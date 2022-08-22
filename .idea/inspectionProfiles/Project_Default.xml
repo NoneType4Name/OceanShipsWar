@@ -1,0 +1,72 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyBroadExceptionInspection" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="PyPep8Inspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredErrors">
+        <list>
+          <option value="E265" />
+          <option value="E231" />
+          <option value="E501" />
+          <option value="E125" />
+          <option value="E122" />
+          <option value="E741" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyPep8NamingInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredErrors">
+        <list>
+          <option value="N801" />
+          <option value="N802" />
+          <option value="N806" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyTypeCheckerInspection" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="PyUnboundLocalVariableInspection" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="edit_game.wolf_right_up_g" />
+          <option value="edit_game.wolf_right_down_g" />
+          <option value="edit_game.wolf_left_down_g" />
+          <option value="edit_game.wolf_left_up_g" />
+          <option value="edit_game.egg_left_up3_group" />
+          <option value="edit_game.egg_left_up0_group" />
+          <option value="edit_game.egg_left_up1_group" />
+          <option value="edit_game.egg_left_up2_group" />
+          <option value="edit_game.egg_left_down0_group" />
+          <option value="edit_game.egg_left_down0group" />
+          <option value="edit_game.egg_left_down1group" />
+          <option value="edit_game.egg_left_down2group" />
+          <option value="edit_game.egg_left_down3group" />
+          <option value="edit_game.egg_right_up3group" />
+          <option value="edit_game.egg_right_up0group" />
+          <option value="edit_game.egg_right_up1group" />
+          <option value="edit_game.egg_right_up2group" />
+          <option value="edit_game.egg_right_down3group" />
+          <option value="edit_game.egg_right_down0group" />
+          <option value="edit_game.egg_right_down1group" />
+          <option value="edit_game.egg_right_down2group" />
+          <option value="edit_game.egg_left_up0group" />
+          <option value="edit_game.egg_left_up3group" />
+          <option value="edit_game.egg_left_up1group" />
+          <option value="edit_game.egg_left_up2group" />
+          <option value="edit_game.back_g" />
+          <option value="edit_game.eggboom_g" />
+          <option value="edit_game.health2_g" />
+          <option value="edit_game.health0_g" />
+          <option value="edit_game.health1_g" />
+          <option value="edit_game.eggboom2_g" />
+          <option value="edit_game.gray_g" />
+          <option value="str.__setitem__" />
+          <option value="int.__getitem__" />
+          <option value="str.__delitem__" />
+          <option value="list.__getitem__" />
+          <option value="sys._MEIPASS" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
