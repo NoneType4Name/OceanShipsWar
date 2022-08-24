@@ -186,7 +186,7 @@ class Slide(pygame.sprite.Sprite):
 
     def update(self, mouse):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
-        self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), self.background, 1), (0, 0))
+        self.image.blit(RoundedRect((0, 0, self.rect.w - 2, self.rect.h - 2), self.background, 1), (1, 1))
         self.image.blit(RoundedRect((0, 0, self.rect.w * self.base_data, self.rect.h),
                                     (255 - self.background[0], 255 - self.background[1], 255 - self.background[2]), 1),
                         (0, 0))

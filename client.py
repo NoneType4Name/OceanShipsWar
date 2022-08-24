@@ -11,7 +11,7 @@ import requests
 import threading
 from screeninfo import get_monitors
 from io import BytesIO
-from asets.Buttons import *
+from Buttons import *
 
 clock = pygame.time.Clock()
 
@@ -41,7 +41,7 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 main_dir = os.getcwd()
 theme = 0
-version = 0.10
+version = '0.0.0'
 bsize = size[0] // 27.428571428571427
 ships_wh = int(bsize // 7)
 left_margin, upper_margin = (size[0] // 2 - bsize * 5), (size[1] // 2 - bsize * 5)
@@ -506,7 +506,7 @@ re_settings_button()
 def update_game(ver):
     global run
     mb = 0
-    file = requests.get(f'https://github.com/AlexKim0710/OceanShipsWar/releases/download/alpha/OceanShipsWar.{ver}.exe',
+    file = requests.get(f'https://github.com/AlexKim0710/OceanShipsWar/releases/download/latest/OceanShipsWar.exe',
                         stream=True)
     with open(f'OceanShipsWar {ver}.exe', 'wb') as f:
         for chunk in file.iter_content(1024 * 1024):
@@ -518,7 +518,7 @@ def update_game(ver):
 
 def StartGame():
     global FineLoadGame, Sounds, StartLoaded, MaxStartLoad, ConditionOfLoad, FromGitVersion
-    if pygame.mixer.get_init():
+    if False:#pygame.mixer.get_init():
         Sounds = {}
         MaxStartLoad = 0
         StartLoaded = 0
@@ -552,20 +552,17 @@ def StartGame():
                 StartLoaded += len(chunk)/4194304
             Sounds[var] = pygame.mixer.Sound(BytesIO(content))
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-        FromGitVersion = requests.get('https://raw.githubusercontent.com/AlexKim0710/OceanShipsWar/main/version').text[
-                         :-1]
+        FromGitVersion = requests.get('https://github.com/AlexKim0710/OceanShipsWar/releases/latest').url.split('/')[-1]
         FineLoadGame = True
         GameSettings['Sound'] = True
     else:
         GameSettings['Sound'] = False
         ERRORS.append('Ошибка инициализации звука.')
-        temp = ''
-        ERRORS.append(os.getcwd())
         return
-    if version < float(FromGitVersion):
+    if version != FromGitVersion:
         ERRORS.append(f'Загружается новая версия: {FromGitVersion}')
         threading.Thread(target=update_game, args=[FromGitVersion]).start()
-    elif version > float(FromGitVersion):
+    if 'b' in FromGitVersion:
         ERRORS.append(f'\tПриветствуем участника бетатестирования!.\t')
     return
 
@@ -672,9 +669,8 @@ while run:
             join_game = True
             TextInputJn.active = True
         elif Update.isCollide() and mouse_left_press:
-            FromGitVersion = requests.get(
-                'https://raw.githubusercontent.com/AlexKim0710/OceanShipsWar/main/version').text[:-1]
-            if version < float(FromGitVersion):
+            FromGitVersion = requests.get('https://github.com/AlexKim0710/OceanShipsWar/releases/latest').url.split('/')[-1]
+            if version != FromGitVersion:
                 ERRORS.append(f'Загружается новая версия: {FromGitVersion}')
                 threading.Thread(target=update_game, args=[FromGitVersion]).start()
             else:
