@@ -785,8 +785,8 @@ while run:
         if is_adm:
             if Enemy_socket:
                 try:
-                    input_data = eval(Enemy_socket.recv(2048).decode())
-                    Enemy_socket.send(str(send_data).encode())
+                    input_data = json.loads(Enemy_socket.recv(2048).decode())
+                    Enemy_socket.send(json.dumps(send_data).encode())
                     run_game = True
                 except (BlockingIOError,OSError):
                     pass
@@ -801,8 +801,8 @@ while run:
                     pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
         else:
             try:
-                sock.send(str(send_data).encode())
-                input_data = eval(sock.recv(1024 * 2).decode())
+                sock.send(json.dumps(send_data).encode())
+                input_data = json.loads(sock.recv(1024 * 2).decode())
                 run_game = True
             except (ConnectionResetError, socket.timeout):
                 ERRORS.append('Противник отключился.')
@@ -1173,6 +1173,7 @@ while run:
                         pygame.draw.circle(screen, RED, GetRect(rc).center, bsize / 100 * 10)
                     out_to_func_draw_ship_count = []
                     for type_ship in input_data['ships']:
+                        print(type_ship)
                         out_to_func_draw_ship_count.append(len(send_data['ships'][type_ship]))
                     draw_ship_count(out_to_func_draw_ship_count)
 
