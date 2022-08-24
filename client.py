@@ -7,6 +7,7 @@ import socket
 import subprocess
 import time
 import pygame
+from ast import literal_eval
 import requests
 import threading
 from screeninfo import get_monitors
@@ -59,7 +60,7 @@ build_y = False
 ship = 0
 doSelect = True
 create_ship = None
-ships = {'1': {}, '2': {}, '3': {}, '4': {}}
+ships = {1: {}, 2: {}, 3: {}, 4: {}}
 ships_env = []
 quadro_ship = 1
 trio_ship = 2
@@ -86,8 +87,8 @@ MaxStartLoad = 0
 StartLoaded = 0
 FineLoadGame = True
 ConditionOfLoad = False
-solo, duo, trio, quadro = 0, 0, 0, 0
-send_data = {'ships': ships,
+solo, duo, trio, quadro = [0]*4
+send_data = {'ships': {1: {}, 2: {}, 3: {}, 4: {}},
              'count': 0,
              'selects': [],
              'killed': {'blocks': [], 'ships': []},
@@ -295,10 +296,10 @@ def re_theme():
 
 re_theme()
 # easygui.fileopenbox(filetypes=["*.json"], multiple=True)
-SOLO = 4
-DUO = 3
-TRIO = 2
-QUADRO = 1
+SOLO = solo_ship
+DUO = duo_ship
+TRIO = trio_ship
+QUADRO = quadro_ship
 
 
 def draw_ship_count(ships_count, max_ships=[SOLO,DUO,TRIO,QUADRO]):
@@ -506,7 +507,7 @@ re_settings_button()
 def update_game(ver):
     global run
     mb = 0
-    file = requests.get(f'https://github.com/AlexKim0710/OceanShipsWar/releases/download/latest/OceanShipsWar.exe',
+    file = requests.get(f'https://github.com/NoneType4Name/OceanShipsWar/releases/download/latest/OceanShipsWar.exe',
                         stream=True)
     with open(f'OceanShipsWar {ver}.exe', 'wb') as f:
         for chunk in file.iter_content(1024 * 1024):
@@ -518,22 +519,22 @@ def update_game(ver):
 
 def StartGame():
     global FineLoadGame, Sounds, StartLoaded, MaxStartLoad, ConditionOfLoad, FromGitVersion
-    if False:#pygame.mixer.get_init():
+    if pygame.mixer.get_init():
         Sounds = {}
         MaxStartLoad = 0
         StartLoaded = 0
         FineLoadGame = False
         ConditionOfLoad = False
         list_of_load = {
-            "info_sound":{"url":'https://github.com/AlexKim0710/OceanShipsWar/blob/main/asets/info.wav?raw=true'},
-            "killed_sound":{"url":'https://github.com/AlexKim0710/OceanShipsWar/blob/main/asets/killed.ogg?raw=true'},
-            "missed_sound":{"url":'https://github.com/AlexKim0710/OceanShipsWar/blob/main/asets/missed.ogg?raw=true'},
-            "wounded_sound":{"url":'https://github.com/AlexKim0710/OceanShipsWar/blob/main/asets/wounded.ogg?raw=true'}
+            "info_sound":{"url":'https://github.com/NoneType4Name/OceanShipsWar/blob/main/asets/info.wav?raw=true'},
+            "killed_sound":{"url":'https://github.com/NoneType4Name/OceanShipsWar/blob/main/asets/killed.ogg?raw=true'},
+            "missed_sound":{"url":'https://github.com/NoneType4Name/OceanShipsWar/blob/main/asets/missed.ogg?raw=true'},
+            "wounded_sound":{"url":'https://github.com/NoneType4Name/OceanShipsWar/blob/main/asets/wounded.ogg?raw=true'}
                         }
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_WAITARROW)
         while True:
             try:
-                FromGitVersion = requests.get('https://raw.githubusercontent.com/AlexKim0710/OceanShipsWar/main/version').text[
+                FromGitVersion = requests.get('https://raw.githubusercontent.com/NoneType4Name/OceanShipsWar/main/version').text[
                                 :-1]
                 break
             except requests.exceptions.ConnectionError:
@@ -552,7 +553,7 @@ def StartGame():
                 StartLoaded += len(chunk)/4194304
             Sounds[var] = pygame.mixer.Sound(BytesIO(content))
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-        FromGitVersion = requests.get('https://github.com/AlexKim0710/OceanShipsWar/releases/latest').url.split('/')[-1]
+        FromGitVersion = requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest').url.split('/')[-1]
         FineLoadGame = True
         GameSettings['Sound'] = True
     else:
@@ -669,7 +670,7 @@ while run:
             join_game = True
             TextInputJn.active = True
         elif Update.isCollide() and mouse_left_press:
-            FromGitVersion = requests.get('https://github.com/AlexKim0710/OceanShipsWar/releases/latest').url.split('/')[-1]
+            FromGitVersion = requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest').url.split('/')[-1]
             if version != FromGitVersion:
                 ERRORS.append(f'Загружается новая версия: {FromGitVersion}')
                 threading.Thread(target=update_game, args=[FromGitVersion]).start()
@@ -785,8 +786,8 @@ while run:
         if is_adm:
             if Enemy_socket:
                 try:
-                    input_data = json.loads(Enemy_socket.recv(2048).decode())
-                    Enemy_socket.send(json.dumps(send_data).encode())
+                    input_data = literal_eval(Enemy_socket.recv(2048).decode())
+                    Enemy_socket.send(str(send_data).encode())
                     run_game = True
                 except (BlockingIOError,OSError):
                     pass
@@ -801,8 +802,8 @@ while run:
                     pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
         else:
             try:
-                sock.send(json.dumps(send_data).encode())
-                input_data = json.loads(sock.recv(1024 * 2).decode())
+                sock.send(str(send_data).encode())
+                input_data = literal_eval(sock.recv(2048).decode())
                 run_game = True
             except (ConnectionResetError, socket.timeout):
                 ERRORS.append('Противник отключился.')
@@ -813,7 +814,6 @@ while run:
                 GameSettings['my socket'] = ['', 0]
                 GameSettings['enemy socket'] = ['', 0]
                 pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-
         if end_game:
             run_game = False
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
@@ -962,7 +962,7 @@ while run:
                             elif GetShip(create_ship)[index_of_len_ship] / bsize == 4:
                                 if quadro_ship:
                                     quadro_ship -= 1
-                                    ships['4'][str(quadro)] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
+                                    ships[4][quadro] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
                                     quadro += 1
                                     great_build = True
                                 else:
@@ -974,7 +974,7 @@ while run:
                             elif GetShip(create_ship)[index_of_len_ship] / bsize == 3:
                                 if trio_ship:
                                     trio_ship -= 1
-                                    ships['3'][str(trio)] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
+                                    ships[3][trio] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
                                     trio += 1
                                     great_build = True
                                 else:
@@ -986,7 +986,7 @@ while run:
                             elif GetShip(create_ship)[index_of_len_ship] / bsize == 2:
                                 if duo_ship:
                                     duo_ship -= 1
-                                    ships['2'][str(duo)] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
+                                    ships[2][duo] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
                                     duo += 1
                                     great_build = True
                                 else:
@@ -998,7 +998,7 @@ while run:
                             elif GetShip(create_ship)[index_of_len_ship] / bsize == 1:
                                 if solo_ship:
                                     solo_ship -= 1
-                                    ships['1'][str(solo)] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
+                                    ships[1][solo] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
                                     solo += 1
                                     great_build = True
                                 else:
@@ -1034,7 +1034,8 @@ while run:
                 for n, event in enumerate(input_data['event']):
                     try:
                         if event['type'] == 'sound':
-                            exec(event['event'])
+                            Sounds[event['event']].set_volume(GameSettings['Game SoundVol'])
+                            Sounds[event['event']].play()
                     except Exception:
                         pass
                 try:
@@ -1111,18 +1112,20 @@ while run:
                                     if GameSettings['Game Sound'] and GameSettings['Sound']:
                                         Sounds['killed_sound'].set_volume(GameSettings['Game SoundVol'])
                                         Sounds['killed_sound'].play()
-                                    send_data['event'].append({'type': 'sound', 'event': 'Sounds["killed_sound"].play()'})
+                                        send_data['event'].append(
+                                            {'type': 'sound', 'event': 'killed_sound'})
                                 else:
                                     if GameSettings['Game Sound'] and GameSettings['Sound']:
                                         Sounds['wounded_sound'].set_volume(GameSettings['Game SoundVol'])
                                         Sounds['wounded_sound'].play()
-                                    send_data['event'].append({'type': 'sound', 'event': 'Sounds["wounded_sound"].play()'})
+                                        send_data['event'].append(
+                                            {'type': 'sound', 'event': 'wounded_sound'})
                                 send_data['pass'] = False
                             else:
                                 if GameSettings['Game Sound'] and GameSettings['Sound']:
                                     Sounds['missed_sound'].set_volume(GameSettings['Game SoundVol'])
                                     Sounds['missed_sound'].play()
-                                send_data['event'].append({'type':'sound','event':'Sounds["missed_sound"].play()'})
+                                    send_data['event'].append({'type': 'sound', 'event': 'missed_sound'})
                                 send_data['pass'] = True
                                 send_data['selects'].append(mouse_on_block)
                     for rc in input_data['die']['blocks']:
@@ -1141,10 +1144,6 @@ while run:
                     else:
                         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_NO)
                         pygame.draw.rect(screen, RED, GetRect(mouse_on_block), ships_wh)
-                    out_to_func_draw_ship_count = []
-                    for type_ship in input_data['ships']:
-                        out_to_func_draw_ship_count.append(len(input_data['ships'][type_ship]))
-                    draw_ship_count(out_to_func_draw_ship_count)
 
                 elif move == not_me:
                     if len(input_data['die']['ships']) == input_data['count']:
@@ -1157,7 +1156,7 @@ while run:
                         end_game = True
                     txt = font.render('Ждем...', True, (255, 255, 0))
                     screen.blit(txt, (size[0] // 2 - txt.get_rect()[2] // 2, size[1] - txt.get_rect()[3] - bsize // 2))
-                    for type_s in send_data['ships'].keys():
+                    for type_s in range(1, max(send_data['ships'].keys()) + 1):
                         for sp in send_data['ships'][type_s].values():
                             pygame.draw.rect(screen, LINES, GetShip(sp['ship']), ships_wh)
                     for block in send_data['die']['blocks']:
