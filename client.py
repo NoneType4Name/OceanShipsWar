@@ -59,7 +59,7 @@ build_y = False
 ship = 0
 doSelect = True
 create_ship = None
-ships = {1: {}, 2: {}, 3: {}, 4: {}}
+ships = {'1': {}, '2': {}, '3': {}, '4': {}}
 ships_env = []
 quadro_ship = 1
 trio_ship = 2
@@ -87,7 +87,7 @@ StartLoaded = 0
 FineLoadGame = True
 ConditionOfLoad = False
 solo, duo, trio, quadro = 0, 0, 0, 0
-send_data = {'ships': {1: {}, 2: {}, 3: {}, 4: {}},
+send_data = {'ships': ships,
              'count': 0,
              'selects': [],
              'killed': {'blocks': [], 'ships': []},
@@ -962,7 +962,7 @@ while run:
                             elif GetShip(create_ship)[index_of_len_ship] / bsize == 4:
                                 if quadro_ship:
                                     quadro_ship -= 1
-                                    ships[4][quadro] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
+                                    ships['4'][str(quadro)] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
                                     quadro += 1
                                     great_build = True
                                 else:
@@ -974,7 +974,7 @@ while run:
                             elif GetShip(create_ship)[index_of_len_ship] / bsize == 3:
                                 if trio_ship:
                                     trio_ship -= 1
-                                    ships[3][trio] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
+                                    ships['3'][str(trio)] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
                                     trio += 1
                                     great_build = True
                                 else:
@@ -986,7 +986,7 @@ while run:
                             elif GetShip(create_ship)[index_of_len_ship] / bsize == 2:
                                 if duo_ship:
                                     duo_ship -= 1
-                                    ships[2][duo] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
+                                    ships['2'][str(duo)] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
                                     duo += 1
                                     great_build = True
                                 else:
@@ -998,7 +998,7 @@ while run:
                             elif GetShip(create_ship)[index_of_len_ship] / bsize == 1:
                                 if solo_ship:
                                     solo_ship -= 1
-                                    ships[1][solo] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
+                                    ships['1'][str(solo)] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
                                     solo += 1
                                     great_build = True
                                 else:
@@ -1157,7 +1157,7 @@ while run:
                         end_game = True
                     txt = font.render('Ждем...', True, (255, 255, 0))
                     screen.blit(txt, (size[0] // 2 - txt.get_rect()[2] // 2, size[1] - txt.get_rect()[3] - bsize // 2))
-                    for type_s in range(1, max(send_data['ships'].keys()) + 1):
+                    for type_s in send_data['ships'].keys():
                         for sp in send_data['ships'][type_s].values():
                             pygame.draw.rect(screen, LINES, GetShip(sp['ship']), ships_wh)
                     for block in send_data['die']['blocks']:
@@ -1173,7 +1173,6 @@ while run:
                         pygame.draw.circle(screen, RED, GetRect(rc).center, bsize / 100 * 10)
                     out_to_func_draw_ship_count = []
                     for type_ship in input_data['ships']:
-                        print(type_ship)
                         out_to_func_draw_ship_count.append(len(send_data['ships'][type_ship]))
                     draw_ship_count(out_to_func_draw_ship_count)
 
