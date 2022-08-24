@@ -1,2 +1,2 @@
 # OceanShipsWar
-main repository of minigame.
+def branch of minigame.
