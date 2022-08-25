@@ -1,0 +1,16 @@
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+__pycache__/
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+build/
+dist/
+.idea
+2.py
+README.md
