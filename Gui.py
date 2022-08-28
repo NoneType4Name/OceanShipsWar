@@ -157,7 +157,7 @@ class Label(pygame.sprite.Sprite):
             for s in range(1000):
                 self.font = pygame.font.Font(default_font, s)
                 self.size = self.font.size(self.text)
-                if self.size[0] > self.rect.w - self.rect.w * 0.1 or self.size[1] > self.rect.h:
+                if self.size[0] > self.rect.w - self.rect.w * 0.01 or self.size[1] > self.rect.h:
                     self.font = pygame.font.Font(default_font, s - 1)
                     self.size = self.font.size(self.text)
                     break
@@ -176,13 +176,17 @@ class Label(pygame.sprite.Sprite):
                 for s in range(1000):
                     self.font = pygame.font.Font(default_font, s)
                     self.size = self.font.size(self.text)
-                    if self.size[0] > self.rect.w - self.rect.w * 0.1 or self.size[1] > self.rect.h:
+                    if self.size[0] > self.rect.w - self.rect.w * 0.01 or self.size[1] > self.rect.h:
                         self.font = pygame.font.Font(default_font, s - 1)
                         self.size = self.font.size(self.text)
                         break
         self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
         self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), self.color, 1), (0, 0))
-        self.image.blit(self.font.render(self.text, True, self.text_color),
+        if self.center:
+            self.image.blit(self.font.render(self.text, True, self.text_color), (self.rect.w * 0.01,
+                                                                                 self.rect.h // 2 - self.size[1] // 2))
+        else:
+            self.image.blit(self.font.render(self.text, True, self.text_color),
                         (self.rect.w // 2 - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
 
 
@@ -191,7 +195,6 @@ class Slide(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.rect = pygame.Rect(rect[0],rect[1],rect[2]*1.1,rect[3])
         self.slide_rect = pygame.Rect(rect)
-        print(self.rect.w,self.slide_rect.w, self.slide_rect.w * 1 + (self.slide_rect.h * 1 if 1 else 0))
         # pygame.Rect(self.rect.w * 0.05, (self.rect.h / 2 - self.rect.h * 0.3 / 2 + 1), self.rect.w * 0.9, self.rect.h * 0.3)
         self.slide_color = pygame.Color(slide_color)
         self.background = pygame.Color(background)
@@ -203,8 +206,10 @@ class Slide(pygame.sprite.Sprite):
     def update(self, mouse):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), self.background, 1), (0, 0))
-        self.image.blit(RoundedRect((0, 0, self.slide_rect.w * self.base_data + (self.rect.h * 1 if self.base_data else 0), self.slide_rect.h),
-                                    (255 - self.background[0], 255 - self.background[1], 255 - self.background[2], self.background[3]), 1),(0, 0))
+        self.image.blit(RoundedRect((0, 0, self.slide_rect.w * self.base_data + (self.rect.h * 1 if self.base_data else
+                                                                                 0), self.slide_rect.h),
+                                    (255 - self.background[0], 255 - self.background[1], 255 - self.background[2],
+                                     self.background[3]), 1), (0, 0))
         pygame.draw.circle(self.image, self.slide_color,
                            (self.slide_rect.w * self.base_data + (self.slide_rect.h // 2), self.slide_rect.h // 2),
                            self.slide_rect.h // 2)
@@ -251,12 +256,18 @@ class Element(pygame.sprite.Sprite):
                 break
 
     def update(self, mouse):
+        val = int((self.rect.w+self.rect.h)/100)
         if self.real_rect.collidepoint(pygame.mouse.get_pos()):
-            self.image.blit(RoundedRect(self.rect, self.around_select, 1, 2, self.background), (0, 0))
+            self.image.blit(RoundedRect(self.rect, self.around_select, 1, 1 if not val else val,
+                                        self.background), (0, 0))
             if mouse:
-                return literal_eval(self.text)
+                try:
+                    return literal_eval(self.text)
+                except ValueError:
+                    return self.text
         else:
-            self.image.blit(RoundedRect(self.rect, self.around, 1, 1, self.background), (0, 0))
+            self.image.blit(RoundedRect(self.rect, self.around, 1, (1 if val/2 else val/2),
+                                        self.background), (0, 0))
         self.image.blit(self.font.render(self.text, True, self.font_color), (self.rect.w / 2 - self.size[0] / 2,
                                                                              self.rect.h / 2 - self.size[1] / 2))
 
