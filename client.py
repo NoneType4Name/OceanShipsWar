@@ -359,10 +359,10 @@ def re_settings_button():
     set_of_settings = {
         'up margin': 0,
         'down margin': 1.9,
-        'label': ((0, 255, 255),(0, 0, 0)),
+        'label': ((41, 42, 43),(232, 234, 236)),
         'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
-        'slides':((255, 255, 255), (24, 24, 24)),
-        'lists':((255, 255, 255), (255, 0, 255), (0, 0, 0))
+        'slides':((138, 180, 248), (53, 86, 140)),
+        'lists':((232, 234, 236), (29, 29, 31), (41, 42, 45))
     }
     set_for_lists = {
         'Language':['rus','eng'],
@@ -373,11 +373,12 @@ def re_settings_button():
     SettingsElements.empty()
     temp_g = pygame.sprite.Group()
     for type_settings in Settings:
+
         for element in Settings[type_settings]:
             BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92,
                                    size[1] // 36)
             if 0 < pad < 1.9:
-                MainElement = Label(BaseRect, GameLanguage[f'{type_settings} {element}'], *set_of_settings['label'], True)
+                MainElement = Label(BaseRect, GameLanguage[f'{type_settings} {element}'], *set_of_settings['label'], True, True)
                 if type(Settings[type_settings][element]) is bool:
                     Element = Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1,
                                       BaseRect.y + 1,
@@ -409,7 +410,12 @@ def re_settings_button():
                     print(type_settings,element,type(Settings[type_settings][element]))
                     raise SystemError
                 Labels.add(MainElement)
-                pad += BaseRect.h/size[1] * 1.3
+                pad += BaseRect.h/size[1] * 1.1
+    for lab in range(16):
+        BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92,
+                               size[1] // 36)
+        Labels.add(Label(BaseRect, lab, *set_of_settings['label'], True, True))
+        pad += BaseRect.h / size[1] * 1.1
 
     for el in reversed(temp_g.sprites()):
         SettingsElements.add(el)
@@ -506,16 +512,16 @@ while run:
     for event in pygame.event.get():
         if create_game:
             for s in CreateGameButtons.sprites():
-                u: str = s.update(event)
-                if u:
-                    u = u.split(':', 1)
-                    if u[0] == 'create':
+                update: dict = s.update(event)
+                if update:
+                    u = list(update.keys())[0]
+                    if u == 'create':
                         try:
-                            if ':' in u[1]:
-                                u = u[1].split(':', 1)
-                                GameSettings['my socket'] = [u[0], int(u[1])]
+                            if ':' in update[u]:
+                                data = update[u].split(':', 1)
+                                GameSettings['my socket'] = [data[0], int(data[1])]
                             else:
-                                GameSettings['my socket'] = [u[1], 9998]
+                                GameSettings['my socket'] = [update[u], 9998]
                             me = 'main'
                             not_me = 'client'
                             Enemy_socket = None
@@ -531,15 +537,15 @@ while run:
                             re_theme()
         elif join_game:
             for s in JoinGameButtons.sprites():
-                u = s.update(event)
-                if u:
-                    u = u.split(':', 1)
-                    if u[0] == 'join':
-                        if ':' in u[1]:
-                            u = u[1].split(':', 1)
-                            GameSettings['my socket'] = [u[0], int(u[1])]
+                update: dict = s.update(event)
+                if update:
+                    u = list(update.keys())[0]
+                    if u == 'join':
+                        if ':' in update[u]:
+                            data = update[u].split(':', 1)
+                            GameSettings['my socket'] = [data[0], int(data[1])]
                         else:
-                            GameSettings['my socket'] = [u[1], 9998]
+                            GameSettings['my socket'] = [update[u], 9998]
         if event.type == pygame.QUIT:
             run = False
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -601,9 +607,13 @@ while run:
         sprites.draw(screen)
     elif settings:
         screen.fill(BACKGROUND)
-        Labels.update()
         SettingsMainLabel.update()
         EscButton.update()
+        if SettingsActiveElement:
+            Labels.update(GameLanguage[SettingsActiveElement.name])
+        else:
+            Labels.update()
+        Labels.draw(screen)
         if EscButton.isCollide() and NotificationLeftPress or key_esc:
             SettingsActiveElement = None
             settings = False
@@ -671,7 +681,6 @@ while run:
         #     if count_sl == len(Slides.sprites()):
         #         mouse_left_press = False
 
-        Labels.draw(screen)
         SettingsElements.draw(screen)
         pygame.draw.rect(screen, BACKGROUND, (0, 0, size[0], size[1] * 0.05))
         pygame.draw.line(screen, LINES, (0, size[1] * 0.05), (size[0], size[1] * 0.05), int(bsize // 2 // 10))
