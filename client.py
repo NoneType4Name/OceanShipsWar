@@ -87,6 +87,20 @@ StartLoaded = 0
 FineLoadGame = True
 ConditionOfLoad = False
 SettingsActiveElement = None
+
+Labels = pygame.sprite.Group()
+SettingsElements = pygame.sprite.Group()
+settings_pos = 0.1
+upper_margin_settings = 0.1
+pad = 0
+down_margin_settings = 1
+sprites = pygame.sprite.Group()
+SystemButtons = pygame.sprite.Group()
+CreateGameButtons = pygame.sprite.Group()
+JoinGameButtons = pygame.sprite.Group()
+Notifications = pygame.sprite.Group()
+LoadGameGroup = pygame.sprite.Group()
+letters = []
 solo, duo, trio, quadro = [0]*4
 send_data = {'ships': {1: {}, 2: {}, 3: {}, 4: {}},
              'count': 0,
@@ -99,14 +113,17 @@ send_data = {'ships': {1: {}, 2: {}, 3: {}, 4: {}},
              'event': []}
 input_data = send_data
 Settings = {
+    'Graphic': {
+        'WindowSize': size,
+        'Language': 'rus'
+    },
     'Sound':{
         'Notification': 1,
         'Game': 1
-    },
-    'Graphic':{
-        'WindowSize': size,
-        'Language': 'rus'
-    }}
+    }
+}
+GameLanguage = {}
+active_element = list(Settings.keys())[0]
 GameSettings = {
     'my socket': ['', 0],
     'enemy socket': ['', 0]}
@@ -117,17 +134,19 @@ if os.path.exists('settings.json'):
     except json.decoder.JSONDecodeError as err:
         ERRORS.append(f'Ошибка инициализации json конфига\tСтрока:{err.lineno}\tСтолбец:{err.colno}\tСимвол:{err.pos}\tОшибка:{err.msg}')
 
-Labels = pygame.sprite.Group()
-SettingsElements = pygame.sprite.Group()
-settings_upper_margin = 0.1
-pad = settings_upper_margin
-sprites = pygame.sprite.Group()
-SystemButtons = pygame.sprite.Group()
-CreateGameButtons = pygame.sprite.Group()
-JoinGameButtons = pygame.sprite.Group()
-Notifications = pygame.sprite.Group()
-LoadGameGroup = pygame.sprite.Group()
-letters = []
+GameLanguage = {'start game': 'Создать игру',
+                'join game': 'Присоеденится к игре',
+                'settings': 'Настройки',
+                'theme light': 'Яркая',
+                'theme dark': 'Тёмная',
+                'Sound': 'Звук',
+                'Sound Game': 'Звуки игры',
+                'Sound Notification': 'Звуки уведомлений',
+                'Graphic': 'Графика',
+                'Graphic Language': 'Язык',
+                'Graphic WindowSize': 'Размер окна',
+                'Exit': 'Выход',
+                'version': f'Версия {version}'}
 
 
 def re_lang():
@@ -138,8 +157,10 @@ def re_lang():
                         'settings': 'Настройки',
                         'theme light': 'Яркая',
                         'theme dark': 'Тёмная',
+                        'Sound': 'Звук',
                         'Sound Game': 'Звуки игры',
                         'Sound Notification': 'Звуки уведомлений',
+                        'Graphic': 'Графика',
                         'Graphic Language': 'Язык',
                         'Graphic WindowSize': 'Размер окна',
                         'Exit': 'Выход',
@@ -150,8 +171,10 @@ def re_lang():
                         'settings': 'Settings',
                         'theme light': 'Light',
                         'theme dark': 'Dark',
+                        'Sound': 'Sound',
                         'Sound Game': 'Game Sound',
                         'Sound Notification': 'Notifications Sound',
+                        'Graphic': 'Graphic',
                         'Graphic Language': 'Language',
                         'Graphic WindowSize': 'Window size',
                         'Exit': 'Exit',
@@ -230,8 +253,8 @@ def re_theme():
         TextInputTxCl = (255, 255, 255)
     StartLoadProgress = ProgressBar(
         (size[0]//2-size[0]*0.2/2,size[1]*0.7,size[0]*0.2,size[1]*0.05), LINES, (0, 255, 0), 0)
-    StartLoadLabel = Label((size[0]//2-size[0]*0.2/2,size[1]*0.6,size[0]*0.2,size[1]*0.05),'0 %',(0,0,0,0),(0,255,0), True)
-    StartLoadLabel2 = Label((size[0]//2-size[0]*0.2/2,size[1]*0.65,size[0]*0.2,size[1]*0.05),'',(0,0,0,0),(0,255,0), True)
+    StartLoadLabel = Label((size[0]//2-size[0]*0.2/2,size[1]*0.6,size[0]*0.2,size[1]*0.05),'0 %',(0,0,0,0),(0,255,0), center=True)
+    StartLoadLabel2 = Label((size[0]//2-size[0]*0.2/2,size[1]*0.65,size[0]*0.2,size[1]*0.05),'',(0,0,0,0),(0,255,0), center=True)
     Update = Button((-1, size[1] - bsize // 2, bsize * 2, bsize // 2), str(GameLanguage['version']), ButtonsCl1,
                     ButtonsCl2, ButtonsTxtColor,
                     ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
@@ -355,52 +378,78 @@ for num_let in range(len(letters)):
         blocks[num_let].append(pygame.Rect(left_margin + num_let * bsize, upper_margin + num * bsize, bsize, bsize))
 
 
+def command(name):
+    global active_element
+    active_element = name
+    re_settings_button()
+
+
 def re_settings_button():
-    set_of_settings = {
-        'up margin': 0,
-        'down margin': 1.9,
-        'label': ((41, 42, 43),(232, 234, 236)),
-        'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
-        'slides':((138, 180, 248), (53, 86, 140)),
-        'lists':((232, 234, 236), (29, 29, 31), (41, 42, 45))
-    }
+    global pad, active_element
+    if theme:
+        set_of_settings = {
+            'up margin': 0.15,
+            'down margin': 1.9,
+            'label': ((214, 213, 212), (23, 21, 19),[(0,0,0), (200, 200, 200)]),
+            'buttons': ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
+            'buttons active': ((0, 0, 0), (164, 163, 162), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
+            'switches': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
+            'slides': ((117, 75, 7), (202, 169, 115)),
+            'lists': ((23, 21, 19), (226, 226, 224), (214, 213, 210))
+        }
+    else:
+        set_of_settings = {
+            'up margin': 0.15,
+            'down margin': 1.9,
+            'label': ((41, 42, 43),(232, 234, 236), [(255,255,255), (91, 92, 93)]),
+            'buttons': ((41, 42, 43),(41, 42, 43),(232, 234, 236), (255,255,255), (91, 92, 93), (232, 234, 236)),
+            'buttons active': ((255,255,255), (91, 92, 93), (232, 234, 236), (255,255,255), (91, 92, 93), (232, 234, 236)),
+            'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
+            'slides':((138, 180, 248), (53, 86, 140)),
+            'lists':((232, 234, 236), (29, 29, 31), (41, 42, 45))
+        }
     set_for_lists = {
         'Language':['rus','eng'],
         'WindowSize':pygame.display.list_modes()
     }
-    pad = settings_upper_margin
+    pad = round(settings_pos, 3)
+    buttons_pad = round(settings_pos, 3)
     Labels.empty()
     SettingsElements.empty()
     temp_g = pygame.sprite.Group()
+    if not active_element:
+        active_element = list(Settings.keys())[0]
+    BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
     for type_settings in Settings:
-
-        for element in Settings[type_settings]:
-            BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92,
-                                   size[1] // 36)
-            if 0 < pad < 1.9:
-                MainElement = Label(BaseRect, GameLanguage[f'{type_settings} {element}'], *set_of_settings['label'], True, True)
+        SettingsElements.add(Button((size[0]*0.05, size[1] * buttons_pad, BaseRect.h * 5, BaseRect.h),
+                             GameLanguage[type_settings],
+                             *set_of_settings['buttons active' if type_settings == active_element else 'buttons'], 1, [command,type_settings]))
+        if type_settings == active_element:
+            for element in Settings[type_settings]:
+                BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
+                MainElement = Label(BaseRect, GameLanguage[f'{type_settings} {element}'], *set_of_settings['label'], True)
                 if type(Settings[type_settings][element]) is bool:
                     Element = Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1,
-                                      BaseRect.y + 1,
-                                      BaseRect.h * 2 - BaseRect.h * 0.1,
-                                      BaseRect.h - 2),
-                                     *set_of_settings['switches'],
-                                     name=f'{type_settings} {element}', power=Settings[type_settings][element])
+                                        BaseRect.y + 1,
+                                        BaseRect.h * 2 - BaseRect.h * 0.1,
+                                        BaseRect.h - 2),
+                                        *set_of_settings['switches'],
+                                        name=f'{type_settings} {element}', power=Settings[type_settings][element])
                     SettingsElements.add(Element)
                 elif (type(Settings[type_settings][element])) in [str, list, tuple]:
                     Element = List((BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
                                     BaseRect.y + 1,
                                     BaseRect.h * 4 - BaseRect.h * 0.1,
                                     BaseRect.h - 2),
-                                   Settings[type_settings][element],
-                                   set_for_lists[element],
-                                   *set_of_settings['lists'],
-                                   f'{type_settings} {element}')
+                                    Settings[type_settings][element],
+                                    set_for_lists[element],
+                                    *set_of_settings['lists'],
+                                    f'{type_settings} {element}')
                     temp_g.add(Element)
                 elif (type(Settings[type_settings][element])) in [float, int]:
                     Element = Slide(
-                        (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11 - 1,
-                         BaseRect.y + 1,
+                        (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
+                        BaseRect.y + 1,
                          (BaseRect.h - 2) * 10,
                          BaseRect.h - 2),
                         *set_of_settings['slides'], base_data=Settings[type_settings][element],
@@ -411,10 +460,11 @@ def re_settings_button():
                     raise SystemError
                 Labels.add(MainElement)
                 pad += BaseRect.h/size[1] * 1.1
-    for lab in range(16):
-        BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92,
-                               size[1] // 36)
-        Labels.add(Label(BaseRect, lab, *set_of_settings['label'], True, True))
+        buttons_pad += (BaseRect.h/size[1] * 1.1)
+
+    for lab in range(10):
+        BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
+        Labels.add(Label(BaseRect, lab, *set_of_settings['label'], center=True))
         pad += BaseRect.h / size[1] * 1.1
 
     for el in reversed(temp_g.sprites()):
@@ -549,9 +599,24 @@ while run:
         if event.type == pygame.QUIT:
             run = False
         if event.type == pygame.MOUSEBUTTONDOWN:
+            step = 0.05
             if event.button == 1:
                 mouse_left_press = True
                 NotificationLeftPress = True
+            elif event.button == 4:
+                if settings_pos - step >= upper_margin_settings:
+                    for s in Labels.sprites():
+                        s.RectEdit(0, -int(size[1]*step))
+                    for s in SettingsElements.sprites():
+                        s.RectEdit(0, -int(size[1]*step))
+                    settings_pos = round(settings_pos - step, 3)
+            elif event.button == 5:
+                if settings_pos + step + pad <= down_margin_settings:
+                    for s in Labels.sprites():
+                        s.RectEdit(0, int(size[1]*step))
+                    for s in SettingsElements.sprites():
+                        s.RectEdit(0, int(size[1]*step))
+                    settings_pos = round(settings_pos + step, 3)
         if event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
                 mouse_left_press = False
@@ -629,8 +694,9 @@ while run:
                         mouse_left_press = False
                     elif type(SpriteUpdate) is dict:
                         temp = tuple(SpriteUpdate.keys())[0]
-                        temp2 = temp.split(' ')
-                        Settings[temp2[0]][temp2[1]] = SpriteUpdate[temp]
+                        if temp:
+                            temp2 = temp.split(' ')
+                            Settings[temp2[0]][temp2[1]] = SpriteUpdate[temp]
                         mouse_left_press = False
                         re_lang()
                         re_theme()
@@ -653,33 +719,6 @@ while run:
                         else:
                             SettingsActiveElement = None
                             mouse_left_press = False
-
-        # for s in Switches.sprites():
-        #     if s.update(mouse_left_press):
-        #         Settings[s.update(mouse_left_press)] = not Settings[s.update(mouse_left_press)]
-        #         mouse_left_press = False
-        #         re_settings_button()
-        # for l in Lists.sprites():
-        #     u = l.update(mouse_left_press)
-        #     if u:
-        #         if ':' in str(u):
-        #             if 'Language' in u:
-        #                 re_lang(str(u).split(':')[1])
-        #                 re_theme()
-        #             Settings[str(u).split(':')[0]] = str(u).split(':')[1]
-        #             re_settings_button()
-        #         mouse_left_press = False
-        #     elif not Slides.sprites():
-        #         mouse_left_press = False
-        # count_sl = 0
-        # for s in Slides.sprites():
-        #     u = s.update(mouse_left_press)
-        #     if u:
-        #         GameSettings[u[0]] = u[1]
-        #     else:
-        #         count_sl += 1
-        #     if count_sl == len(Slides.sprites()):
-        #         mouse_left_press = False
 
         SettingsElements.draw(screen)
         pygame.draw.rect(screen, BACKGROUND, (0, 0, size[0], size[1] * 0.05))

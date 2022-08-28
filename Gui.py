@@ -1,4 +1,5 @@
 import string
+import threading
 from ast import literal_eval
 import pyperclip
 import time
@@ -55,7 +56,7 @@ def RoundedRect(rect, color, radius=0.4, width=0, inner_color=(0, 0, 0)) -> pyga
 
 
 class Button(pygame.sprite.Sprite):
-    def __init__(self, rect, text, color1, color2, text_color, color1_act, color2_act, color_act_text):
+    def __init__(self, rect, text, color1, color2, text_color, color1_act, color2_act, color_act_text, radius=0.5, command=[]):
         pygame.sprite.Sprite.__init__(self)
         self.rect = pygame.Rect(rect)
         wh = (int(self.rect.w + self.rect.h) // 100)
@@ -72,6 +73,10 @@ class Button(pygame.sprite.Sprite):
         self.text = text
         self.wh = int((self.rect.w + self.rect.h) / 100)
         self.wh = self.wh if self.wh else 1
+        self.radius = radius
+        if command:
+            self.command = command[0]
+            self.arg = command[1]
         for s in range(1000):
             self.font = pygame.font.Font(default_font, s)
             self.size = self.font.size(self.text)
@@ -81,25 +86,25 @@ class Button(pygame.sprite.Sprite):
                 self.size = self.font.size(self.text)
                 break
 
-    def update(self):
+    def update(self, mouse=False):
         if self.isCollide():
-            self.image.blit(RoundedRect(self.rect, self.color1_act, .5, self.wh, self.color2_act), (0, 0))
-            # self.image.blit(RoundedRect(self.rectInner, self.color2_act), (self.rectInner.x,self.rectInner.y))
+            self.image.blit(RoundedRect(self.rect, self.color1_act, self.radius, 1, self.color2_act), (0, 0))
             self.image.blit(self.font.render(self.text, True, self.color_act_text),
                             (self.rect.w // 2 - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
+            if mouse:
+                self.command(self.arg)
+                return {'':''}
         else:
-            self.image.blit(RoundedRect(self.rect, self.color1, .5, self.wh, self.color2), (0, 0))
-            # self.image.blit(RoundedRect(self.rectInner, self.color2), (self.rectInner.x,self.rectInner.y))
+            self.image.blit(RoundedRect(self.rect, self.color1, self.radius, 1, self.color2), (0, 0))
             self.image.blit(self.font.render(self.text, True, self.text_color),
                             (self.rect.w // 2 - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
 
     def isCollide(self):
-        if self.rect.x < pygame.mouse.get_pos()[0] < self.rect.x + self.rect.width and self.rect.y < \
-                pygame.mouse.get_pos()[
-                    1] < self.rect.y + self.rect.height:
-            return True
-        else:
-            return False
+        return self.rect.collidepoint(pygame.mouse.get_pos())
+
+    def RectEdit(self,x=0,y=0):
+        self.rect.x += x
+        self.rect.y += y
 
 
 class Switch(pygame.sprite.Sprite):
@@ -135,15 +140,20 @@ class Switch(pygame.sprite.Sprite):
             self.power = not self.power
             return {self.name:self.power}
 
+    def RectEdit(self,x=0,y=0):
+        self.rect.x += x
+        self.rect.y += y
+
 
 class Label(pygame.sprite.Sprite):
-    def __init__(self, rect, text, color, text_color, center=False, width=False):
+    def __init__(self, rect, text, color, text_color, width: list = False, center=False):
         pygame.sprite.Sprite.__init__(self)
         self.rect = pygame.Rect(rect)
         self.text = str(text)
-        # self.val = int((self.this_rect.w + self.this_rect.h) / 100)
-        # self.val2 = 1 if not self.val else self.val
-        # self.rect = pygame.Rect(rect[0]-self.val2, rect[1]-self.val2, rect[2]+self.val2*2, rect[3]+self.val2*2)
+        if width:
+            self.around = pygame.Color(width[0])
+            self.around_main = pygame.Color(width[1])
+            self.around.a = 100
         self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
         self.color = pygame.Color(color)
         self.color.a = 100
@@ -172,9 +182,7 @@ class Label(pygame.sprite.Sprite):
         if (self.width and self.rect.collidepoint(pygame.mouse.get_pos()) and not name) or name == self.text:
             # for i in range(self.val2):
             #     self.image.blit(RoundedRect((0, 0, self.rect.w - i * 2, self.rect.h - i * 2), (100, 20, 255, int(255 * (i/self.val2))), 1), (i, i))
-            self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), (255,255,255,100), 1, 1, tuple(map(lambda c: c+50 if c+50 <= 255 else c, [self.color.r,
-                                                                                                                                                    self.color.g,
-                                                                                                                                                    self.color.b]))), (0, 0))
+            self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), self.around, 1, 1, self.around_main), (0, 0))
         else:
             self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), self.color, 1), (0, 0))
         if self.center:
@@ -200,6 +208,10 @@ class Label(pygame.sprite.Sprite):
                         self.font = pygame.font.Font(default_font, s - 1)
                         self.size = self.font.size(self.text)
                         break
+
+    def RectEdit(self,x=0,y=0):
+        self.rect.x += x
+        self.rect.y += y
 
 
 class Slide(pygame.sprite.Sprite):
@@ -246,6 +258,10 @@ class Slide(pygame.sprite.Sprite):
     def isCollide(self):
         return self.rect.collidepoint(pygame.mouse.get_pos())
 
+    def RectEdit(self,x=0,y=0):
+        self.rect.x += x
+        self.rect.y += y
+
 
 class Element(pygame.sprite.Sprite):
     def __init__(self, rect, real_rect, text, background, font_color, around, around_select):
@@ -281,6 +297,10 @@ class Element(pygame.sprite.Sprite):
                                         self.background), (0, 0))
         self.image.blit(self.font.render(self.text, True, self.font_color), (self.rect.w / 2 - self.size[0] / 2,
                                                                              self.rect.h / 2 - self.size[1] / 2))
+
+    def RectEdit(self,x=0,y=0):
+        self.real_rect.x += x
+        self.real_rect.y += y
 
 
 class List(pygame.sprite.Sprite):
@@ -340,6 +360,13 @@ class List(pygame.sprite.Sprite):
             return True
         else:
             return False
+
+    def RectEdit(self,x=0,y=0):
+        self.rect.x += x
+        self.rect.y += y
+
+        for p in self.elements.sprites():
+            p.RectEdit(x, y)
 
 
 class TextInput(pygame.sprite.Sprite):
