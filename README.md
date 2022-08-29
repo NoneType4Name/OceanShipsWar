@@ -1,2 +1,2 @@
-# OceanShipsWar
+# OceanShipsWar.
 main repository of minigame.
