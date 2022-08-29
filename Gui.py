@@ -88,14 +88,14 @@ class Button(pygame.sprite.Sprite):
 
     def update(self, mouse=False):
         if self.isCollide():
-            self.image.blit(RoundedRect(self.rect, self.color1_act, self.radius, 1, self.color2_act), (0, 0))
+            self.image.blit(RoundedRect(self.rect, self.color1_act, self.radius, self.wh, self.color2_act), (0, 0))
             self.image.blit(self.font.render(self.text, True, self.color_act_text),
                             (self.rect.w // 2 - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
             if mouse:
                 self.command(self.arg)
                 return {'':''}
         else:
-            self.image.blit(RoundedRect(self.rect, self.color1, self.radius, 1, self.color2), (0, 0))
+            self.image.blit(RoundedRect(self.rect, self.color1, self.radius, self.wh, self.color2), (0, 0))
             self.image.blit(self.font.render(self.text, True, self.text_color),
                             (self.rect.w // 2 - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
 
@@ -150,15 +150,15 @@ class Label(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.rect = pygame.Rect(rect)
         self.text = str(text)
+        self.color = pygame.Color(color)
+        self.text_color = pygame.Color(text_color)
         if width:
             self.around = pygame.Color(width[0])
             self.around_main = pygame.Color(width[1])
             self.around.a = 100
+            self.color.a = 100
+            self.text_color.a = 100
         self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        self.color = pygame.Color(color)
-        self.color.a = 100
-        self.text_color = pygame.Color(text_color)
-        self.text_color.a = 100
         self.center = center
         self.width = width
         if self.center:
@@ -179,18 +179,20 @@ class Label(pygame.sprite.Sprite):
                     break
 
     def update(self, name=''):
-        if (self.width and self.rect.collidepoint(pygame.mouse.get_pos()) and not name) or name == self.text:
+        if self.width and ((self.rect.collidepoint(pygame.mouse.get_pos()) and not name) or (name and name == self.text)):
             # for i in range(self.val2):
             #     self.image.blit(RoundedRect((0, 0, self.rect.w - i * 2, self.rect.h - i * 2), (100, 20, 255, int(255 * (i/self.val2))), 1), (i, i))
             self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), self.around, 1, 1, self.around_main), (0, 0))
         else:
+            if not self.width:
+                self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
             self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), self.color, 1), (0, 0))
         if self.center:
-            self.image.blit(self.font.render(self.text, True, self.text_color), (self.rect.w * 0.02,
-                                                                                 self.rect.h // 2 - self.size[1] // 2))
-        else:
             self.image.blit(self.font.render(self.text, True, self.text_color),
                             (self.rect.w // 2 - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
+        else:
+            self.image.blit(self.font.render(self.text, True, self.text_color), (self.rect.w * 0.02,
+                                                                                 self.rect.h // 2 - self.size[1] // 2))
         if self.size != self.font.size(self.text):
             if self.center:
                 for s in range(1000):
@@ -400,6 +402,7 @@ class TextInput(pygame.sprite.Sprite):
         if self.isCollide() and event.type == pygame.MOUSEBUTTONDOWN and not self.active:
             if event.button == 1:
                 self.active = True
+                self.cursor = len(self.text)
                 pygame.key.start_text_input()
                 pygame.key.set_repeat(500, 50)
         elif not self.isCollide() and event.type == pygame.MOUSEBUTTONDOWN and self.active:
@@ -458,10 +461,14 @@ class TextInput(pygame.sprite.Sprite):
                 elif event.key == pygame.K_END:
                     self.cursor = len(self.text)
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:  # or event.key == pygame.K_ESCAPE
-                    self.active = False
-                    pygame.key.set_repeat(0, 0)
-                    pygame.key.stop_text_input()
-                    return {self.name:self.text}
+                    if self.text:
+                        self.active = False
+                        pygame.key.set_repeat(0, 0)
+                        pygame.key.stop_text_input()
+                        return {self.name: self.text}
+                    else:
+                        self.text = self.base_text
+                        self.cursor = len(self.text)
                 elif event.key == pygame.K_v and pygame.key.get_mods() & pygame.KMOD_LCTRL:
                     paste_text = pyperclip.paste()
                     if paste_text:
@@ -477,7 +484,6 @@ class TextInput(pygame.sprite.Sprite):
                     self.font = pygame.font.Font(default_font, s - 1)
                     self.size = self.font.size(self.text if self.text else self.base_text)
                     break
-        if self.active:
             self.image.blit(RoundedRect(self.rect, (0, 255, 0), .5, self.rectInner.x, self.background), (0, 0))
             # self.image.blit(
             #     RoundedRect((0, 0, self.rectInner.w + self.rectInner.x, self.rectInner.h + self.rectInner.y),
