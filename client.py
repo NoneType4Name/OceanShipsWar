@@ -11,6 +11,7 @@ from ast import literal_eval
 import requests
 import threading
 from screeninfo import get_monitors
+from netifaces import interfaces, ifaddresses, AF_INET
 from io import BytesIO
 from Gui import *
 
@@ -43,7 +44,7 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 main_dir = os.getcwd()
 theme = 0
-version = '0.0.1b'
+version = '0.0.2b'
 try:
     os.chdir(sys._MEIPASS)
 except AttributeError:
@@ -261,7 +262,7 @@ def re_theme():
                     ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
     TextInputCr = TextInput(
         (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
-         size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'create', socket.gethostbyname(socket.gethostname()),
+         size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'create', [i['addr'] for i in ifaddresses(interfaces()[0]).setdefault(AF_INET, [{'addr':socket.gethostbyname(socket.getfqdn())}])][0],
         GameSettings['my socket'][0])
     TextInputJn = TextInput(
         (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
@@ -475,11 +476,11 @@ def update_game(ver):
     mb = 0
     file = requests.get(f'https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe',
                         stream=True)
-    with open(f'OceanShipsWar {ver}.exe', 'wb') as f:
+    with open(fr'{main_dir}\OceanShipsWar {ver}.exe', 'wb') as f:
         for chunk in file.iter_content(1024 * 1024):
             f.write(chunk)
             mb += 1
-    subprocess.Popen(f'OceanShipsWar {ver}.exe')
+    subprocess.Popen(fr'{main_dir}\OceanShipsWar {ver}.exe')
     run = False
 
 

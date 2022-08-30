@@ -5,6 +5,7 @@ import pyperclip
 import time
 import pygame
 
+
 PUNCTUATION = string.punctuation
 default_font = 'asets/notosans.ttf'
 pygame.font.init()
