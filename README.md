@@ -3,7 +3,7 @@ main repository of minigame.
 
 ## Contributor in [telegram](t.me/NoneType4Name).
 
-Using: download exe file from latest release and run it.
+Using: download exe file from last release and run it.
 
 For using source code:
 - read license.
@@ -12,4 +12,3 @@ For using source code:
 - `python3 client.py`.
 
 Licensed with MIT (more in LICENSE.txt in this ropository).
-
