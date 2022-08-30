@@ -1122,7 +1122,7 @@ while run:
                             if killed_enemy:
                                 if final_killed_enemy:
                                     if Settings['Sound']['Game']:
-                                        Sounds['killed_sound'].set_volume(Settings['Game'])
+                                        Sounds['killed_sound'].set_volume(Settings['Sound']['Game'])
                                         Sounds['killed_sound'].play()
                                         send_data['event'].append(
                                             {'type': 'sound', 'event': 'killed_sound'})
