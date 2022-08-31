@@ -465,10 +465,10 @@ def re_settings_button():
 
     for el in reversed(temp_g.sprites()):
         SettingsElements.add(el)
+    return
 
 
 re_settings_button()
-
 
 def update_game(ver):
     global run
@@ -526,9 +526,9 @@ def StartGame():
         return
     if FineLoadGame:
         if version != FromGitVersion:
-            FromGitVersionInt = int(FromGitVersion.replace('.', '').replace('b', ''))
-            versionInt = int(version.replace('.', '').replace('b', ''))
-            if FromGitVersionInt < versionInt:
+            from_git_version_int = int(FromGitVersion.replace('.', '').replace('b', ''))
+            version_int = int(version.replace('.', '').replace('b', ''))
+            if from_git_version_int < version_int:
                 ERRORS.append(f'\tПриветствуем участника pre-тестирования!.\t')
             else:
                 ERRORS.append(f'Загружается новая версия: {FromGitVersion}')
@@ -539,7 +539,6 @@ def StartGame():
 
 
 threading.Thread(target=StartGame).start()
-
 
 while run:
     key_esc = False
@@ -739,7 +738,6 @@ while run:
         if EscButton.isCollide() and mouse_left_press or key_esc:
             GameSettings['my socket'] = ['', 0]
             sock = None
-            re_theme()
             create_game = False
             room = True
         if GameSettings['my socket'][0]:

@@ -4,7 +4,6 @@ import pyperclip
 import time
 import pygame
 
-
 PUNCTUATION = string.punctuation
 default_font = 'asets/notosans.ttf'
 pygame.font.init()
@@ -152,7 +151,6 @@ class Label(pygame.sprite.Sprite):
         self.text = str(text)
         self.color = pygame.Color(color)
         self.text_color = pygame.Color(text_color)
-        self.base_text = str(text)
         if width:
             self.around = pygame.Color(width[0])
             self.around_main = pygame.Color(width[1])
@@ -194,7 +192,7 @@ class Label(pygame.sprite.Sprite):
         else:
             self.image.blit(self.font.render(self.text, True, self.text_color), (self.rect.w * 0.02,
                                                                                  self.rect.h // 2 - self.size[1] // 2))
-        if self.text != self.base_text:
+        if self.size != self.font.size(self.text):
             if self.center:
                 for s in range(1000):
                     self.font = pygame.font.Font(default_font, s)
@@ -211,7 +209,6 @@ class Label(pygame.sprite.Sprite):
                         self.font = pygame.font.Font(default_font, s - 1)
                         self.size = self.font.size(self.text)
                         break
-            self.base_text = self.text
 
     def RectEdit(self,x=0,y=0):
         self.rect.x += x
@@ -401,6 +398,33 @@ class TextInput(pygame.sprite.Sprite):
 
     def update(self, event):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+        if self.active:
+            self.image.blit(RoundedRect(self.rect, (0, 255, 0), .5, self.rectInner.x, self.background), (0, 0))
+            pygame.draw.line(self.image,
+                             (self.background.r - 100 if self.background.r - 100 > 0 else 100,
+                              self.background.g - 100 if self.background.g - 100 > 0 else 100,
+                              self.background.b - 100 if self.background.b - 100 > 0 else 100),
+
+                             (self.rect.h * 0.05 + self.font.size(self.text[:self.cursor])[0] +
+                              self.font.size(self.text[:self.cursor])[1] * 0.1,
+                              (self.rect.h // 2 - self.size[1] // 2)),
+                             (self.rect.h * 0.05 + self.font.size(self.text[:self.cursor])[0] +
+                              self.font.size(self.text[:self.cursor])[1] * 0.1,
+                              (self.rect.h // 2 - self.size[1] // 2) + (
+                                          self.rect.h - (self.rect.h // 2 - self.size[1] // 2) * 2)),
+                             int(self.font.size(self.text[:self.cursor])[1] * 0.1))
+        else:
+            self.image.blit(RoundedRect(self.rect, self.around, .5, self.rectInner.x, self.background), (0, 0))
+
+        if self.text:
+            self.image.blit(self.font.render(self.text, True, self.text_color),
+                            (self.rect.h * 0.1, self.rect.h // 2 - self.size[1] // 2))
+        else:
+            self.image.blit(
+                self.font.render(self.base_text, True, (self.text_color.r - 100 if self.text_color.r - 100 > 0 else 100,
+                                                        self.text_color.g - 100 if self.text_color.g - 100 > 0 else 100,
+                                                        self.text_color.b - 100 if self.text_color.b - 100 > 0 else 100)),
+                (self.rect.h * 0.1, self.rect.h // 2 - self.size[1] // 2))
         if self.isCollide() and event.type == pygame.MOUSEBUTTONDOWN and not self.active:
             if event.button == 1:
                 self.active = True
@@ -479,49 +503,14 @@ class TextInput(pygame.sprite.Sprite):
             if event.type == pygame.TEXTINPUT:
                 self.text = self.text[:self.cursor] + event.text + self.text[self.cursor:]
                 self.cursor += 1 if event.text else 0
-            for s in range(0, 1000):
-                self.font = pygame.font.Font(default_font, s)
-                self.size = self.font.size(self.text if self.text else self.base_text)
-                if self.size[0] >= self.rectInner.w - self.rectInner.x or self.size[1] >= self.rectInner.h * 0.8 - self.rectInner.y:
-                    self.font = pygame.font.Font(default_font, s - 1)
+            if self.size[0] >= self.rectInner.w - self.rectInner.x or self.size[1] >= self.rectInner.h * 0.8 - self.rectInner.y:
+                for s in range(0, 1000):
+                    self.font = pygame.font.Font(default_font, s)
                     self.size = self.font.size(self.text if self.text else self.base_text)
-                    break
-            self.image.blit(RoundedRect(self.rect, (0, 255, 0), .5, self.rectInner.x, self.background), (0, 0))
-            # self.image.blit(
-            #     RoundedRect((0, 0, self.rectInner.w + self.rectInner.x, self.rectInner.h + self.rectInner.y),
-            #                 self.background, .5),
-            #     (self.rectInner.x, self.rectInner.y))
-        else:
-            self.image.blit(RoundedRect(self.rect, self.around, .5, self.rectInner.x, self.background), (0, 0))
-            # self.image.blit(
-            #     RoundedRect((0, 0, self.rectInner.w + self.rectInner.x, self.rectInner.h + self.rectInner.y),
-            #                 self.background, .5),
-            #     (self.rectInner.x, self.rectInner.y))
-
-        if self.text:
-            self.image.blit(self.font.render(self.text, True, self.text_color),
-                            (self.rect.h * 0.1, self.rect.h // 2 - self.size[1] // 2))
-        else:
-            self.image.blit(
-                self.font.render(self.base_text, True, (self.text_color.r - 100 if self.text_color.r - 100 > 0 else 100,
-                                                        self.text_color.g - 100 if self.text_color.g - 100 > 0 else 100,
-                                                        self.text_color.b - 100 if self.text_color.b - 100 > 0 else 100)),
-                (self.rect.h * 0.1, self.rect.h // 2 - self.size[1] // 2))
-
-        if self.active:
-            pygame.draw.line(self.image,
-                             (self.background.r - 100 if self.background.r - 100 > 0 else 100,
-                              self.background.g - 100 if self.background.g - 100 > 0 else 100,
-                              self.background.b - 100 if self.background.b - 100 > 0 else 100),
-
-                             (self.rect.h * 0.05 + self.font.size(self.text[:self.cursor])[0] +
-                              self.font.size(self.text[:self.cursor])[1] * 0.1,
-                              (self.rect.h // 2 - self.size[1] // 2)),
-                             (self.rect.h * 0.05 + self.font.size(self.text[:self.cursor])[0] +
-                              self.font.size(self.text[:self.cursor])[1] * 0.1,
-                              (self.rect.h // 2 - self.size[1] // 2) + (
-                                          self.rect.h - (self.rect.h // 2 - self.size[1] // 2) * 2)),
-                             int(self.font.size(self.text[:self.cursor])[1] * 0.1))
+                    if self.size[0] >= self.rectInner.w - self.rectInner.x or self.size[1] >= self.rectInner.h * 0.8 - self.rectInner.y:
+                        self.font = pygame.font.Font(default_font, s - 1)
+                        self.size = self.font.size(self.text if self.text else self.base_text)
+                        break
 
     def isCollide(self):
         if self.rect.collidepoint(pygame.mouse.get_pos()):
@@ -624,3 +613,66 @@ class ProgressBar(pygame.sprite.Sprite):
         self.image.blit(
             RoundedRect((0, 0, (self.rect.w - self.wh * 2) * self.value, self.rect.h - self.wh * 2),
                         self.progress_color), (self.wh, self.wh))
+
+
+# class Settings(object):
+#     def __init__(self, settings, set_of_settings, set_for_lists, GameLangua size):
+#         self.SettingsLabels = pygame.sprite.Group()
+#         self.SettingsElements = pygame.sprite.Group()
+#         self.SettingsButtons = pygame.sprite.Group()
+#         self.temp_g = pygame.sprite.Group()
+#         self.set_of_settings = set_of_settings
+#         self.set_for_lists = set_for_lists
+#         self.active_element = None
+#         self.settings = settings
+#         if not self.active_element:
+#             active_element = list(self.settings.keys())[0]
+#         BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
+#         for type_settings in Settings:
+#             self.SettingsElements.add(Button((size[0] * 0.05, size[1] * buttons_pad, BaseRect.h * 5, BaseRect.h),
+#                                         GameLanguage[type_settings],
+#                                         *set_of_settings[
+#                                             'buttons active' if type_settings == active_element else 'buttons'], 1,
+#                                         [command, type_settings]))
+#             if type_settings == active_element:
+#                 for element in Settings[type_settings]:
+#                     BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92,
+#                                            size[1] // 36)
+#                     MainElement = Label(BaseRect, GameLanguage[f'{type_settings} {element}'], *set_of_settings['label'],
+#                                         False)
+#                     if type(Settings[type_settings][element]) is bool:
+#                         Element = Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1,
+#                                           BaseRect.y + 1,
+#                                           BaseRect.h * 2 - BaseRect.h * 0.1,
+#                                           BaseRect.h - 2),
+#                                          *set_of_settings['switches'],
+#                                          name=f'{type_settings} {element}', power=Settings[type_settings][element])
+#                         SettingsElements.add(Element)
+#                     elif (type(Settings[type_settings][element])) in [str, list, tuple]:
+#                         Element = List((BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
+#                                         BaseRect.y + 1,
+#                                         BaseRect.h * 4 - BaseRect.h * 0.1,
+#                                         BaseRect.h - 2),
+#                                        Settings[type_settings][element],
+#                                        set_for_lists[element],
+#                                        *set_of_settings['lists'],
+#                                        f'{type_settings} {element}')
+#                         temp_g.add(Element)
+#                     elif (type(Settings[type_settings][element])) in [float, int]:
+#                         Element = Slide(
+#                             (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
+#                              BaseRect.y + 1,
+#                              (BaseRect.h - 2) * 10,
+#                              BaseRect.h - 2),
+#                             *set_of_settings['slides'], base_data=Settings[type_settings][element],
+#                             name=f'{type_settings} {element}')
+#                         SettingsElements.add(Element)
+#                     else:
+#                         print(type_settings, element, type(Settings[type_settings][element]))
+#                         raise SystemError
+#                     Labels.add(MainElement)
+#                     pad += BaseRect.h / size[1] * 1.1
+#             buttons_pad += (BaseRect.h / size[1] * 1.1)
+#
+#         for el in reversed(temp_g.sprites()):
+#             SettingsElements.add(el)
