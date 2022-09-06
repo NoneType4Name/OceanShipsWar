@@ -424,7 +424,7 @@ def re_settings_button():
     for type_settings in Settings:
         SettingsElements.add(Button((size[0]*0.05, size[1] * buttons_pad, BaseRect.h * 5, BaseRect.h),
                              GameLanguage[type_settings],
-                             *set_of_settings['buttons active' if type_settings == active_element else 'buttons'], 1, [command,type_settings]))
+                             *set_of_settings['buttons active' if type_settings == active_element else 'buttons'], 1))
         if type_settings == active_element:
             for element in Settings[type_settings]:
                 BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
@@ -469,6 +469,7 @@ def re_settings_button():
 
 
 re_settings_button()
+
 
 def update_game(ver):
     global run
