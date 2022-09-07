@@ -149,9 +149,11 @@ GameLanguage = {'start game': 'Создать игру',
                 'Exit': 'Выход',
                 'version': f'Версия {version}'}
 
+language = 'rus'
+
 
 def re_lang():
-    global GameLanguage
+    global GameLanguage, language
     if Settings['Graphic']['Language'] == 'rus':
         GameLanguage = {'start game': 'Создать игру',
                         'join game': 'Присоеденится к игре',
@@ -166,6 +168,7 @@ def re_lang():
                         'Graphic WindowSize': 'Размер окна',
                         'Exit': 'Выход',
                         'version': f'Версия {version}'}
+        language = 'rus'
     elif Settings['Graphic']['Language'] == 'eng':
         GameLanguage = {'start game': 'Create game',
                         'join game': 'Join to game',
@@ -180,6 +183,7 @@ def re_lang():
                         'Graphic WindowSize': 'Window size',
                         'Exit': 'Exit',
                         'version': f'Version {version}'}
+        language = 'eng'
 
 
 re_lang()
@@ -371,104 +375,122 @@ def draw():
                                  upper_margin - font.size(letters[it])[1] * 1.2))
 
 
-draw()
-
 for num_let in range(len(letters)):
     blocks[num_let] = []
     for num in range(len(letters)):
         blocks[num_let].append(pygame.Rect(left_margin + num_let * bsize, upper_margin + num * bsize, bsize, bsize))
 
 
-def command(name):
-    global active_element
-    active_element = name
-    re_settings_button()
+# def re_settings_button():
+#     if theme:
+#         set_of_settings = {
+#             'up margin': 0.15,
+#             'down margin': 1.9,
+#             'label': ((214, 213, 212), (23, 21, 19),[(0,0,0), (200, 200, 200)]),
+#             'buttons': ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
+#             'buttons active': ((0, 0, 0), (164, 163, 162), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
+#             'switches': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
+#             'slides': ((117, 75, 7), (202, 169, 115)),
+#             'lists': ((23, 21, 19), (226, 226, 224), (214, 213, 210))
+#         }
+#     else:
+#         set_of_settings = {
+#             'up margin': 0.15,
+#             'down margin': 1.9,
+#             'label': ((41, 42, 43),(232, 234, 236), [(255,255,255), (91, 92, 93)]),
+#             'buttons': ((41, 42, 43),(41, 42, 43),(232, 234, 236), (255,255,255), (91, 92, 93), (232, 234, 236)),
+#             'buttons active': ((255,255,255), (91, 92, 93), (232, 234, 236), (255,255,255), (91, 92, 93), (232, 234, 236)),
+#             'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
+#             'slides':((138, 180, 248), (53, 86, 140)),
+#             'lists':((232, 234, 236), (29, 29, 31), (41, 42, 45))
+#         }
+#     set_for_lists = {
+#         'Language': ['rus', 'eng'],
+#         'WindowSize': pygame.display.list_modes()
+#     }
+#     pad = round(settings_pos, 3)
+#     buttons_pad = set_of_settings['up margin']
+#     Labels.empty()
+#     SettingsElements.empty()
+#     temp_g = pygame.sprite.Group()
+#     if not active_element:
+#         active_element = list(Settings.keys())[0]
+#     BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
+#     for type_settings in Settings:
+#         SettingsElements.add(Button((size[0]*0.05, size[1] * buttons_pad, BaseRect.h * 5, BaseRect.h),
+#                              GameLanguage[type_settings],
+#                              *set_of_settings['buttons active' if type_settings == active_element else 'buttons'], 1))
+#         if type_settings == active_element:
+#             for element in Settings[type_settings]:
+#                 BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
+#                 MainElement = Label(BaseRect, GameLanguage[f'{type_settings} {element}'], *set_of_settings['label'], False)
+#                 if type(Settings[type_settings][element]) is bool:
+#                     Element = Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1,
+#                                         BaseRect.y + 1,
+#                                         BaseRect.h * 2 - BaseRect.h * 0.1,
+#                                         BaseRect.h - 2),
+#                                         *set_of_settings['switches'],
+#                                         name=f'{type_settings} {element}', power=Settings[type_settings][element])
+#                     SettingsElements.add(Element)
+#                 elif (type(Settings[type_settings][element])) in [str, list, tuple]:
+#                     Element = List((BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
+#                                     BaseRect.y + 1,
+#                                     BaseRect.h * 4 - BaseRect.h * 0.1,
+#                                     BaseRect.h - 2),
+#                                     Settings[type_settings][element],
+#                                     set_for_lists[element],
+#                                     *set_of_settings['lists'],
+#                                     f'{type_settings} {element}')
+#                     temp_g.add(Element)
+#                 elif (type(Settings[type_settings][element])) in [float, int]:
+#                     Element = Slide(
+#                         (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
+#                         BaseRect.y + 1,
+#                          (BaseRect.h - 2) * 10,
+#                          BaseRect.h - 2),
+#                         *set_of_settings['slides'], base_data=Settings[type_settings][element],
+#                         name=f'{type_settings} {element}')
+#                     SettingsElements.add(Element)
+#                 else:
+#                     print(type_settings,element,type(Settings[type_settings][element]))
+#                     raise SystemError
+#                 Labels.add(MainElement)
+#                 pad += BaseRect.h/size[1] * 1.1
+#         buttons_pad += (BaseRect.h/size[1] * 1.1)
+#
+#     for el in reversed(temp_g.sprites()):
+#         SettingsElements.add(el)
+#     return
 
 
-def re_settings_button():
-    global pad, active_element
-    if theme:
-        set_of_settings = {
-            'up margin': 0.15,
-            'down margin': 1.9,
-            'label': ((214, 213, 212), (23, 21, 19),[(0,0,0), (200, 200, 200)]),
-            'buttons': ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
-            'buttons active': ((0, 0, 0), (164, 163, 162), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
-            'switches': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
-            'slides': ((117, 75, 7), (202, 169, 115)),
-            'lists': ((23, 21, 19), (226, 226, 224), (214, 213, 210))
+# re_settings_button()
+if theme:
+    set_of_settings = {
+        'up margin': 0.15,
+        'down margin': 1.9,
+        'label': ((214, 213, 212), (23, 21, 19),[(0,0,0), (200, 200, 200)]),
+        'buttons': ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
+        'buttons active': ((0, 0, 0), (164, 163, 162), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
+        'switches': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
+        'slides': ((117, 75, 7), (202, 169, 115)),
+        'lists': ((23, 21, 19), (226, 226, 224), (214, 213, 210))
+    }
+else:
+    set_of_settings = {
+        'up margin': 0.15,
+        'down margin': 1.9,
+        'label': ((41, 42, 43),(232, 234, 236), [(255,255,255), (91, 92, 93)]),
+        'buttons': ((41, 42, 43),(41, 42, 43),(232, 234, 236), (255,255,255), (91, 92, 93), (232, 234, 236)),
+        'buttons active': ((255,255,255), (91, 92, 93), (232, 234, 236), (255,255,255), (91, 92, 93), (232, 234, 236)),
+        'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
+        'slides':((138, 180, 248), (53, 86, 140)),
+        'lists':((232, 234, 236), (29, 29, 31), (41, 42, 45))
         }
-    else:
-        set_of_settings = {
-            'up margin': 0.15,
-            'down margin': 1.9,
-            'label': ((41, 42, 43),(232, 234, 236), [(255,255,255), (91, 92, 93)]),
-            'buttons': ((41, 42, 43),(41, 42, 43),(232, 234, 236), (255,255,255), (91, 92, 93), (232, 234, 236)),
-            'buttons active': ((255,255,255), (91, 92, 93), (232, 234, 236), (255,255,255), (91, 92, 93), (232, 234, 236)),
-            'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
-            'slides':((138, 180, 248), (53, 86, 140)),
-            'lists':((232, 234, 236), (29, 29, 31), (41, 42, 45))
-        }
-    set_for_lists = {
+set_for_lists = {
         'Language': ['rus', 'eng'],
         'WindowSize': pygame.display.list_modes()
     }
-    pad = round(settings_pos, 3)
-    buttons_pad = set_of_settings['up margin']
-    Labels.empty()
-    SettingsElements.empty()
-    temp_g = pygame.sprite.Group()
-    if not active_element:
-        active_element = list(Settings.keys())[0]
-    BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
-    for type_settings in Settings:
-        SettingsElements.add(Button((size[0]*0.05, size[1] * buttons_pad, BaseRect.h * 5, BaseRect.h),
-                             GameLanguage[type_settings],
-                             *set_of_settings['buttons active' if type_settings == active_element else 'buttons'], 1))
-        if type_settings == active_element:
-            for element in Settings[type_settings]:
-                BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
-                MainElement = Label(BaseRect, GameLanguage[f'{type_settings} {element}'], *set_of_settings['label'], False)
-                if type(Settings[type_settings][element]) is bool:
-                    Element = Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1,
-                                        BaseRect.y + 1,
-                                        BaseRect.h * 2 - BaseRect.h * 0.1,
-                                        BaseRect.h - 2),
-                                        *set_of_settings['switches'],
-                                        name=f'{type_settings} {element}', power=Settings[type_settings][element])
-                    SettingsElements.add(Element)
-                elif (type(Settings[type_settings][element])) in [str, list, tuple]:
-                    Element = List((BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
-                                    BaseRect.y + 1,
-                                    BaseRect.h * 4 - BaseRect.h * 0.1,
-                                    BaseRect.h - 2),
-                                    Settings[type_settings][element],
-                                    set_for_lists[element],
-                                    *set_of_settings['lists'],
-                                    f'{type_settings} {element}')
-                    temp_g.add(Element)
-                elif (type(Settings[type_settings][element])) in [float, int]:
-                    Element = Slide(
-                        (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
-                        BaseRect.y + 1,
-                         (BaseRect.h - 2) * 10,
-                         BaseRect.h - 2),
-                        *set_of_settings['slides'], base_data=Settings[type_settings][element],
-                        name=f'{type_settings} {element}')
-                    SettingsElements.add(Element)
-                else:
-                    print(type_settings,element,type(Settings[type_settings][element]))
-                    raise SystemError
-                Labels.add(MainElement)
-                pad += BaseRect.h/size[1] * 1.1
-        buttons_pad += (BaseRect.h/size[1] * 1.1)
-
-    for el in reversed(temp_g.sprites()):
-        SettingsElements.add(el)
-    return
-
-
-re_settings_button()
+SettingsClass = Settings_class(Settings,set_of_settings,set_for_lists,GameLanguage,size,screen)
 
 
 def update_game(ver):
@@ -558,7 +580,11 @@ while run:
         font = pygame.font.Font('asets/notosans.ttf', int(bsize / 1.5))
         infoSurface = pygame.Surface((size[0] // 2 // 1.5, upper_margin // 2), pygame.SRCALPHA)
         re_theme()
-        re_settings_button()
+        SettingsClass = Settings_class(Settings, set_of_settings, set_for_lists, GameLanguage, size, screen)
+    if language != Settings['Graphic']['Language']:
+        re_lang()
+        re_theme()
+        SettingsClass = Settings_class(Settings, set_of_settings, set_for_lists, GameLanguage, size, screen)
     for event in pygame.event.get():
         if create_game:
             for s in CreateGameButtons.sprites():
@@ -649,7 +675,6 @@ while run:
             mouse_left_press = False
             settings = True
             room = False
-            re_settings_button()
             ERRORS.append('Настройки пока работают не исправно!.\tПростите.')
         elif RoomQuit.isCollide() and mouse_left_press:
             run = False
@@ -680,51 +705,21 @@ while run:
         screen.fill(BACKGROUND)
         SettingsMainLabel.update()
         EscButton.update()
-        if SettingsActiveElement:
-            Labels.update(GameLanguage[SettingsActiveElement.name])
-        else:
-            Labels.update()
-        Labels.draw(screen)
+        # if SettingsActiveElement:
+        #     Labels.update(GameLanguage[SettingsActiveElement.name])
+        # else:
+        #     Labels.update()
+        # Labels.draw(screen)
         if EscButton.isCollide() and NotificationLeftPress or key_esc:
             SettingsActiveElement = None
             settings = False
             room = True
-        for sprite in SettingsElements.sprites():
-            if not SettingsActiveElement:
-                SpriteUpdate: dict = sprite.update(mouse_left_press)
-                if SpriteUpdate:
-                    if type(SpriteUpdate) is bool:
-                        SettingsActiveElement = sprite
-                    elif type(SpriteUpdate) is int:
-                        SettingsActiveElement = sprite
-                        mouse_left_press = False
-                    elif type(SpriteUpdate) is dict:
-                        temp = tuple(SpriteUpdate.keys())[0]
-                        if temp:
-                            temp2 = temp.split(' ')
-                            Settings[temp2[0]][temp2[1]] = SpriteUpdate[temp]
-                        mouse_left_press = False
-                        re_lang()
-                        re_theme()
-                        re_settings_button()
-            else:
-                if sprite != SettingsActiveElement:
-                    sprite.update(False)
-                else:
-                    SpriteUpdate: dict = sprite.update(mouse_left_press)
-                    if SpriteUpdate:
-                        if type(SpriteUpdate) != bool:
-                            temp = tuple(SpriteUpdate.keys())[0]
-                            temp2 = temp.split(' ')
-                            Settings[temp2[0]][temp2[1]] = SpriteUpdate[temp]
-                            SettingsActiveElement = None
-                            mouse_left_press = False
-                            re_lang()
-                            re_theme()
-                            re_settings_button()
-                        else:
-                            SettingsActiveElement = None
-                            mouse_left_press = False
+
+        SettingsClass.update(mouse_left_press)
+        if SettingsClass.settings != Settings:
+            Settings = SettingsClass.settings
+        if SettingsClass.mouse != mouse_left_press:
+            mouse_left_press = SettingsClass.mouse
 
         SettingsElements.draw(screen)
         pygame.draw.rect(screen, BACKGROUND, (0, 0, size[0], size[1] * 0.05))
@@ -766,7 +761,6 @@ while run:
             sock = None
             join_game = False
             room = True
-            re_theme()
 
         if GameSettings['my socket'][0]:
             try:
