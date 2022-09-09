@@ -31,7 +31,7 @@ os.environ['SDL_VIDEO_CENTERED'] = '1'
 pygame.font.init()
 size = [get_monitors()[0].width, get_monitors()[0].height]
 global_size = size
-attitude = list(map(lambda x: x//math.gcd(*size), size))
+attitude = list(map(lambda x: x // math.gcd(*size), size))
 screen = pygame.display.set_mode(size, pygame.HWSURFACE)
 ico = pygame.image.load('asets/ico.png')
 pygame.display.set_icon(ico)
@@ -88,6 +88,7 @@ StartLoaded = 0
 FineLoadGame = True
 ConditionOfLoad = False
 SettingsActiveElement = None
+RandomBuildButton = True
 
 Labels = pygame.sprite.Group()
 SettingsElements = pygame.sprite.Group()
@@ -102,7 +103,7 @@ JoinGameButtons = pygame.sprite.Group()
 Notifications = pygame.sprite.Group()
 LoadGameGroup = pygame.sprite.Group()
 letters = []
-solo, duo, trio, quadro = [0]*4
+solo, duo, trio, quadro = [0] * 4
 send_data = {'ships': {1: {}, 2: {}, 3: {}, 4: {}},
              'count': 0,
              'selects': [],
@@ -118,7 +119,7 @@ Settings = {
         'WindowSize': size,
         'Language': 'rus'
     },
-    'Sound':{
+    'Sound': {
         'Notification': 1,
         'Game': 1
     }
@@ -133,7 +134,8 @@ if os.path.exists('settings.json'):
         with open('settings.json') as f:
             Settings = json.loads(f.read())
     except json.decoder.JSONDecodeError as err:
-        ERRORS.append(f'Ошибка инициализации json конфига\tСтрока:{err.lineno}\tСтолбец:{err.colno}\tСимвол:{err.pos}\tОшибка:{err.msg}')
+        ERRORS.append(
+            f'Ошибка инициализации json конфига\tСтрока:{err.lineno}\tСтолбец:{err.colno}\tСимвол:{err.pos}\tОшибка:{err.msg}')
 
 GameLanguage = {'start game': 'Создать игру',
                 'join game': 'Присоеденится к игре',
@@ -147,7 +149,8 @@ GameLanguage = {'start game': 'Создать игру',
                 'Graphic Language': 'Язык',
                 'Graphic WindowSize': 'Размер окна',
                 'Exit': 'Выход',
-                'version': f'Версия {version}'}
+                'version': f'Версия {version}',
+                'Game random build': 'Случайная расстановка'}
 
 language = 'rus'
 
@@ -167,7 +170,8 @@ def re_lang():
                         'Graphic Language': 'Язык',
                         'Graphic WindowSize': 'Размер окна',
                         'Exit': 'Выход',
-                        'version': f'Версия {version}'}
+                        'version': f'Версия {version}',
+                        'Game random build': 'Случайная расстановка'}
         language = 'rus'
     elif Settings['Graphic']['Language'] == 'eng':
         GameLanguage = {'start game': 'Create game',
@@ -182,7 +186,8 @@ def re_lang():
                         'Graphic Language': 'Language',
                         'Graphic WindowSize': 'Window size',
                         'Exit': 'Exit',
-                        'version': f'Version {version}'}
+                        'version': f'Version {version}',
+                        'Game random build': 'Random building'}
         language = 'eng'
 
 
@@ -228,99 +233,30 @@ def GetShipBlocks(cords: tuple) -> list:
         return cord
 
 
-def re_theme():
-    global ButtonAdm, ButtonClient, ButtonSettings, ButtonTheme, EscButton, SettingsMainLabel, RoomQuit, \
-        CreateGameMainLabel, TextInputCr, TextInputJn, CreateGameWaitUser, JoinGameMainLabel, JoinGameWaitUser, BACKGROUND, LINES, KILLED_SHIP, Update, \
-        StartLoadProgress, StartLoadLabel, StartLoadLabel2
-    if theme:
-        KILLED_SHIP = (200, 200, 200)
-        LINES = pygame.Color(24, 24, 24)
-        BACKGROUND = (227, 227, 227)
-        ButtonsCl1 = (177, 220, 237)
-        ButtonsCl2 = (255, 255, 255)
-        ButtonsTxtColor = (64, 64, 64)
-        ButtonsAtcCol1 = (255, 255, 255)
-        ButtonsAtcCol2 = (127, 127, 127)
-        ButtonsClActT = (0, 0, 0)
-        TextInputArCl = (0, 255, 255)
-        TextInputTxCl = (0, 0, 0)
-    else:
-        KILLED_SHIP = (60, 60, 60)
-        LINES = pygame.Color(255, 255, 255)
-        BACKGROUND = (24, 24, 24)
-        ButtonsCl1 = (255, 255, 255)
-        ButtonsCl2 = (0, 0, 0)
-        ButtonsTxtColor = (255, 255, 255)
-        ButtonsAtcCol1 = (255, 255, 255)
-        ButtonsAtcCol2 = (127, 127, 127)
-        ButtonsClActT = (0, 0, 0)
-        TextInputArCl = (0, 0, 100)
-        TextInputTxCl = (255, 255, 255)
-    StartLoadProgress = ProgressBar(
-        (size[0]//2-size[0]*0.2/2,size[1]*0.7,size[0]*0.2,size[1]*0.05), LINES, (0, 255, 0), 0)
-    StartLoadLabel = Label((size[0]//2-size[0]*0.2/2,size[1]*0.6,size[0]*0.2,size[1]*0.05),'0 %',(0,0,0,0),(0,255,0), center=True)
-    StartLoadLabel2 = Label((size[0]//2-size[0]*0.2/2,size[1]*0.65,size[0]*0.2,size[1]*0.05),'',(0,0,0,0),(0,255,0), center=True)
-    Update = Button((-1, size[1] - bsize // 2, bsize * 2, bsize // 2), str(GameLanguage['version']), ButtonsCl1,
-                    ButtonsCl2, ButtonsTxtColor,
-                    ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-    TextInputCr = TextInput(
-        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
-         size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'create',  [i['addr'] for i in ifaddresses(interfaces()[0]).setdefault(AF_INET, [{'addr':socket.gethostbyname(socket.getfqdn())}])][0],
-        GameSettings['my socket'][0])
-    TextInputJn = TextInput(
-        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
-         size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'join', '192.168.1.1',
-        GameSettings['my socket'][0])
-    CreateGameWaitUser = Label(
-        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
-         size[1] * 0.1), f'Ждем соперника... Ваш адрес: {GameSettings["my socket"][0]}:{GameSettings["my socket"][1]}', BACKGROUND, (0, 255, 255), center=True)
-    JoinGameWaitUser = Label(
-        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
-         size[1] * 0.1), f'Ждем соперника... Адрес будущего соперника: {GameSettings["enemy socket"][0]}:{GameSettings["enemy socket"][1]}', BACKGROUND,
-        (255, 0, 255), center=True)
-    SettingsMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
-                              GameLanguage['settings'], BACKGROUND, LINES, center=True)
-    CreateGameMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
-                                GameLanguage['start game'], BACKGROUND, LINES, center=True)
-    JoinGameMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
-                              GameLanguage['join game'], BACKGROUND, LINES, center=True)
-    RoomQuit = Button((size[0] - bsize + 1, -1, bsize, bsize),
-                      GameLanguage['Exit'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
-                      ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-    EscButton = Button((-1, -1, (bsize + bsize * 0.5) // 2, bsize // 2), 'ESC', ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
-                       ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-    ButtonAdm = Button(
-        (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.3 - size[1] * 0.1, size[0] * 0.16,
-         size[1] * 0.1),
-        GameLanguage['start game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
-        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-    ButtonClient = Button(
-        (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.16,
-         size[1] * 0.1),
-        GameLanguage['join game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
-        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-    ButtonSettings = Button(
-        (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.7 - size[1] * 0.1, size[0] * 0.16,
-         size[1] * 0.1),
-        GameLanguage['settings'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
-        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-    ButtonTheme = Button((size[0] - bsize - bsize // 2, size[1] - bsize - bsize // 2, bsize, bsize),
-                         GameLanguage['theme light'] if theme else GameLanguage['theme dark'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
-                         ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-    sprites.empty()
-    SystemButtons.empty()
-    CreateGameButtons.empty()
-    JoinGameButtons.empty()
-    LoadGameGroup.empty()
-    SystemButtons.add(EscButton, SettingsMainLabel, CreateGameMainLabel, CreateGameWaitUser, JoinGameMainLabel,
-                      JoinGameWaitUser)
-    CreateGameButtons.add(TextInputCr)
-    JoinGameButtons.add(TextInputJn)
-    sprites.add(ButtonAdm, ButtonClient, ButtonSettings, ButtonTheme, RoomQuit, Update)
-    LoadGameGroup.add(StartLoadProgress,StartLoadLabel, StartLoadLabel2)
+KILLED_SHIP = (60, 60, 60)
+LINES = pygame.Color(255, 255, 255)
+BACKGROUND = (24, 24, 24)
+ButtonsCl1 = (255, 255, 255)
+ButtonsCl2 = (0, 0, 0)
+ButtonsTxtColor = (255, 255, 255)
+ButtonsAtcCol1 = (255, 255, 255)
+ButtonsAtcCol2 = (127, 127, 127)
+ButtonsClActT = (0, 0, 0)
+TextInputArCl = (0, 0, 100)
+TextInputTxCl = (255, 255, 255)
+
+My_ip = None
 
 
-re_theme()
+def get_ip():
+    global My_ip
+    My_ip = [i['addr'] for i in ifaddresses(interfaces()[0]).setdefault(AF_INET, [{'addr': socket.gethostbyname(socket.getfqdn())}])][0]
+    return
+
+
+get_ip()
+
+
 # easygui.fileopenbox(filetypes=["*.json"], multiple=True)
 SOLO = solo_ship
 DUO = duo_ship
@@ -328,12 +264,12 @@ TRIO = trio_ship
 QUADRO = quadro_ship
 
 
-def draw_ship_count(ships_count, max_ships=[SOLO,DUO,TRIO,QUADRO]):
+def draw_ship_count(ships_count, max_ships=[SOLO, DUO, TRIO, QUADRO]):
     mid = [size[0] // 2 + size[0] // 2 // 2, size[1] // 2 - size[1] // 2 // 1.5]
     for type_ship in range(len(ships_count)):
         counter_block_num = 0
         for num_block in range(((max_ships[type_ship] * (type_ship + 1)) + max_ships[type_ship])):
-            if counter_block_num < type_ship+1:
+            if counter_block_num < type_ship + 1:
                 if ships_count[type_ship]:
                     color = LINES
                 else:
@@ -343,7 +279,8 @@ def draw_ship_count(ships_count, max_ships=[SOLO,DUO,TRIO,QUADRO]):
                 color = BACKGROUND
                 counter_block_num = 0
                 ships_count[type_ship] -= 1 if ships_count[type_ship] else 0
-            pygame.draw.rect(screen, color, (mid[0] + num_block * (bsize // 2), mid[1] + bsize * (type_ship+1), bsize // 2, bsize // 2), ships_wh//3)
+            pygame.draw.rect(screen, color, (
+            mid[0] + num_block * (bsize // 2), mid[1] + bsize * (type_ship + 1), bsize // 2, bsize // 2), ships_wh // 3)
 
 
 def draw():
@@ -381,94 +318,11 @@ for num_let in range(len(letters)):
         blocks[num_let].append(pygame.Rect(left_margin + num_let * bsize, upper_margin + num * bsize, bsize, bsize))
 
 
-# def re_settings_button():
-#     if theme:
-#         set_of_settings = {
-#             'up margin': 0.15,
-#             'down margin': 1.9,
-#             'label': ((214, 213, 212), (23, 21, 19),[(0,0,0), (200, 200, 200)]),
-#             'buttons': ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
-#             'buttons active': ((0, 0, 0), (164, 163, 162), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
-#             'switches': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
-#             'slides': ((117, 75, 7), (202, 169, 115)),
-#             'lists': ((23, 21, 19), (226, 226, 224), (214, 213, 210))
-#         }
-#     else:
-#         set_of_settings = {
-#             'up margin': 0.15,
-#             'down margin': 1.9,
-#             'label': ((41, 42, 43),(232, 234, 236), [(255,255,255), (91, 92, 93)]),
-#             'buttons': ((41, 42, 43),(41, 42, 43),(232, 234, 236), (255,255,255), (91, 92, 93), (232, 234, 236)),
-#             'buttons active': ((255,255,255), (91, 92, 93), (232, 234, 236), (255,255,255), (91, 92, 93), (232, 234, 236)),
-#             'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
-#             'slides':((138, 180, 248), (53, 86, 140)),
-#             'lists':((232, 234, 236), (29, 29, 31), (41, 42, 45))
-#         }
-#     set_for_lists = {
-#         'Language': ['rus', 'eng'],
-#         'WindowSize': pygame.display.list_modes()
-#     }
-#     pad = round(settings_pos, 3)
-#     buttons_pad = set_of_settings['up margin']
-#     Labels.empty()
-#     SettingsElements.empty()
-#     temp_g = pygame.sprite.Group()
-#     if not active_element:
-#         active_element = list(Settings.keys())[0]
-#     BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
-#     for type_settings in Settings:
-#         SettingsElements.add(Button((size[0]*0.05, size[1] * buttons_pad, BaseRect.h * 5, BaseRect.h),
-#                              GameLanguage[type_settings],
-#                              *set_of_settings['buttons active' if type_settings == active_element else 'buttons'], 1))
-#         if type_settings == active_element:
-#             for element in Settings[type_settings]:
-#                 BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
-#                 MainElement = Label(BaseRect, GameLanguage[f'{type_settings} {element}'], *set_of_settings['label'], False)
-#                 if type(Settings[type_settings][element]) is bool:
-#                     Element = Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1,
-#                                         BaseRect.y + 1,
-#                                         BaseRect.h * 2 - BaseRect.h * 0.1,
-#                                         BaseRect.h - 2),
-#                                         *set_of_settings['switches'],
-#                                         name=f'{type_settings} {element}', power=Settings[type_settings][element])
-#                     SettingsElements.add(Element)
-#                 elif (type(Settings[type_settings][element])) in [str, list, tuple]:
-#                     Element = List((BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
-#                                     BaseRect.y + 1,
-#                                     BaseRect.h * 4 - BaseRect.h * 0.1,
-#                                     BaseRect.h - 2),
-#                                     Settings[type_settings][element],
-#                                     set_for_lists[element],
-#                                     *set_of_settings['lists'],
-#                                     f'{type_settings} {element}')
-#                     temp_g.add(Element)
-#                 elif (type(Settings[type_settings][element])) in [float, int]:
-#                     Element = Slide(
-#                         (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
-#                         BaseRect.y + 1,
-#                          (BaseRect.h - 2) * 10,
-#                          BaseRect.h - 2),
-#                         *set_of_settings['slides'], base_data=Settings[type_settings][element],
-#                         name=f'{type_settings} {element}')
-#                     SettingsElements.add(Element)
-#                 else:
-#                     print(type_settings,element,type(Settings[type_settings][element]))
-#                     raise SystemError
-#                 Labels.add(MainElement)
-#                 pad += BaseRect.h/size[1] * 1.1
-#         buttons_pad += (BaseRect.h/size[1] * 1.1)
-#
-#     for el in reversed(temp_g.sprites()):
-#         SettingsElements.add(el)
-#     return
-
-
-# re_settings_button()
 if theme:
     set_of_settings = {
         'up margin': 0.15,
         'down margin': 1.9,
-        'label': ((214, 213, 212), (23, 21, 19),[(0,0,0), (200, 200, 200)]),
+        'label': ((214, 213, 212), (23, 21, 19), [(0, 0, 0), (200, 200, 200)]),
         'buttons': ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
         'buttons active': ((0, 0, 0), (164, 163, 162), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
         'switches': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
@@ -479,18 +333,187 @@ else:
     set_of_settings = {
         'up margin': 0.15,
         'down margin': 1.9,
-        'label': ((41, 42, 43),(232, 234, 236), [(255,255,255), (91, 92, 93)]),
-        'buttons': ((41, 42, 43),(41, 42, 43),(232, 234, 236), (255,255,255), (91, 92, 93), (232, 234, 236)),
-        'buttons active': ((255,255,255), (91, 92, 93), (232, 234, 236), (255,255,255), (91, 92, 93), (232, 234, 236)),
+        'label': ((41, 42, 43), (232, 234, 236), [(255, 255, 255), (91, 92, 93)]),
+        'buttons': ((41, 42, 43), (41, 42, 43), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
+        'buttons active': (
+        (255, 255, 255), (91, 92, 93), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
         'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
-        'slides':((138, 180, 248), (53, 86, 140)),
-        'lists':((232, 234, 236), (29, 29, 31), (41, 42, 45))
-        }
-set_for_lists = {
-        'Language': ['rus', 'eng'],
-        'WindowSize': pygame.display.list_modes()
+        'slides': ((138, 180, 248), (53, 86, 140)),
+        'lists': ((232, 234, 236), (29, 29, 31), (41, 42, 45))
     }
-SettingsClass = Settings_class(Settings,set_of_settings,set_for_lists,GameLanguage,size,screen)
+set_for_lists = {
+    'Language': ['rus', 'eng'],
+    'WindowSize': pygame.display.list_modes()
+}
+SettingsClass = Settings_class(Settings, set_of_settings, set_for_lists, GameLanguage, size, screen)
+
+
+StartLoadProgress = ProgressBar(
+    (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.7, size[0] * 0.2, size[1] * 0.05), LINES, (0, 255, 0), 0)
+StartLoadLabel = Label((size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.6, size[0] * 0.2, size[1] * 0.05), '0 %',
+                       (0, 0, 0, 0), (0, 255, 0), center=True)
+StartLoadLabel2 = Label((size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.65, size[0] * 0.2, size[1] * 0.05), '',
+                        (0, 0, 0, 0), (0, 255, 0), center=True)
+Update = Button((-1, size[1] - bsize // 2, bsize * 2, bsize // 2), str(GameLanguage['version']), ButtonsCl1, ButtonsCl2,
+                ButtonsTxtColor, ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+TextInputCr = TextInput(
+    (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2, size[1] * 0.1), BACKGROUND,
+    TextInputArCl, TextInputTxCl, 'create', My_ip,
+    GameSettings['my socket'][0])
+TextInputJn = TextInput(
+    (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
+     size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'join', '192.168.1.1',
+    GameSettings['my socket'][0])
+CreateGameWaitUser = Label(
+    (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
+     size[1] * 0.1), f'Ждем соперника... Ваш адрес: {GameSettings["my socket"][0]}:{GameSettings["my socket"][1]}',
+    BACKGROUND, (0, 255, 255), center=True)
+JoinGameWaitUser = Label(
+    (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
+     size[1] * 0.1),
+    f'Ждем соперника... Адрес будущего соперника: {GameSettings["enemy socket"][0]}:{GameSettings["enemy socket"][1]}',
+    BACKGROUND,
+    (255, 0, 255), center=True)
+SettingsMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
+                          GameLanguage['settings'], BACKGROUND, LINES, center=True)
+CreateGameMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
+                            GameLanguage['start game'], BACKGROUND, LINES, center=True)
+JoinGameMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
+                          GameLanguage['join game'], BACKGROUND, LINES, center=True)
+RoomQuit = Button((size[0] - bsize + 1, -1, bsize, bsize),
+                  GameLanguage['Exit'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+                  ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+EscButton = Button((-1, -1, (bsize + bsize * 0.5) // 2, bsize // 2), 'ESC', ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+                   ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+ButtonAdm = Button(
+    (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.3 - size[1] * 0.1, size[0] * 0.16,
+     size[1] * 0.1),
+    GameLanguage['start game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+    ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+ButtonClient = Button(
+    (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.16,
+     size[1] * 0.1),
+    GameLanguage['join game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+    ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+if RandomBuildButton:
+    RandomChoiceButton = Button((size[0] * 0.2, size[1] * 0.7, size[0] * 0.1, size[1] * 0.05), GameLanguage['Game random build'],
+                                *set_of_settings['buttons'])
+ButtonSettings = Button(
+    (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.7 - size[1] * 0.1, size[0] * 0.16,
+     size[1] * 0.1),
+    GameLanguage['settings'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+    ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+ButtonTheme = Button((size[0] - bsize - bsize // 2, size[1] - bsize - bsize // 2, bsize, bsize),
+                     GameLanguage['theme light'] if theme else GameLanguage['theme dark'], ButtonsCl1, ButtonsCl2,
+                     ButtonsTxtColor,
+                     ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+
+
+def re_theme():
+    threading.Thread(target=get_ip)
+    global ButtonAdm, ButtonClient, ButtonSettings, ButtonTheme, EscButton, SettingsMainLabel, RoomQuit, \
+        CreateGameMainLabel, TextInputCr, TextInputJn, CreateGameWaitUser, JoinGameMainLabel, JoinGameWaitUser, BACKGROUND, LINES, KILLED_SHIP, Update, \
+        StartLoadProgress, StartLoadLabel, StartLoadLabel2, ButtonsCl1, ButtonsCl2, ButtonsTxtColor, ButtonsAtcCol1, ButtonsAtcCol2, ButtonsAtcCol2, ButtonsClActT, TextInputArCl, TextInputTxCl, \
+        RandomChoiceButton
+    if theme:
+        KILLED_SHIP = (200, 200, 200)
+        LINES = pygame.Color(24, 24, 24)
+        BACKGROUND = (227, 227, 227)
+        ButtonsCl1 = (177, 220, 237)
+        ButtonsCl2 = (255, 255, 255)
+        ButtonsTxtColor = (64, 64, 64)
+        ButtonsAtcCol1 = (255, 255, 255)
+        ButtonsAtcCol2 = (127, 127, 127)
+        ButtonsClActT = (0, 0, 0)
+        TextInputArCl = (0, 255, 255)
+        TextInputTxCl = (0, 0, 0)
+    else:
+        KILLED_SHIP = (60, 60, 60)
+        LINES = pygame.Color(255, 255, 255)
+        BACKGROUND = (24, 24, 24)
+        ButtonsCl1 = (255, 255, 255)
+        ButtonsCl2 = (0, 0, 0)
+        ButtonsTxtColor = (255, 255, 255)
+        ButtonsAtcCol1 = (255, 255, 255)
+        ButtonsAtcCol2 = (127, 127, 127)
+        ButtonsClActT = (0, 0, 0)
+        TextInputArCl = (0, 0, 100)
+        TextInputTxCl = (255, 255, 255)
+    StartLoadProgress = ProgressBar(
+        (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.7, size[0] * 0.2, size[1] * 0.05), LINES, (0, 255, 0), 0)
+    StartLoadLabel = Label((size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.6, size[0] * 0.2, size[1] * 0.05), '0 %',
+                           (0, 0, 0, 0), (0, 255, 0), center=True)
+    StartLoadLabel2 = Label((size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.65, size[0] * 0.2, size[1] * 0.05), '',
+                            (0, 0, 0, 0), (0, 255, 0), center=True)
+    Update = Button((-1, size[1] - bsize // 2, bsize * 2, bsize // 2), str(GameLanguage['version']), ButtonsCl1,
+                    ButtonsCl2, ButtonsTxtColor,
+                    ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+    TextInputCr = TextInput(
+        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
+         size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'create', My_ip,
+        GameSettings['my socket'][0])
+    TextInputJn = TextInput(
+        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
+         size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'join', '192.168.1.1',
+        GameSettings['my socket'][0])
+    CreateGameWaitUser = Label(
+        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
+         size[1] * 0.1), f'Ждем соперника... Ваш адрес: {GameSettings["my socket"][0]}:{GameSettings["my socket"][1]}',
+        BACKGROUND, (0, 255, 255), center=True)
+    JoinGameWaitUser = Label(
+        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
+         size[1] * 0.1),
+        f'Ждем соперника... Адрес будущего соперника: {GameSettings["enemy socket"][0]}:{GameSettings["enemy socket"][1]}',
+        BACKGROUND,
+        (255, 0, 255), center=True)
+    SettingsMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
+                              GameLanguage['settings'], BACKGROUND, LINES, center=True)
+    CreateGameMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
+                                GameLanguage['start game'], BACKGROUND, LINES, center=True)
+    JoinGameMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
+                              GameLanguage['join game'], BACKGROUND, LINES, center=True)
+    RoomQuit = Button((size[0] - bsize + 1, -1, bsize, bsize),
+                      GameLanguage['Exit'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+                      ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+    EscButton = Button((-1, -1, (bsize + bsize * 0.5) // 2, bsize // 2), 'ESC', ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+                       ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+    ButtonAdm = Button(
+        (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.3 - size[1] * 0.1, size[0] * 0.16,
+         size[1] * 0.1),
+        GameLanguage['start game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+    ButtonClient = Button(
+        (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.16,
+         size[1] * 0.1),
+        GameLanguage['join game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+    if RandomBuildButton:
+        RandomChoiceButton = Button((size[0] * 0.2, size[1] * 0.7, size[0] * 0.1, size[1] * 0.05),
+                                    GameLanguage['Game random build'],
+                                    *set_of_settings['buttons'])
+    ButtonSettings = Button(
+        (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.7 - size[1] * 0.1, size[0] * 0.16,
+         size[1] * 0.1),
+        GameLanguage['settings'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+    ButtonTheme = Button((size[0] - bsize - bsize // 2, size[1] - bsize - bsize // 2, bsize, bsize),
+                         GameLanguage['theme light'] if theme else GameLanguage['theme dark'], ButtonsCl1, ButtonsCl2,
+                         ButtonsTxtColor,
+                         ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+    sprites.empty()
+    SystemButtons.empty()
+    CreateGameButtons.empty()
+    JoinGameButtons.empty()
+    LoadGameGroup.empty()
+    SystemButtons.add(EscButton, SettingsMainLabel, CreateGameMainLabel, CreateGameWaitUser, JoinGameMainLabel,
+                      JoinGameWaitUser)
+    CreateGameButtons.add(TextInputCr)
+    JoinGameButtons.add(TextInputJn)
+    sprites.add(ButtonAdm, ButtonClient, ButtonSettings, ButtonTheme, RoomQuit, Update)
+    LoadGameGroup.add(StartLoadProgress, StartLoadLabel, StartLoadLabel2)
+
+
+re_theme()
 
 
 def update_game(ver):
@@ -524,7 +547,7 @@ def StartGame():
             StartLoadLabel.text = 'Подключение...'
             try:
                 FromGitVersion = \
-                requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest').url.split('/')[-1]
+                    requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest').url.split('/')[-1]
                 StartLoadLabel.text = ''
                 break
             except requests.exceptions.ConnectionError:
@@ -563,6 +586,155 @@ def StartGame():
 
 threading.Thread(target=StartGame).start()
 
+
+def RandomPlacing(solo, duo, trio, quadro):
+    global mouse_left_press, solo_ship, duo_ship, trio_ship, quadro_ship
+    map_of_game =
+    if mouse_left_press and mouse_on_block and LegitBuild:
+        if solo_ship or duo_ship or trio_ship or quadro_ship:
+            DrawCursor = False
+            great_build = False
+            if not build_ship:
+                start_build = mouse_on_block
+                index_of_len_ship = 2
+                build_ship = True
+                doSelect = True
+            else:
+                if start_build == mouse_on_block:
+                    create_ship = (start_build, mouse_on_block)
+                else:
+                    if doSelect:
+                        if GetRect(start_build).x < GetRect(mouse_on_block).x:
+                            doSelect = False
+                            left_to_right = True
+                            right_to_left, up_to_down, down_to_up = False, False, False
+
+                        elif GetRect(start_build).x > GetRect(mouse_on_block).x:
+                            doSelect = False
+                            right_to_left = True
+                            left_to_right, up_to_down, down_to_up = False, False, False
+
+                        elif GetRect(start_build).y < GetRect(mouse_on_block).y:
+                            doSelect = False
+                            up_to_down = True
+                            left_to_right, right_to_left, down_to_up = False, False, False
+
+                        elif GetRect(start_build).y > GetRect(mouse_on_block).y:
+                            doSelect = False
+                            down_to_up = True
+                            left_to_right, right_to_left, up_to_down = False, False, False
+
+                    else:
+                        if left_to_right:
+                            if GetRect(mouse_on_block).x - GetRect(start_build).x > 0:
+                                create_ship = (start_build, (mouse_on_block[0], start_build[1]))
+                                index_of_len_ship = 2
+                            else:
+                                doSelect = True
+
+                        elif right_to_left:
+                            if GetRect(start_build).x - GetRect(mouse_on_block).x > 0:
+                                create_ship = ((mouse_on_block[0], start_build[1]), start_build)
+                                index_of_len_ship = 2
+                            else:
+                                doSelect = True
+
+                        elif up_to_down:
+                            if GetRect(mouse_on_block).y - GetRect(start_build).y > 0:
+                                create_ship = (start_build, (start_build[0], mouse_on_block[1]))
+                                index_of_len_ship = 3
+                            else:
+                                doSelect = True
+
+                        elif down_to_up:
+                            if GetRect(start_build).y - GetRect(mouse_on_block).y > 0:
+                                create_ship = ((start_build[0], mouse_on_block[1]), start_build)
+                                index_of_len_ship = 3
+                            else:
+                                doSelect = True
+                if create_ship:
+                    pygame.draw.rect(screen, LINES, GetShip(create_ship), ships_wh)
+
+    else:
+        if build_ship and create_ship:
+            mouse_left_press = False
+            RunCycle = True
+            for type_s in ships:
+                if RunCycle:
+                    for rc in ships[type_s].values():
+                        rect = GetShip(rc['ship'])
+                        if GetShipEnv(GetShip(create_ship)).colliderect(rect):
+                            create_ship = None
+                            build_ship = False
+                            ERRORS.append('Не по правилам!.')
+                            RunCycle = False
+                            break
+                else:
+                    break
+            else:
+                if GetShip(create_ship)[index_of_len_ship] / bsize > 4:
+                    ERRORS.append('Максимальная длина корабля 4 клетки!.')
+                    create_ship = None
+                    build_ship = False
+                    doSelect = True
+                    DrawCursor = True
+                elif GetShip(create_ship)[index_of_len_ship] / bsize == 4:
+                    if quadro_ship:
+                        quadro_ship -= 1
+                        ships[4][quadro] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
+                        quadro += 1
+                        great_build = True
+                    else:
+                        ERRORS.append('4-х палубные корабли закончились!.')
+                        create_ship = None
+                        build_ship = False
+                        doSelect = True
+                        DrawCursor = True
+                elif GetShip(create_ship)[index_of_len_ship] / bsize == 3:
+                    if trio_ship:
+                        trio_ship -= 1
+                        ships[3][trio] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
+                        trio += 1
+                        great_build = True
+                    else:
+                        ERRORS.append('3-х палубные корабли закончились!.')
+                        create_ship = None
+                        build_ship = False
+                        doSelect = True
+                        DrawCursor = True
+                elif GetShip(create_ship)[index_of_len_ship] / bsize == 2:
+                    if duo_ship:
+                        duo_ship -= 1
+                        ships[2][duo] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
+                        duo += 1
+                        great_build = True
+                    else:
+                        ERRORS.append('2-х палубные корабли закончились!.')
+                        create_ship = None
+                        build_ship = False
+                        doSelect = True
+                        DrawCursor = True
+                elif GetShip(create_ship)[index_of_len_ship] / bsize == 1:
+                    if solo_ship:
+                        solo_ship -= 1
+                        ships[1][solo] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
+                        solo += 1
+                        great_build = True
+                    else:
+                        ERRORS.append('1-о палубные корабли закончились!.')
+                        create_ship = None
+                        build_ship = False
+                        doSelect = True
+                        DrawCursor = True
+            if great_build:
+                great_build = False
+                build_ship = False
+                doSelect = True
+                DrawCursor = True
+                ship += 1
+                create_ship = None
+                left_to_right, right_to_left, up_to_down, down_to_up = False, False, False, False
+
 while run:
     key_esc = False
     mouse_pos = pygame.mouse.get_pos()
@@ -585,43 +757,9 @@ while run:
         re_lang()
         re_theme()
         SettingsClass = Settings_class(Settings, set_of_settings, set_for_lists, GameLanguage, size, screen)
+    EVENTS = []
     for event in pygame.event.get():
-        if create_game:
-            for s in CreateGameButtons.sprites():
-                update: dict = s.update(event)
-                if update:
-                    u = list(update.keys())[0]
-                    if u == 'create':
-                        try:
-                            if ':' in update[u]:
-                                data = update[u].split(':', 1)
-                                GameSettings['my socket'] = [data[0], int(data[1])]
-                            else:
-                                GameSettings['my socket'] = [update[u], 9998]
-                            me = 'main'
-                            not_me = 'client'
-                            Enemy_socket = None
-                            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                            sock.bind((GameSettings['my socket'][0], GameSettings['my socket'][1]))
-                            sock.setblocking(False)
-                            sock.listen(1)
-                            re_theme()
-                        except Exception as err:
-                            ERRORS.append(f'Введите общедоступный IP адрес или хостинг!.\t{err}')
-                            GameSettings['my socket'] = ['', 0]
-                            re_theme()
-        elif join_game:
-            for s in JoinGameButtons.sprites():
-                update: dict = s.update(event)
-                if update:
-                    u = list(update.keys())[0]
-                    if u == 'join':
-                        if ':' in update[u]:
-                            data = update[u].split(':', 1)
-                            GameSettings['my socket'] = [data[0], int(data[1])]
-                        else:
-                            GameSettings['my socket'] = [update[u], 9998]
+        EVENTS.append(event)
         if event.type == pygame.QUIT:
             run = False
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -629,20 +767,20 @@ while run:
             if event.button == 1:
                 mouse_left_press = True
                 NotificationLeftPress = True
-            elif event.button == 5:
-                if settings_pos - step >= upper_margin_settings:
-                    for s in Labels.sprites():
-                        s.RectEdit(0, -int(size[1]*step))
-                    for s in SettingsElements.sprites():
-                        s.RectEdit(0, -int(size[1]*step))
-                    settings_pos = round(settings_pos - step, 3)
-            elif event.button == 4:
-                if settings_pos + step + pad <= down_margin_settings:
-                    for s in Labels.sprites():
-                        s.RectEdit(0, int(size[1]*step))
-                    for s in SettingsElements.sprites():
-                        s.RectEdit(0, int(size[1]*step))
-                    settings_pos = round(settings_pos + step, 3)
+            # elif event.button == 5:
+            #     if settings_pos - step >= upper_margin_settings:
+            #         for s in Labels.sprites():
+            #             s.RectEdit(0, -int(size[1]*step))
+            #         for s in SettingsElements.sprites():
+            #             s.RectEdit(0, -int(size[1]*step))
+            #         settings_pos = round(settings_pos - step, 3)
+            # elif event.button == 4:
+            #     if settings_pos + step + pad <= down_margin_settings:
+            #         for s in Labels.sprites():
+            #             s.RectEdit(0, int(size[1]*step))
+            #         for s in SettingsElements.sprites():
+            #             s.RectEdit(0, int(size[1]*step))
+            #         settings_pos = round(settings_pos + step, 3)
         if event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
                 mouse_left_press = False
@@ -654,9 +792,9 @@ while run:
         screen.fill(BACKGROUND)
         StartLoadLabel2.text = ConditionOfLoad
         if MaxStartLoad:
-            StartLoadProgress.value = StartLoaded/MaxStartLoad
+            StartLoadProgress.value = StartLoaded / MaxStartLoad
             StartLoadLabel2.text = ConditionOfLoad
-            StartLoadLabel.text = f'{int(StartLoaded/MaxStartLoad*100)} %'
+            StartLoadLabel.text = f'{int(StartLoaded / MaxStartLoad * 100)} %'
         else:
             StartLoadProgress.value = 0
             StartLoadLabel.text = 'Подключение...'
@@ -665,6 +803,7 @@ while run:
 
     elif room:
         screen.fill(BACKGROUND)
+        RandomChoiceButton.update()
         sprites.update()
         RoomQuit.update()
         if ButtonTheme.isCollide() and mouse_left_press:
@@ -689,7 +828,8 @@ while run:
             join_game = True
             TextInputJn.active = True
         elif Update.isCollide() and mouse_left_press:
-            FromGitVersion = requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest').url.split('/')[-1]
+            FromGitVersion = \
+            requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest').url.split('/')[-1]
             if version != FromGitVersion:
                 FromGitVersionInt = int(FromGitVersion.replace('.', '').replace('b', ''))
                 versionInt = int(version.replace('.', '').replace('b', ''))
@@ -701,6 +841,7 @@ while run:
             else:
                 ERRORS.append('Актуальная версия.')
         sprites.draw(screen)
+        screen.blit(RandomChoiceButton.image, RandomChoiceButton.rect)
     elif settings:
         screen.fill(BACKGROUND)
         SettingsMainLabel.update()
@@ -736,6 +877,7 @@ while run:
             sock = None
             create_game = False
             room = True
+
         if GameSettings['my socket'][0]:
             try:
                 Enemy_socket, addr = sock.accept()
@@ -746,6 +888,30 @@ while run:
             except BlockingIOError:
                 pass
             CreateGameWaitUser.update()
+        for s in CreateGameButtons.sprites():
+            update: dict = s.update(EVENTS)
+            if update:
+                u = list(update.keys())[0]
+                if u == 'create':
+                    try:
+                        if ':' in update[u]:
+                            data = update[u].split(':', 1)
+                            GameSettings['my socket'] = [data[0], int(data[1])]
+                        else:
+                            GameSettings['my socket'] = [update[u], 9998]
+                        me = 'main'
+                        not_me = 'client'
+                        Enemy_socket = None
+                        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                        sock.bind((GameSettings['my socket'][0], GameSettings['my socket'][1]))
+                        sock.setblocking(False)
+                        sock.listen(1)
+                        re_theme()
+                    except Exception as err:
+                        ERRORS.append(f'Введите общедоступный IP адрес или хостинг!.\t{err}')
+                        GameSettings['my socket'] = ['', 0]
+                        re_theme()
         pygame.draw.rect(screen, BACKGROUND, (0, 0, size[0], size[1] * 0.05))
         pygame.draw.line(screen, LINES, (0, size[1] * 0.05), (size[0], size[1] * 0.05), int(bsize // 2 // 10))
         pygame.draw.rect(screen, BACKGROUND, (0, size[1] * .95, size[0], size[1] * 0.95))
@@ -762,20 +928,32 @@ while run:
             join_game = False
             room = True
 
+        for s in JoinGameButtons.sprites():
+            update: dict = s.update(EVENTS)
+            if update:
+                u = list(update.keys())[0]
+                if u == 'join':
+                    if ':' in update[u]:
+                        data = update[u].split(':', 1)
+                        GameSettings['my socket'] = [data[0], int(data[1])]
+                    else:
+                        GameSettings['my socket'] = [update[u], 9998]
+
         if GameSettings['my socket'][0]:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                 sock.settimeout(5)
                 sock.connect(
-                    (GameSettings['my socket'][0], 9998 if not GameSettings['my socket'][1] else GameSettings['my socket'][1]))
+                    (GameSettings['my socket'][0],
+                     9998 if not GameSettings['my socket'][1] else GameSettings['my socket'][1]))
                 is_adm = False
                 game = True
                 join_game = False
                 me = 'client'
                 not_me = 'main'
             except Exception as err:
-                ERRORS.append(f'Введите общедоступный IP адрес или хостинг!. \t{err}')
+                ERRORS.append(f'Введите общедоступный IP адрес или хостинг!.\t{err}')
                 GameSettings['my socket'] = ['', 0]
                 re_theme()
 
@@ -793,7 +971,7 @@ while run:
                     input_data = literal_eval(Enemy_socket.recv(2048).decode())
                     Enemy_socket.send(str(send_data).encode())
                     run_game = True
-                except (BlockingIOError,OSError):
+                except (BlockingIOError, OSError):
                     pass
                 except (ConnectionAbortedError, SyntaxError, ConnectionResetError, socket.timeout):
                     ERRORS.append('Противник отключился.')
@@ -823,7 +1001,9 @@ while run:
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
             screen.fill(BACKGROUND)
             EscButton.update()
-            l = Label((size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.3 // 2, size[0] * 0.2, size[1] * 0.3), 'Вы проиграли!.' if send_data['end game'] == me else 'Вы выйграли!.', BACKGROUND,(0, 255, 255))
+            l = Label(
+                (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.3 // 2, size[0] * 0.2, size[1] * 0.3),
+                'Вы проиграли!.' if send_data['end game'] == me else 'Вы выйграли!.', BACKGROUND, (0, 255, 255))
             l.update()
             screen.blit(l.image, l.rect)
             screen.blit(EscButton.image, EscButton.rect)
@@ -855,6 +1035,9 @@ while run:
                 LegitBuild = True
                 RunCycle = True
                 DrawCursor = True
+                RandomChoiceButton.update()
+                if RandomChoiceButton.isCollide() and mouse_left_press:
+                    ships = RandomPlacing()
                 for type_s in ships:
                     if RunCycle:
                         for rc in ships[type_s].values():
@@ -1032,6 +1215,7 @@ while run:
                     pygame.draw.rect(screen, RED, GetRect(mouse_on_block), ships_wh)
 
                 draw_ship_count([solo_ship, duo_ship, trio_ship, quadro_ship])
+                screen.blit(RandomChoiceButton.image, RandomChoiceButton.rect)
 
             if not BUILD:
                 send_data['event'] = []
@@ -1051,7 +1235,8 @@ while run:
                                     del send_data['ships'][type_ship][num_of_ship]['blocks'][num_of_block]
                                     send_data['die']['blocks'].append(block)
                                     if not send_data['ships'][type_ship][num_of_ship]['blocks']:
-                                        send_data['die']['ships'].append(send_data['ships'][type_ship][num_of_ship]['ship'])
+                                        send_data['die']['ships'].append(
+                                            send_data['ships'][type_ship][num_of_ship]['ship'])
                                         del send_data['ships'][type_ship][num_of_ship]
                                     break
                 except RuntimeError:
@@ -1142,7 +1327,8 @@ while run:
 
                     for rc in send_data['selects']:
                         pygame.draw.circle(screen, RED, GetRect(rc).center, bsize / 100 * 10)
-                    if mouse_on_block not in send_data['selects'] and mouse_on_block not in send_data['killed']['blocks']:
+                    if mouse_on_block not in send_data['selects'] and mouse_on_block not in send_data['killed'][
+                        'blocks']:
                         if mouse_on_block:
                             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_CROSSHAIR)
                             pygame.draw.rect(screen, BLUE, GetRect(mouse_on_block), ships_wh)

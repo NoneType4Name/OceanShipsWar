@@ -12,6 +12,6 @@ venv.bak/
 build/
 dist/
 .idea
-2.py
+.vs
 README.md
 prod/
