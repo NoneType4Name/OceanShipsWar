@@ -83,6 +83,7 @@ class Button(pygame.sprite.Sprite):
                 break
 
     def update(self):
+        self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         if self.isCollide():
             self.image.blit(RoundedRect(self.rect, self.color1_act, self.radius, self.wh, self.color2_act), (0, 0))
             self.image.blit(self.font.render(self.text, True, self.color_act_text),
@@ -388,13 +389,13 @@ class TextInput(pygame.sprite.Sprite):
         for s in range(0, 1000):
             self.font = pygame.font.Font(default_font, s)
             self.size = self.font.size(self.value if self.value else self.base_text)
-            if self.size[0] >= self.rectInner.w - self.rectInner.x or self.size[
-                1] >= self.rectInner.h * 0.8 - self.rectInner.y:
+            if self.size[0] > self.rectInner.w - self.rectInner.x or self.size[
+                1] > self.rectInner.h * 0.8 - self.rectInner.y:
                 self.font = pygame.font.Font(default_font, s - 1)
                 self.size = self.font.size(self.value if self.value else self.base_text)
                 break
 
-    def update(self, mouse):
+    def update(self,events):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         if self.active:
             self.image.blit(RoundedRect(self.rect, (0, 255, 0), .5, self.rectInner.x, self.background), (0, 0))
@@ -423,7 +424,7 @@ class TextInput(pygame.sprite.Sprite):
                                                         self.text_color.g - 100 if self.text_color.g - 100 > 0 else 100,
                                                         self.text_color.b - 100 if self.text_color.b - 100 > 0 else 100)),
                 (self.rect.h * 0.1, self.rect.h // 2 - self.size[1] // 2))
-        for event in pygame.event.get():
+        for event in events:
             if self.isCollide() and event.type == pygame.MOUSEBUTTONDOWN and not self.active:
                 if event.button == 1:
                     self.active = True
@@ -452,6 +453,7 @@ class TextInput(pygame.sprite.Sprite):
                         else:
                             self.value = self.value[:self.cursor - 1] + self.value[self.cursor:]
                             self.cursor -= 1
+                        self.re_font()
                     elif event.key == pygame.K_LEFT:
                         if pygame.key.get_mods() & pygame.KMOD_LCTRL:
                             for n, sim in enumerate(self.value[:self.cursor][::-1]):
@@ -483,6 +485,7 @@ class TextInput(pygame.sprite.Sprite):
                                 self.value = self.value[:self.cursor]
                         else:
                             self.value = self.value[:self.cursor] + self.value[self.cursor + 1:]
+                        self.re_font()
                     elif event.key == pygame.K_HOME:
                         self.cursor = 0
                     elif event.key == pygame.K_END:
@@ -493,33 +496,36 @@ class TextInput(pygame.sprite.Sprite):
                             pygame.key.set_repeat(0, 0)
                             pygame.key.stop_text_input()
                             return {self.name: self.value}
-                        else:
+                        elif pygame.key.get_mods() & pygame.KMOD_LCTRL:
                             self.value = self.base_text
-                            self.cursor = len(self.text)
+                            self.cursor = len(self.value)
+                            self.re_font()
                     elif event.key == pygame.K_v and pygame.key.get_mods() & pygame.KMOD_LCTRL:
                         paste_text = pyperclip.paste()
                         if paste_text:
                             self.value = self.value = self.value[:self.cursor] + paste_text + self.value[self.cursor:]
                             self.cursor += len(paste_text)
+                            self.re_font()
                 if event.type == pygame.TEXTINPUT:
                     self.value = self.value[:self.cursor] + event.text + self.value[self.cursor:]
                     self.cursor += 1 if event.text else 0
-                if self.size[0] >= self.rectInner.w - self.rectInner.x or self.size[
-                    1] >= self.rectInner.h * 0.8 - self.rectInner.y:
-                    for s in range(0, 1000):
-                        self.font = pygame.font.Font(default_font, s)
-                        self.size = self.font.size(self.value if self.value else self.base_text)
-                        if self.size[0] >= self.rectInner.w - self.rectInner.x or self.size[
-                            1] >= self.rectInner.h * 0.8 - self.rectInner.y:
-                            self.font = pygame.font.Font(default_font, s - 1)
-                            self.size = self.font.size(self.value if self.value else self.base_text)
-                            break
+                    self.re_font()
 
     def isCollide(self):
         if self.rect.collidepoint(pygame.mouse.get_pos()):
             return True
         else:
             return False
+
+    def re_font(self):
+        for s in range(0, 1000):
+            self.font = pygame.font.Font(default_font, s)
+            self.size = self.font.size(self.value if self.value else self.base_text)
+            if self.size[0] >= self.rectInner.w - self.rectInner.x or self.size[
+                1] >= self.rectInner.h * 0.8 - self.rectInner.y:
+                self.font = pygame.font.Font(default_font, s - 1)
+                self.size = self.font.size(self.value if self.value else self.base_text)
+                break
 
 
 class Notification(pygame.sprite.Sprite):
