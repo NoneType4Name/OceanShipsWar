@@ -18,7 +18,7 @@ clock = pygame.time.Clock()
 
 run = True
 sock = None
-# GlobalTimeOut = requests.get('https://google.com').elapsed.total_seconds()
+# GlobalTimeOut = requests.get('http://google.com').elapsed.total_seconds()
 mouse_left_press = False
 NotificationLeftPress = False
 key_esc = False
@@ -36,8 +36,8 @@ os.environ['SDL_VIDEO_CENTERED'] = '1'
 pygame.font.init()
 size = [get_monitors()[0].width, get_monitors()[0].height]
 global_size = size
-attitude = list(map(lambda x: x // math.gcd(*size), size))
-screen = pygame.display.set_mode(size, pygame.HWSURFACE)
+screen = pygame.Surface(size, pygame.HWSURFACE)
+dsp = pygame.display.set_mode(size, pygame.HWSURFACE)
 ico = pygame.image.load('asets/ico.png')
 pygame.display.set_icon(ico)
 pygame.display.set_caption('Ocean Ship War')
@@ -47,7 +47,7 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 theme = 0
-version = '0.0.3b'
+version = '0.0.4b'
 
 bsize = size[0] // 27.428571428571427
 ships_wh = int(bsize // 7)
@@ -99,6 +99,7 @@ down_margin_settings = 1
 sprites = pygame.sprite.Group()
 SystemButtons = pygame.sprite.Group()
 CreateGameButtons = pygame.sprite.Group()
+GameButtons = pygame.sprite.Group()
 JoinGameButtons = pygame.sprite.Group()
 Notifications = pygame.sprite.Group()
 LoadGameGroup = pygame.sprite.Group()
@@ -150,7 +151,8 @@ GameLanguage = {'start game': 'Создать игру',
                 'Graphic WindowSize': 'Размер окна',
                 'Exit': 'Выход',
                 'version': f'Версия {version}',
-                'Game random build': 'Случайная расстановка'}
+                'Game random build': 'Случайная расстановка',
+                'Game clear map': 'Очистить карту.'}
 
 language = 'rus'
 
@@ -171,7 +173,8 @@ def re_lang():
                         'Graphic WindowSize': 'Размер окна',
                         'Exit': 'Выход',
                         'version': f'Версия {version}',
-                        'Game random build': 'Случайная расстановка'}
+                        'Game random build': 'Случайная расстановка',
+                        'Game clear map': 'Очистить карту'}
         language = 'rus'
     elif Settings['Graphic']['Language'] == 'eng':
         GameLanguage = {'start game': 'Create game',
@@ -187,7 +190,8 @@ def re_lang():
                         'Graphic WindowSize': 'Window size',
                         'Exit': 'Exit',
                         'version': f'Version {version}',
-                        'Game random build': 'Random building'}
+                        'Game random build': 'Random building',
+                        'Game clear map': 'Clear map'}
         language = 'eng'
 
 
@@ -325,6 +329,7 @@ if theme:
         'down margin': 1.9,
         'label': ((214, 213, 212), (23, 21, 19), [(0, 0, 0), (200, 200, 200)]),
         'buttons': ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
+        'button red': ((255, 100, 100, 20), (255, 100, 100, 20), (23, 21, 19), (0, 0, 0), (255, 0, 0), (23, 21, 19)),
         'buttons active': ((0, 0, 0), (164, 163, 162), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
         'switches': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
         'slides': ((117, 75, 7), (202, 169, 115)),
@@ -336,6 +341,7 @@ else:
         'down margin': 1.9,
         'label': ((41, 42, 43), (232, 234, 236), [(255, 255, 255), (91, 92, 93)]),
         'buttons': ((41, 42, 43), (41, 42, 43), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
+        'button red': ((255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
         'buttons active': (
         (255, 255, 255), (91, 92, 93), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
         'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
@@ -399,6 +405,8 @@ ButtonClient = Button(
 if RandomBuildButton:
     RandomChoiceButton = Button((size[0] * 0.2, size[1] * 0.7, size[0] * 0.1, size[1] * 0.05), GameLanguage['Game random build'],
                                 *set_of_settings['buttons'])
+ClearMapButton = Button((size[0] * 0.1, size[1] * 0.7 - size[1] * 0.05, size[0] * 0.1, size[1] * 0.05), GameLanguage['Game clear map'],
+                        *set_of_settings['button red'])
 ButtonSettings = Button(
     (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.7 - size[1] * 0.1, size[0] * 0.16,
      size[1] * 0.1),
@@ -415,7 +423,7 @@ def re_theme():
     global ButtonAdm, ButtonClient, ButtonSettings, ButtonTheme, EscButton, SettingsMainLabel, RoomQuit, \
         CreateGameMainLabel, TextInputCr, TextInputJn, CreateGameWaitUser, JoinGameMainLabel, JoinGameWaitUser, BACKGROUND, LINES, KILLED_SHIP, Update, \
         StartLoadProgress, StartLoadLabel, StartLoadLabel2, ButtonsCl1, ButtonsCl2, ButtonsTxtColor, ButtonsAtcCol1, ButtonsAtcCol2, ButtonsAtcCol2, ButtonsClActT, TextInputArCl, TextInputTxCl, \
-        RandomChoiceButton
+        RandomChoiceButton, ClearMapButton, set_of_settings
     if theme:
         KILLED_SHIP = (200, 200, 200)
         LINES = pygame.Color(24, 24, 24)
@@ -428,6 +436,17 @@ def re_theme():
         ButtonsClActT = (0, 0, 0)
         TextInputArCl = (0, 255, 255)
         TextInputTxCl = (0, 0, 0)
+        set_of_settings = {
+                'up margin': 0.15,
+                'down margin': 1.9,
+                'label': ((214, 213, 212), (23, 21, 19), [(0, 0, 0), (200, 200, 200)]),
+                'buttons': ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
+                'buttons active': ((0, 0, 0), (164, 163, 162), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
+                'button red': ((255, 0, 0, 20), (255, 0, 0, 20), (23, 21, 19), (255, 255, 255), (255, 0, 0), (23, 21, 19)),
+                'switches': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
+                'slides': ((117, 75, 7), (202, 169, 115)),
+                'lists': ((23, 21, 19), (226, 226, 224), (214, 213, 210))
+            }
     else:
         KILLED_SHIP = (60, 60, 60)
         LINES = pygame.Color(255, 255, 255)
@@ -440,6 +459,18 @@ def re_theme():
         ButtonsClActT = (0, 0, 0)
         TextInputArCl = (0, 0, 100)
         TextInputTxCl = (255, 255, 255)
+        set_of_settings = {
+            'up margin': 0.15,
+            'down margin': 1.9,
+            'label': ((41, 42, 43), (232, 234, 236), [(255, 255, 255), (91, 92, 93)]),
+            'buttons': ((41, 42, 43), (41, 42, 43), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
+            'button red': (
+            (255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
+            'buttons active': (
+                (255, 255, 255), (91, 92, 93), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
+            'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
+            'slides': ((138, 180, 248), (53, 86, 140)),
+            'lists': ((232, 234, 236), (29, 29, 31), (41, 42, 45))}
     StartLoadProgress = ProgressBar(
         (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.7, size[0] * 0.2, size[1] * 0.05), LINES, (0, 255, 0), 0)
     StartLoadLabel = Label((size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.6, size[0] * 0.2, size[1] * 0.05), '0 %',
@@ -489,9 +520,10 @@ def re_theme():
         GameLanguage['join game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
         ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
     if RandomBuildButton:
-        RandomChoiceButton = Button((size[0] * 0.2, size[1] * 0.7, size[0] * 0.1, size[1] * 0.05),
+        RandomChoiceButton = Button((size[0] * 0.1, size[1] * 0.7, size[0] * 0.1, size[1] * 0.05),
                                     GameLanguage['Game random build'],
                                     *set_of_settings['buttons'])
+    ClearMapButton = Button((size[0] * 0.1, size[1] * 0.7 - size[1] * 0.05, size[0] * 0.1, size[1] * 0.05), GameLanguage['Game clear map'], *set_of_settings['button red'])
     ButtonSettings = Button(
         (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.7 - size[1] * 0.1, size[0] * 0.16,
          size[1] * 0.1),
@@ -506,12 +538,14 @@ def re_theme():
     CreateGameButtons.empty()
     JoinGameButtons.empty()
     LoadGameGroup.empty()
+    GameButtons.empty()
     SystemButtons.add(EscButton, SettingsMainLabel, CreateGameMainLabel, CreateGameWaitUser, JoinGameMainLabel,
                       JoinGameWaitUser)
     CreateGameButtons.add(TextInputCr)
     JoinGameButtons.add(TextInputJn)
     sprites.add(ButtonAdm, ButtonClient, ButtonSettings, ButtonTheme, RoomQuit, Update)
     LoadGameGroup.add(StartLoadProgress, StartLoadLabel, StartLoadLabel2)
+    GameButtons.add(RandomChoiceButton, ClearMapButton)
 
 
 re_theme()
@@ -589,120 +623,101 @@ threading.Thread(target=StartGame).start()
 
 
 def RandomPlacing():
-    global mouse_left_press, solo_ship, duo_ship, trio_ship, quadro_ship
-    cord_x = [x for x in range(0, 9)]
-    cord_y = [y for y in range(0, 9)]
-    for n in range(sum([solo_ship, duo_ship, trio_ship, quadro_ship])):
-        vector = random.randrange(1, 5)
-        if vector == 1:
-                            if GetRect(mouse_on_block).x - GetRect(start_build).x > 0:
-                                create_ship = (start_build, (mouse_on_block[0], start_build[1]))
-                                index_of_len_ship = 2
+    global mouse_left_press, solo_ship, duo_ship, trio_ship, quadro_ship, solo, duo, trio, quadro, ship, ships
+    while True:
+        solo, duo, trio, quadro = [0]*4
+        solo_ship, duo_ship, trio_ship, quadro_ship = SOLO, DUO, TRIO, QUADRO
+        ships = {1: {}, 2: {}, 3: {}, 4: {}}
+        cord_not_used = {}
+        for k in range(0, 10):
+            cord_not_used[k] = dict(zip([str(v) for v in range(0, 10)], [y for y in range(0, 10)]))
+        errors = 0
+        for type_ship, ships_count in enumerate(reversed([solo_ship, duo_ship, trio_ship, quadro_ship])):
+            type_ship = 3 - type_ship
+            if errors < 50:
+                for _ in range(ships_count):
+                    while errors < 50:
+                        errors += 1
+                        cord_x = random.choice(list(cord_not_used.keys()))
+                        y_vals = []
+                        for var in cord_not_used[cord_x].values():
+                            if var != 'used':
+                                y_vals.append(var)
+                        cord_y = random.choice(y_vals)
+                        cords = [cord_x, cord_y]
+                        vector = random.randint(0, 1)
+                        build = False
+                        if not vector:
+                            if cords[0] + type_ship < len(cord_not_used):
+                                build = True
+                        else:
+                            if cords[1] + type_ship < len(cord_not_used):
+                                build = True
+                        if build:
+                            if vector:
+                                build_ship_this = (cords, (cords[0], cords[1]+type_ship))
                             else:
-                                doSelect = True
-
-                        elif right_to_left:
-                            if GetRect(start_build).x - GetRect(mouse_on_block).x > 0:
-                                create_ship = ((mouse_on_block[0], start_build[1]), start_build)
-                                index_of_len_ship = 2
-                            else:
-                                doSelect = True
-
-                        elif up_to_down:
-                            if GetRect(mouse_on_block).y - GetRect(start_build).y > 0:
-                                create_ship = (start_build, (start_build[0], mouse_on_block[1]))
-                                index_of_len_ship = 3
-                            else:
-                                doSelect = True
-
-                        elif down_to_up:
-                            if GetRect(start_build).y - GetRect(mouse_on_block).y > 0:
-                                create_ship = ((start_build[0], mouse_on_block[1]), start_build)
-                                index_of_len_ship = 3
-                            else:
-                                doSelect = True
-                if create_ship:
-                    pygame.draw.rect(screen, LINES, GetShip(create_ship), ships_wh)
-
-    else:
-        if build_ship and create_ship:
-            mouse_left_press = False
-            RunCycle = True
-            for type_s in ships:
-                if RunCycle:
-                    for rc in ships[type_s].values():
-                        rect = GetShip(rc['ship'])
-                        if GetShipEnv(GetShip(create_ship)).colliderect(rect):
-                            create_ship = None
-                            build_ship = False
-                            ERRORS.append('Не по правилам!.')
-                            RunCycle = False
-                            break
-                else:
-                    break
+                                build_ship_this = (cords, (cords[0] + type_ship, cords[1]))
+                            run_c = True
+                            for type_s in ships:
+                                if run_c:
+                                    for rc in ships[type_s].values():
+                                        rect = GetShip(rc['ship'])
+                                        if GetShipEnv(GetShip(build_ship_this)).colliderect(rect):
+                                            run_c = False
+                                            break
+                            if run_c:
+                                pygame.draw.rect(screen, (0, 200, 255), GetShip(build_ship_this), ships_wh)
+                                time.sleep(0.1)
+                                if type_ship == 0:
+                                    solo_ship -= 1
+                                    ships[1][solo] = {'ship': build_ship_this, 'blocks': GetShipBlocks(build_ship_this)}
+                                    solo += 1
+                                elif type_ship == 1:
+                                    duo_ship -= 1
+                                    ships[2][duo] = {'ship': build_ship_this, 'blocks': GetShipBlocks(build_ship_this)}
+                                    duo += 1
+                                elif type_ship == 2:
+                                    trio_ship -= 1
+                                    ships[3][trio] = {'ship': build_ship_this, 'blocks': GetShipBlocks(build_ship_this)}
+                                    trio += 1
+                                elif type_ship == 3:
+                                    quadro_ship -= 1
+                                    ships[4][quadro] = {'ship': build_ship_this, 'blocks': GetShipBlocks(build_ship_this)}
+                                    quadro += 1
+                                environ = [
+                                    (
+                                    [build_ship_this[0][0] - 1 if build_ship_this[0][0] else build_ship_this[0][0],
+                                     build_ship_this[0][1] - 1 if build_ship_this[0][1] else build_ship_this[0][1]],
+                                    [build_ship_this[1][0] + 1 if build_ship_this[1][0] + 1 < len(cord_not_used) else build_ship_this[1][0],
+                                     build_ship_this[1][1] - 1 if build_ship_this[1][1] else build_ship_this[1][1]]
+                                    ),
+                                    (
+                                    [build_ship_this[0][0] - 1 if build_ship_this[0][0] else build_ship_this[0][0],
+                                     build_ship_this[0][1]],
+                                    [build_ship_this[1][0] + 1 if build_ship_this[1][0] + 1 < len(cord_not_used) else build_ship_this[1][0],
+                                     build_ship_this[1][1]]
+                                    ),
+                                    (
+                                    [build_ship_this[0][0] - 1 if build_ship_this[0][0] else build_ship_this[0][0],
+                                     build_ship_this[0][1] + 1 if build_ship_this[0][1] + 1 < len(cord_not_used) else build_ship_this[0][1]],
+                                    [build_ship_this[1][0] + 1 if build_ship_this[1][0] + 1 < len(cord_not_used) else build_ship_this[1][0],
+                                     build_ship_this[1][1] + 1 if build_ship_this[1][1] + 1 < len(cord_not_used) else build_ship_this[1][1]]
+                                    )]
+                                for block in [*GetShipBlocks(environ[0]),
+                                              *GetShipBlocks(environ[1]),
+                                              *GetShipBlocks(environ[2])]:
+                                    if vector:
+                                        cord_not_used[cord_x][str(block[1])] = 'used'
+                                    else:
+                                        cord_not_used[block[0]][cord_y] = 'used'
+                                ship += 1
+                                break
             else:
-                if GetShip(create_ship)[index_of_len_ship] / bsize > 4:
-                    ERRORS.append('Максимальная длина корабля 4 клетки!.')
-                    create_ship = None
-                    build_ship = False
-                    doSelect = True
-                    DrawCursor = True
-                elif GetShip(create_ship)[index_of_len_ship] / bsize == 4:
-                    if quadro_ship:
-                        quadro_ship -= 1
-                        ships[4][quadro] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
-                        quadro += 1
-                        great_build = True
-                    else:
-                        ERRORS.append('4-х палубные корабли закончились!.')
-                        create_ship = None
-                        build_ship = False
-                        doSelect = True
-                        DrawCursor = True
-                elif GetShip(create_ship)[index_of_len_ship] / bsize == 3:
-                    if trio_ship:
-                        trio_ship -= 1
-                        ships[3][trio] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
-                        trio += 1
-                        great_build = True
-                    else:
-                        ERRORS.append('3-х палубные корабли закончились!.')
-                        create_ship = None
-                        build_ship = False
-                        doSelect = True
-                        DrawCursor = True
-                elif GetShip(create_ship)[index_of_len_ship] / bsize == 2:
-                    if duo_ship:
-                        duo_ship -= 1
-                        ships[2][duo] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
-                        duo += 1
-                        great_build = True
-                    else:
-                        ERRORS.append('2-х палубные корабли закончились!.')
-                        create_ship = None
-                        build_ship = False
-                        doSelect = True
-                        DrawCursor = True
-                elif GetShip(create_ship)[index_of_len_ship] / bsize == 1:
-                    if solo_ship:
-                        solo_ship -= 1
-                        ships[1][solo] = {'ship': create_ship, 'blocks': GetShipBlocks(create_ship)}
-                        solo += 1
-                        great_build = True
-                    else:
-                        ERRORS.append('1-о палубные корабли закончились!.')
-                        create_ship = None
-                        build_ship = False
-                        doSelect = True
-                        DrawCursor = True
-            if great_build:
-                great_build = False
-                build_ship = False
-                doSelect = True
-                DrawCursor = True
-                ship += 1
-                create_ship = None
-                left_to_right, right_to_left, up_to_down, down_to_up = False, False, False, False
+                break
+        if not solo_ship + duo_ship + trio_ship + quadro_ship:
+            break
+    return
 
 while run:
     key_esc = False
@@ -712,7 +727,8 @@ while run:
         pygame.display.quit()
         os.environ['SDL_VIDEO_CENTERED'] = '1'
         pygame.display.init()
-        screen = pygame.display.set_mode(size, pygame.HWSURFACE)
+        screen = pygame.Surface(size, pygame.HWSURFACE)
+        dsp = pygame.display.set_mode(size, pygame.HWSURFACE)
         pygame.display.set_caption('Ocean Ship Wars')
         pygame.display.set_icon(ico)
         bsize = size[0] // 27.428571428571427
@@ -720,6 +736,11 @@ while run:
         left_margin, upper_margin = (size[0] // 2 - bsize * 5), (size[1] // 2 - bsize * 5)
         font = pygame.font.Font('asets/notosans.ttf', int(bsize / 1.5))
         infoSurface = pygame.Surface((size[0] // 2 // 1.5, upper_margin // 2), pygame.SRCALPHA)
+        for num_let in range(len(letters)):
+            blocks[num_let] = []
+            for num in range(len(letters)):
+                blocks[num_let].append(
+                    pygame.Rect(left_margin + num_let * bsize, upper_margin + num * bsize, bsize, bsize))
         re_theme()
         SettingsClass = Settings_class(Settings, set_of_settings, set_for_lists, GameLanguage, size, screen)
     if language != Settings['Graphic']['Language']:
@@ -810,16 +831,10 @@ while run:
             else:
                 ERRORS.append('Актуальная версия.')
         sprites.draw(screen)
-        screen.blit(RandomChoiceButton.image, RandomChoiceButton.rect)
     elif settings:
         screen.fill(BACKGROUND)
         SettingsMainLabel.update()
         EscButton.update()
-        # if SettingsActiveElement:
-        #     Labels.update(GameLanguage[SettingsActiveElement.name])
-        # else:
-        #     Labels.update()
-        # Labels.draw(screen)
         if EscButton.isCollide() and NotificationLeftPress or key_esc:
             SettingsActiveElement = None
             settings = False
@@ -912,7 +927,7 @@ while run:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                sock.settimeout(5)
+                sock.settimeout(3)
                 sock.connect(
                     (GameSettings['my socket'][0],
                      9998 if not GameSettings['my socket'][1] else GameSettings['my socket'][1]))
@@ -972,7 +987,7 @@ while run:
             EscButton.update()
             l = Label(
                 (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.3 // 2, size[0] * 0.2, size[1] * 0.3),
-                'Вы проиграли!.' if send_data['end game'] == me else 'Вы выйграли!.', BACKGROUND, (0, 255, 255))
+                'Вы проиграли!.' if send_data['end game'] == me else 'Вы выиграли!.', BACKGROUND, (0, 255, 255))
             l.update()
             screen.blit(l.image, l.rect)
             screen.blit(EscButton.image, EscButton.rect)
@@ -985,6 +1000,15 @@ while run:
                 sock = None
                 GameSettings['my socket'] = ['', 0]
                 GameSettings['enemy socket'] = ['', 0]
+                send_data = {'ships': {1: {}, 2: {}, 3: {}, 4: {}},
+                             'count': 0,
+                             'selects': [],
+                             'killed': {'blocks': [], 'ships': []},
+                             'die': {'blocks': [], 'ships': []},
+                             'move': 'build',
+                             'end game': False,
+                             'pass': False,
+                             'event': []}
 
         if run_game:
             screen.fill(BACKGROUND)
@@ -1004,9 +1028,6 @@ while run:
                 LegitBuild = True
                 RunCycle = True
                 DrawCursor = True
-                RandomChoiceButton.update()
-                if RandomChoiceButton.isCollide() and mouse_left_press:
-                    ships = RandomPlacing()
                 for type_s in ships:
                     if RunCycle:
                         for rc in ships[type_s].values():
@@ -1020,7 +1041,20 @@ while run:
                                 break
                     else:
                         break
-
+                if RandomChoiceButton.isCollide() & GameButtons.has(RandomChoiceButton) and mouse_left_press:
+                    threading.Thread(target=RandomPlacing).start()
+                    mouse_left_press = False
+                    GameButtons.remove(RandomChoiceButton)
+                if ClearMapButton.isCollide() and mouse_left_press:
+                    solo, duo, trio, quadro = [0] * 4
+                    solo_ship, duo_ship, trio_ship, quadro_ship = SOLO, DUO, TRIO, QUADRO
+                    ships = {1: {}, 2: {}, 3: {}, 4: {}}
+                    mouse_left_press = False
+                if not GameButtons.has(RandomChoiceButton):
+                    if not solo_ship + duo_ship + trio_ship + quadro_ship:
+                        GameButtons.add(RandomChoiceButton)
+                GameButtons.update()
+                GameButtons.draw(screen)
                 if not solo_ship and not duo_ship and not trio_ship and not quadro_ship:
                     BUILD = False
                     send_data['ships'] = ships
@@ -1184,7 +1218,6 @@ while run:
                     pygame.draw.rect(screen, RED, GetRect(mouse_on_block), ships_wh)
 
                 draw_ship_count([solo_ship, duo_ship, trio_ship, quadro_ship])
-                screen.blit(RandomChoiceButton.image, RandomChoiceButton.rect)
 
             if not BUILD:
                 send_data['event'] = []
@@ -1196,6 +1229,7 @@ while run:
                                 Sounds[event['event']].play()
                     except Exception:
                         pass
+
                 try:
                     for type_ship in send_data['ships']:
                         for num_of_ship in send_data['ships'][type_ship]:
@@ -1236,8 +1270,7 @@ while run:
                     txt = font.render('Ваш удар!.', True, (0, 255, 0))
                     screen.blit(txt, (size[0] // 2 - txt.get_rect()[2] // 2, size[1] - txt.get_rect()[3] - bsize // 2))
                     if mouse_on_block and mouse_left_press:
-                        if mouse_on_block not in send_data['selects'] and mouse_on_block not in send_data['killed'][
-                            'blocks']:
+                        if mouse_on_block not in send_data['selects'] and mouse_on_block not in send_data['killed']['blocks']:
                             mouse_left_press = False
                             killed_enemy = False
                             final_killed_enemy = False
@@ -1360,6 +1393,25 @@ while run:
             if s.update(False):
                 NotificationLeftPress = False
     Notifications.draw(screen)
+    # if RandomChoiceButton.isCollide() & GameButtons.has(RandomChoiceButton) and mouse_left_press:
+    #     threading.Thread(target=RandomPlacing).start()
+    #     # mouse_left_press = False
+    #     GameButtons.remove(RandomChoiceButton)
+    # if ClearMapButton.isCollide() and mouse_left_press:
+    #     solo, duo, trio, quadro = [0] * 4
+    #     solo_ship, duo_ship, trio_ship, quadro_ship = SOLO, DUO, TRIO, QUADRO
+    #     ships = {1: {}, 2: {}, 3: {}, 4: {}}
+    # if not GameButtons.has(RandomChoiceButton):
+    #     if not solo_ship + duo_ship + trio_ship + quadro_ship:
+    #         GameButtons.add(RandomChoiceButton)
+    # draw()
+    # draw_ship_count([solo_ship, duo_ship, trio_ship, quadro_ship])
+    # for type_s in range(1, max(ships.keys()) + 1):
+    #     for sp in ships[type_s].values():
+    #         pygame.draw.rect(screen, LINES, GetShip(sp['ship']), ships_wh)
+    # GameButtons.update()
+    # GameButtons.draw(screen)
+    dsp.blit(screen, (0, 0))
     pygame.display.flip()
     clock.tick(60)
 
