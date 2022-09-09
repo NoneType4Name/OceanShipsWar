@@ -27,6 +27,11 @@ try:
     pygame.mixer.init()
 except pygame.error:
     pass
+main_dir = os.getcwd()
+try:
+    os.chdir(sys._MEIPASS)
+except AttributeError:
+    pass
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 pygame.font.init()
 size = [get_monitors()[0].width, get_monitors()[0].height]
@@ -41,13 +46,8 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
-main_dir = os.getcwd()
 theme = 0
 version = '0.0.3b'
-try:
-    os.chdir(sys._MEIPASS)
-except AttributeError:
-    pass
 
 bsize = size[0] // 27.428571428571427
 ships_wh = int(bsize // 7)
@@ -312,11 +312,12 @@ def draw():
                                  upper_margin - font.size(letters[it])[1] * 1.2))
 
 
+draw()
+
 for num_let in range(len(letters)):
     blocks[num_let] = []
     for num in range(len(letters)):
         blocks[num_let].append(pygame.Rect(left_margin + num_let * bsize, upper_margin + num * bsize, bsize, bsize))
-
 
 if theme:
     set_of_settings = {
@@ -555,14 +556,14 @@ def StartGame():
         for var in list_of_load:
             ConditionOfLoad = f'Search: ./asets/{var}'
             while run:
-                if os.path.exists(f'{main_dir}/asets/{var}.{list_of_load[var]["type"]}'):
+                if os.path.exists(f'./asets/{var}.{list_of_load[var]["type"]}'):
                     MaxStartLoad += 1
                     break
 
         for var in list_of_load:
             ConditionOfLoad = f'Load: ./asets/{var}'
             StartLoaded += 1
-            Sounds[var] = pygame.mixer.Sound(f'{main_dir}/asets/{var}.{list_of_load[var]["type"]}')
+            Sounds[var] = pygame.mixer.Sound(f'./asets/{var}.{list_of_load[var]["type"]}')
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
         FineLoadGame = True
     else:
@@ -587,45 +588,13 @@ def StartGame():
 threading.Thread(target=StartGame).start()
 
 
-def RandomPlacing(solo, duo, trio, quadro):
+def RandomPlacing():
     global mouse_left_press, solo_ship, duo_ship, trio_ship, quadro_ship
-    map_of_game =
-    if mouse_left_press and mouse_on_block and LegitBuild:
-        if solo_ship or duo_ship or trio_ship or quadro_ship:
-            DrawCursor = False
-            great_build = False
-            if not build_ship:
-                start_build = mouse_on_block
-                index_of_len_ship = 2
-                build_ship = True
-                doSelect = True
-            else:
-                if start_build == mouse_on_block:
-                    create_ship = (start_build, mouse_on_block)
-                else:
-                    if doSelect:
-                        if GetRect(start_build).x < GetRect(mouse_on_block).x:
-                            doSelect = False
-                            left_to_right = True
-                            right_to_left, up_to_down, down_to_up = False, False, False
-
-                        elif GetRect(start_build).x > GetRect(mouse_on_block).x:
-                            doSelect = False
-                            right_to_left = True
-                            left_to_right, up_to_down, down_to_up = False, False, False
-
-                        elif GetRect(start_build).y < GetRect(mouse_on_block).y:
-                            doSelect = False
-                            up_to_down = True
-                            left_to_right, right_to_left, down_to_up = False, False, False
-
-                        elif GetRect(start_build).y > GetRect(mouse_on_block).y:
-                            doSelect = False
-                            down_to_up = True
-                            left_to_right, right_to_left, up_to_down = False, False, False
-
-                    else:
-                        if left_to_right:
+    cord_x = [x for x in range(0, 9)]
+    cord_y = [y for y in range(0, 9)]
+    for n in range(sum([solo_ship, duo_ship, trio_ship, quadro_ship])):
+        vector = random.randrange(1, 5)
+        if vector == 1:
                             if GetRect(mouse_on_block).x - GetRect(start_build).x > 0:
                                 create_ship = (start_build, (mouse_on_block[0], start_build[1]))
                                 index_of_len_ship = 2
