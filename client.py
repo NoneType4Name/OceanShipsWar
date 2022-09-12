@@ -31,7 +31,7 @@ main_dir = os.getcwd()
 try:
     os.chdir(sys._MEIPASS)
 except AttributeError:
-    pass
+    os.chdir(os.path.split(__file__)[0])
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 pygame.font.init()
 size = [get_monitors()[0].width, get_monitors()[0].height]
@@ -40,7 +40,7 @@ screen = pygame.Surface(size, pygame.HWSURFACE)
 dsp = pygame.display.set_mode(size, pygame.HWSURFACE)
 ico = pygame.image.load('asets/ico.png')
 pygame.display.set_icon(ico)
-pygame.display.set_caption('Ocean Ship War')
+pygame.display.set_caption('OceanShipsWar')
 KILLED_SHIP = (60, 60, 60)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -729,7 +729,7 @@ while run:
         pygame.display.init()
         screen = pygame.Surface(size, pygame.HWSURFACE)
         dsp = pygame.display.set_mode(size, pygame.HWSURFACE)
-        pygame.display.set_caption('Ocean Ship Wars')
+        pygame.display.set_caption('OceanShipsWar')
         pygame.display.set_icon(ico)
         bsize = size[0] // 27.428571428571427
         ships_wh = int(bsize // 7)
