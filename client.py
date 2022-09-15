@@ -13,12 +13,11 @@ import threading
 from screeninfo import get_monitors
 from netifaces import interfaces, ifaddresses, AF_INET
 from asets.Gui import *
+import RegApp as reg
 
 clock = pygame.time.Clock()
-
 run = True
 sock = None
-# GlobalTimeOut = requests.get('http://google.com').elapsed.total_seconds()
 mouse_left_press = False
 NotificationLeftPress = False
 key_esc = False
@@ -52,7 +51,8 @@ version = '0.0.4b'
 bsize = size[0] // 27.428571428571427
 ships_wh = int(bsize // 7)
 left_margin, upper_margin = (size[0] // 2 - bsize * 5), (size[1] // 2 - bsize * 5)
-font = pygame.font.Font('asets/notosans.ttf', int(bsize / 1.5))
+default_font = 'asets/notosans.ttf'
+font = pygame.font.Font(default_font, int(bsize / 1.5))
 infoSurface = pygame.Surface((size[0] // 2 // 1.5, upper_margin // 2), pygame.SRCALPHA)
 blocks = {}
 build_ship = False
@@ -118,7 +118,9 @@ input_data = send_data
 Settings = {
     'Graphic': {
         'WindowSize': size,
-        'Language': 'rus'
+        'Language': 'rus',
+        'Font': './asets/notosans.ttf'
+
     },
     'Sound': {
         'Notification': 1,
@@ -152,7 +154,8 @@ GameLanguage = {'start game': 'Создать игру',
                 'Exit': 'Выход',
                 'version': f'Версия {version}',
                 'Game random build': 'Случайная расстановка',
-                'Game clear map': 'Очистить карту.'}
+                'Game clear map': 'Очистить карту',
+                'Graphic Font': 'Шрифт'}
 
 language = 'rus'
 
@@ -174,7 +177,8 @@ def re_lang():
                         'Exit': 'Выход',
                         'version': f'Версия {version}',
                         'Game random build': 'Случайная расстановка',
-                        'Game clear map': 'Очистить карту'}
+                        'Game clear map': 'Очистить карту',
+                        'Graphic Font': 'Шрифт'}
         language = 'rus'
     elif Settings['Graphic']['Language'] == 'eng':
         GameLanguage = {'start game': 'Create game',
@@ -191,7 +195,8 @@ def re_lang():
                         'Exit': 'Exit',
                         'version': f'Version {version}',
                         'Game random build': 'Random building',
-                        'Game clear map': 'Clear map'}
+                        'Game clear map': 'Clear map',
+                        'Graphic Font': 'Font'}
         language = 'eng'
 
 
@@ -333,7 +338,8 @@ if theme:
         'buttons active': ((0, 0, 0), (164, 163, 162), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
         'switches': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
         'slides': ((117, 75, 7), (202, 169, 115)),
-        'lists': ((23, 21, 19), (226, 226, 224), (214, 213, 210))
+        'lists': ((23, 21, 19), (226, 226, 224), (214, 213, 210)),
+        'path': ((117, 75, 7), (202, 169, 115), (23, 21, 19)),
     }
 else:
     set_of_settings = {
@@ -346,73 +352,99 @@ else:
         (255, 255, 255), (91, 92, 93), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
         'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
         'slides': ((138, 180, 248), (53, 86, 140)),
-        'lists': ((232, 234, 236), (29, 29, 31), (41, 42, 45))
+        'lists': ((232, 234, 236), (29, 29, 31), (41, 42, 45)),
+        'path': ((138, 180, 248), (53, 86, 140),(232, 234, 236))
     }
 set_for_lists = {
     'Language': ['rus', 'eng'],
     'WindowSize': pygame.display.list_modes()
 }
-SettingsClass = Settings_class(Settings, set_of_settings, set_for_lists, GameLanguage, size, screen)
+Settings = {
+    'Graphic': {
+        'WindowSize': size,
+        'Language': 'rus',
+        'Font': 'D:/main/coding/python/skripts/OceanShipsWar/asets/notosans.ttf'
+    },
+    'Sound': {
+        'Notification': 1,
+        'Game': 1
+    }
+}
+set_of_settings_type = {
+    'Graphic': {
+        'WindowSize': List,
+        'Language': List,
+        'Font': Path
+    },
+    'Sound': {
+        'Notification': Slide,
+        'Game': Slide
+    }
+}
+set_for_paths = {
+    'Font':{'name':'Select Font (ttf)...', 'multiple': 0, 'types':['*.ttf'], 'values':['.ttf']}
+}
+SettingsClass = Settings_class(Settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, GameLanguage, size, screen, Settings['Graphic']['Font'])
 
 
-StartLoadProgress = ProgressBar(
+StartLoadProgress = ProgressBar(Settings['Graphic']['Font'],
     (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.7, size[0] * 0.2, size[1] * 0.05), LINES, (0, 255, 0), 0)
-StartLoadLabel = Label((size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.6, size[0] * 0.2, size[1] * 0.05), '0 %',
+StartLoadLabel = Label(Settings['Graphic']['Font'], (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.6, size[0] * 0.2, size[1] * 0.05), '0 %',
                        (0, 0, 0, 0), (0, 255, 0), center=True)
-StartLoadLabel2 = Label((size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.65, size[0] * 0.2, size[1] * 0.05), '',
+StartLoadLabel2 = Label(Settings['Graphic']['Font'], (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.65, size[0] * 0.2, size[1] * 0.05), '',
                         (0, 0, 0, 0), (0, 255, 0), center=True)
-Update = Button((-1, size[1] - bsize // 2, bsize * 2, bsize // 2), str(GameLanguage['version']), ButtonsCl1, ButtonsCl2,
+Update = Button(Settings['Graphic']['Font'], (-1, size[1] - bsize // 2, bsize * 2, bsize // 2), str(GameLanguage['version']), ButtonsCl1, ButtonsCl2,
                 ButtonsTxtColor, ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-TextInputCr = TextInput(
+TextInputCr = TextInput(Settings['Graphic']['Font'],
     (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2, size[1] * 0.1), BACKGROUND,
     TextInputArCl, TextInputTxCl, 'create', My_ip,
     GameSettings['my socket'][0])
-TextInputJn = TextInput(
+TextInputJn = TextInput(Settings['Graphic']['Font'],
     (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
      size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'join', '192.168.1.1',
     GameSettings['my socket'][0])
-CreateGameWaitUser = Label(
+CreateGameWaitUser = Label(Settings['Graphic']['Font'],
     (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
      size[1] * 0.1), f'Ждем соперника... Ваш адрес: {GameSettings["my socket"][0]}:{GameSettings["my socket"][1]}',
     BACKGROUND, (0, 255, 255), center=True)
-JoinGameWaitUser = Label(
+JoinGameWaitUser = Label(Settings['Graphic']['Font'],
     (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
      size[1] * 0.1),
     f'Ждем соперника... Адрес будущего соперника: {GameSettings["enemy socket"][0]}:{GameSettings["enemy socket"][1]}',
     BACKGROUND,
     (255, 0, 255), center=True)
-SettingsMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
+SettingsMainLabel = Label(Settings['Graphic']['Font'], (size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
                           GameLanguage['settings'], BACKGROUND, LINES, center=True)
-CreateGameMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
+CreateGameMainLabel = Label(Settings['Graphic']['Font'], (size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
                             GameLanguage['start game'], BACKGROUND, LINES, center=True)
-JoinGameMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
+JoinGameMainLabel = Label(Settings['Graphic']['Font'], (size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
                           GameLanguage['join game'], BACKGROUND, LINES, center=True)
-RoomQuit = Button((size[0] - bsize + 1, -1, bsize, bsize),
+RoomQuit = Button(Settings['Graphic']['Font'], (size[0] - bsize + 1, -1, bsize, bsize),
                   GameLanguage['Exit'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
                   ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-EscButton = Button((-1, -1, (bsize + bsize * 0.5) // 2, bsize // 2), 'ESC', ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+EscButton = Button(Settings['Graphic']['Font'], (-1, -1, (bsize + bsize * 0.5) // 2, bsize // 2), 'ESC', ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
                    ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-ButtonAdm = Button(
+ButtonAdm = Button(Settings['Graphic']['Font'],
     (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.3 - size[1] * 0.1, size[0] * 0.16,
      size[1] * 0.1),
     GameLanguage['start game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
     ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-ButtonClient = Button(
+ButtonClient = Button(Settings['Graphic']['Font'],
     (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.16,
      size[1] * 0.1),
     GameLanguage['join game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
     ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
 if RandomBuildButton:
-    RandomChoiceButton = Button((size[0] * 0.2, size[1] * 0.7, size[0] * 0.1, size[1] * 0.05), GameLanguage['Game random build'],
+    RandomChoiceButton = Button(Settings['Graphic']['Font'], (size[0] * 0.2, size[1] * 0.7, size[0] * 0.1, size[1] * 0.05), GameLanguage['Game random build'],
                                 *set_of_settings['buttons'])
-ClearMapButton = Button((size[0] * 0.1, size[1] * 0.7 - size[1] * 0.05, size[0] * 0.1, size[1] * 0.05), GameLanguage['Game clear map'],
+ClearMapButton = Button(Settings['Graphic']['Font'], (size[0] * 0.1, size[1] * 0.7 - size[1] * 0.05, size[0] * 0.1, size[1] * 0.05), GameLanguage['Game clear map'],
                         *set_of_settings['button red'])
-ButtonSettings = Button(
+ButtonSettings = Button(Settings['Graphic']['Font'],
     (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.7 - size[1] * 0.1, size[0] * 0.16,
      size[1] * 0.1),
     GameLanguage['settings'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
     ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-ButtonTheme = Button((size[0] - bsize - bsize // 2, size[1] - bsize - bsize // 2, bsize, bsize),
+ButtonTheme = Button(Settings['Graphic']['Font'], (size[0] - bsize - bsize // 2, size[1] - bsize - bsize // 2, bsize, bsize),
                      GameLanguage['theme light'] if theme else GameLanguage['theme dark'], ButtonsCl1, ButtonsCl2,
                      ButtonsTxtColor,
                      ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
@@ -441,11 +473,13 @@ def re_theme():
                 'down margin': 1.9,
                 'label': ((214, 213, 212), (23, 21, 19), [(0, 0, 0), (200, 200, 200)]),
                 'buttons': ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
+                'button red': (
+                (255, 100, 100, 20), (255, 100, 100, 20), (23, 21, 19), (0, 0, 0), (255, 0, 0), (23, 21, 19)),
                 'buttons active': ((0, 0, 0), (164, 163, 162), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
-                'button red': ((255, 0, 0, 20), (255, 0, 0, 20), (23, 21, 19), (255, 255, 255), (255, 0, 0), (23, 21, 19)),
                 'switches': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
                 'slides': ((117, 75, 7), (202, 169, 115)),
-                'lists': ((23, 21, 19), (226, 226, 224), (214, 213, 210))
+                'lists': ((23, 21, 19), (226, 226, 224), (214, 213, 210)),
+                'path': ((117, 75, 7), (202, 169, 115),(23, 21, 19)),
             }
     else:
         KILLED_SHIP = (60, 60, 60)
@@ -463,73 +497,89 @@ def re_theme():
             'up margin': 0.15,
             'down margin': 1.9,
             'label': ((41, 42, 43), (232, 234, 236), [(255, 255, 255), (91, 92, 93)]),
-            'buttons': ((41, 42, 43), (41, 42, 43), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
+            'buttons': (
+                (41, 42, 43), (41, 42, 43), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
             'button red': (
-            (255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
+                (255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
             'buttons active': (
                 (255, 255, 255), (91, 92, 93), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
             'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
             'slides': ((138, 180, 248), (53, 86, 140)),
-            'lists': ((232, 234, 236), (29, 29, 31), (41, 42, 45))}
-    StartLoadProgress = ProgressBar(
-        (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.7, size[0] * 0.2, size[1] * 0.05), LINES, (0, 255, 0), 0)
-    StartLoadLabel = Label((size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.6, size[0] * 0.2, size[1] * 0.05), '0 %',
+            'lists': ((232, 234, 236), (29, 29, 31), (41, 42, 45)),
+            'path': ((138, 180, 248), (53, 86, 140), (232, 234, 236))}
+    StartLoadProgress = ProgressBar(Settings['Graphic']['Font'],
+                                    (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.7, size[0] * 0.2, size[1] * 0.05),
+                                    LINES, (0, 255, 0), 0)
+    StartLoadLabel = Label(Settings['Graphic']['Font'],
+                           (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.6, size[0] * 0.2, size[1] * 0.05), '0 %',
                            (0, 0, 0, 0), (0, 255, 0), center=True)
-    StartLoadLabel2 = Label((size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.65, size[0] * 0.2, size[1] * 0.05), '',
+    StartLoadLabel2 = Label(Settings['Graphic']['Font'],
+                            (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.65, size[0] * 0.2, size[1] * 0.05), '',
                             (0, 0, 0, 0), (0, 255, 0), center=True)
-    Update = Button((-1, size[1] - bsize // 2, bsize * 2, bsize // 2), str(GameLanguage['version']), ButtonsCl1,
-                    ButtonsCl2, ButtonsTxtColor,
-                    ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-    TextInputCr = TextInput(
-        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
-         size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'create', My_ip,
-        GameSettings['my socket'][0])
-    TextInputJn = TextInput(
-        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
-         size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'join', '192.168.1.1',
-        GameSettings['my socket'][0])
-    CreateGameWaitUser = Label(
-        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
-         size[1] * 0.1), f'Ждем соперника... Ваш адрес: {GameSettings["my socket"][0]}:{GameSettings["my socket"][1]}',
-        BACKGROUND, (0, 255, 255), center=True)
-    JoinGameWaitUser = Label(
-        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
-         size[1] * 0.1),
-        f'Ждем соперника... Адрес будущего соперника: {GameSettings["enemy socket"][0]}:{GameSettings["enemy socket"][1]}',
-        BACKGROUND,
-        (255, 0, 255), center=True)
-    SettingsMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
+    Update = Button(Settings['Graphic']['Font'], (-1, size[1] - bsize // 2, bsize * 2, bsize // 2),
+                    str(GameLanguage['version']), ButtonsCl1, ButtonsCl2,
+                    ButtonsTxtColor, ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+    TextInputCr = TextInput(Settings['Graphic']['Font'],
+                            (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
+                             size[1] * 0.1), BACKGROUND,
+                            TextInputArCl, TextInputTxCl, 'create', My_ip,
+                            GameSettings['my socket'][0])
+    TextInputJn = TextInput(Settings['Graphic']['Font'],
+                            (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
+                             size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'join', '192.168.1.1',
+                            GameSettings['my socket'][0])
+    CreateGameWaitUser = Label(Settings['Graphic']['Font'],
+                               (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
+                                size[1] * 0.1),
+                               f'Ждем соперника... Ваш адрес: {GameSettings["my socket"][0]}:{GameSettings["my socket"][1]}',
+                               BACKGROUND, (0, 255, 255), center=True)
+    JoinGameWaitUser = Label(Settings['Graphic']['Font'],
+                             (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
+                              size[1] * 0.1),
+                             f'Ждем соперника... Адрес будущего соперника: {GameSettings["enemy socket"][0]}:{GameSettings["enemy socket"][1]}',
+                             BACKGROUND,
+                             (255, 0, 255), center=True)
+    SettingsMainLabel = Label(Settings['Graphic']['Font'],
+                              (size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
                               GameLanguage['settings'], BACKGROUND, LINES, center=True)
-    CreateGameMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
+    CreateGameMainLabel = Label(Settings['Graphic']['Font'],
+                                (size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
                                 GameLanguage['start game'], BACKGROUND, LINES, center=True)
-    JoinGameMainLabel = Label((size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
+    JoinGameMainLabel = Label(Settings['Graphic']['Font'],
+                              (size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
                               GameLanguage['join game'], BACKGROUND, LINES, center=True)
-    RoomQuit = Button((size[0] - bsize + 1, -1, bsize, bsize),
+    RoomQuit = Button(Settings['Graphic']['Font'], (size[0] - bsize + 1, -1, bsize, bsize),
                       GameLanguage['Exit'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
                       ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-    EscButton = Button((-1, -1, (bsize + bsize * 0.5) // 2, bsize // 2), 'ESC', ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+    EscButton = Button(Settings['Graphic']['Font'], (-1, -1, (bsize + bsize * 0.5) // 2, bsize // 2), 'ESC', ButtonsCl1,
+                       ButtonsCl2, ButtonsTxtColor,
                        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-    ButtonAdm = Button(
-        (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.3 - size[1] * 0.1, size[0] * 0.16,
-         size[1] * 0.1),
-        GameLanguage['start game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
-        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-    ButtonClient = Button(
-        (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.16,
-         size[1] * 0.1),
-        GameLanguage['join game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
-        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+    ButtonAdm = Button(Settings['Graphic']['Font'],
+                       (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.3 - size[1] * 0.1, size[0] * 0.16,
+                        size[1] * 0.1),
+                       GameLanguage['start game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+                       ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+    ButtonClient = Button(Settings['Graphic']['Font'],
+                          (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.16,
+                           size[1] * 0.1),
+                          GameLanguage['join game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+                          ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
     if RandomBuildButton:
-        RandomChoiceButton = Button((size[0] * 0.1, size[1] * 0.7, size[0] * 0.1, size[1] * 0.05),
+        RandomChoiceButton = Button(Settings['Graphic']['Font'],
+                                    (size[0] * 0.2, size[1] * 0.7, size[0] * 0.1, size[1] * 0.05),
                                     GameLanguage['Game random build'],
                                     *set_of_settings['buttons'])
-    ClearMapButton = Button((size[0] * 0.1, size[1] * 0.7 - size[1] * 0.05, size[0] * 0.1, size[1] * 0.05), GameLanguage['Game clear map'], *set_of_settings['button red'])
-    ButtonSettings = Button(
-        (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.7 - size[1] * 0.1, size[0] * 0.16,
-         size[1] * 0.1),
-        GameLanguage['settings'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
-        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
-    ButtonTheme = Button((size[0] - bsize - bsize // 2, size[1] - bsize - bsize // 2, bsize, bsize),
+    ClearMapButton = Button(Settings['Graphic']['Font'],
+                            (size[0] * 0.1, size[1] * 0.7 - size[1] * 0.05, size[0] * 0.1, size[1] * 0.05),
+                            GameLanguage['Game clear map'],
+                            *set_of_settings['button red'])
+    ButtonSettings = Button(Settings['Graphic']['Font'],
+                            (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.7 - size[1] * 0.1, size[0] * 0.16,
+                             size[1] * 0.1),
+                            GameLanguage['settings'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+                            ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+    ButtonTheme = Button(Settings['Graphic']['Font'],
+                         (size[0] - bsize - bsize // 2, size[1] - bsize - bsize // 2, bsize, bsize),
                          GameLanguage['theme light'] if theme else GameLanguage['theme dark'], ButtonsCl1, ButtonsCl2,
                          ButtonsTxtColor,
                          ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
@@ -719,6 +769,7 @@ def RandomPlacing():
             break
     return
 
+
 while run:
     key_esc = False
     mouse_pos = pygame.mouse.get_pos()
@@ -734,7 +785,7 @@ while run:
         bsize = size[0] // 27.428571428571427
         ships_wh = int(bsize // 7)
         left_margin, upper_margin = (size[0] // 2 - bsize * 5), (size[1] // 2 - bsize * 5)
-        font = pygame.font.Font('asets/notosans.ttf', int(bsize / 1.5))
+        font = pygame.font.Font(default_font, int(bsize / 1.5))
         infoSurface = pygame.Surface((size[0] // 2 // 1.5, upper_margin // 2), pygame.SRCALPHA)
         for num_let in range(len(letters)):
             blocks[num_let] = []
@@ -742,11 +793,11 @@ while run:
                 blocks[num_let].append(
                     pygame.Rect(left_margin + num_let * bsize, upper_margin + num * bsize, bsize, bsize))
         re_theme()
-        SettingsClass = Settings_class(Settings, set_of_settings, set_for_lists, GameLanguage, size, screen)
+        SettingsClass = Settings_class(Settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, GameLanguage, size, screen, Settings['Graphic']['Font'])
     if language != Settings['Graphic']['Language']:
         re_lang()
         re_theme()
-        SettingsClass = Settings_class(Settings, set_of_settings, set_for_lists, GameLanguage, size, screen)
+        SettingsClass = Settings_class(Settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, GameLanguage, size, screen, Settings['Graphic']['Font'])
     EVENTS = []
     for event in pygame.event.get():
         EVENTS.append(event)
@@ -757,20 +808,6 @@ while run:
             if event.button == 1:
                 mouse_left_press = True
                 NotificationLeftPress = True
-            # elif event.button == 5:
-            #     if settings_pos - step >= upper_margin_settings:
-            #         for s in Labels.sprites():
-            #             s.RectEdit(0, -int(size[1]*step))
-            #         for s in SettingsElements.sprites():
-            #             s.RectEdit(0, -int(size[1]*step))
-            #         settings_pos = round(settings_pos - step, 3)
-            # elif event.button == 4:
-            #     if settings_pos + step + pad <= down_margin_settings:
-            #         for s in Labels.sprites():
-            #             s.RectEdit(0, int(size[1]*step))
-            #         for s in SettingsElements.sprites():
-            #             s.RectEdit(0, int(size[1]*step))
-            #         settings_pos = round(settings_pos + step, 3)
         if event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
                 mouse_left_press = False
@@ -840,8 +877,16 @@ while run:
             settings = False
             room = True
 
-        SettingsClass.update(mouse_left_press)
+        SettingsClass.update(mouse_left_press, EVENTS)
         if SettingsClass.settings != Settings:
+            if Settings['Graphic']['Font'] != SettingsClass.settings['Graphic']['Font']:
+                print(1)
+                default_font = SettingsClass.settings['Graphic']['Font']
+                Settings = SettingsClass.settings
+                font = pygame.font.Font(default_font, int(bsize / 1.5))
+                SettingsClass = Settings_class(Settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, GameLanguage, size, screen, Settings['Graphic']['Font'])
+                re_theme()
+                re_lang()
             Settings = SettingsClass.settings
         if SettingsClass.mouse != mouse_left_press:
             mouse_left_press = SettingsClass.mouse
@@ -985,7 +1030,7 @@ while run:
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
             screen.fill(BACKGROUND)
             EscButton.update()
-            l = Label(
+            l = Label(Settings['Graphic']['Font'],
                 (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.3 // 2, size[0] * 0.2, size[1] * 0.3),
                 'Вы проиграли!.' if send_data['end game'] == me else 'Вы выиграли!.', BACKGROUND, (0, 255, 255))
             l.update()
@@ -1381,8 +1426,7 @@ while run:
         if Settings['Sound']['Notification']:
             Sounds['info_sound'].set_volume(Settings['Sound']['Notification'])
             Sounds['info_sound'].play()
-        Notifications.add(Notification(
-            (size[0] // 2 - size[0] * 0.4 // 2, size[1] * 0.07, size[0] * 0.4, size[1] * 0.1),
+        Notifications.add(Notification(Settings['Graphic']['Font'], (size[0] // 2 - size[0] * 0.4 // 2, size[1] * 0.07, size[0] * 0.4, size[1] * 0.1),
             er, (86, 86, 86), (0, 0, 0), (255, 255, 255)))
         del ERRORS[n]
     for n, s in enumerate(reversed(Notifications.sprites())):
