@@ -1,5 +1,5 @@
 try:
-    version = '0.0.4b'
+    version = '0.0.5b'
     import copy
     import json
     import math
