@@ -1,0 +1,7 @@
+INFO	[2022-09-19 20:20:51,957] [client in <module>] line 25|	import libs
+DEBUG	[2022-09-19 20:20:51,997] [client in <module>] line 105|	SDL success init
+DEBUG	[2022-09-19 20:20:51,997] [client in <module>] line 108|	mixer success init
+DEBUG	[2022-09-19 20:20:51,997] [client in <module>] line 124|	font success init
+DEBUG	[2022-09-19 20:20:53,417] [connectionpool in _new_conn] line 1001|	Starting new HTTPS connection (1): github.com:443
+DEBUG	[2022-09-19 20:20:53,611] [connectionpool in _make_request] line 456|	https://github.com:443 "GET /NoneType4Name/OceanShipsWar/releases/latest HTTP/1.1" 302 0
+DEBUG	[2022-09-19 20:20:54,010] [connectionpool in _make_request] line 456|	https://github.com:443 "GET /NoneType4Name/OceanShipsWar/releases/tag/0.0.4b HTTP/1.1" 200 None

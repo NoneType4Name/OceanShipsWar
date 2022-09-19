@@ -1,11 +1,19 @@
+import os.path
+import easygui
 import string
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from platform import python_version
 from ast import literal_eval
 import pyperclip
 import time
 import pygame
+import copy
 
 PUNCTUATION = string.punctuation
-default_font = 'asets/notosans.ttf'
 pygame.font.init()
 
 
@@ -55,8 +63,10 @@ def RoundedRect(rect, color, radius=0.4, width=0, inner_color=(0, 0, 0)) -> pyga
 
 
 class Button(pygame.sprite.Sprite):
-    def __init__(self, rect, text, color1, color2, text_color, color1_act, color2_act, color_act_text, radius=0.5):
+    def __init__(self, default_font, rect, text, color1, color2, text_color, color1_act, color2_act, color_act_text,
+                 radius=0.5):
         pygame.sprite.Sprite.__init__(self)
+        self.default_font = default_font
         self.rect = pygame.Rect(rect)
         wh = (int(self.rect.w + self.rect.h) // 100)
         wh = wh if wh else 1
@@ -140,8 +150,9 @@ class Switch(pygame.sprite.Sprite):
 
 
 class Label(pygame.sprite.Sprite):
-    def __init__(self, rect, text, color, text_color, width: list = False, center=False):
+    def __init__(self, default_font, rect, text, color, text_color, width: list = False, center=False):
         pygame.sprite.Sprite.__init__(self)
+        self.default_font = default_font
         self.rect = pygame.Rect(rect)
         self.text = str(text)
         self.color = pygame.Color(color)
@@ -191,18 +202,18 @@ class Label(pygame.sprite.Sprite):
         if self.size != self.font.size(self.text):
             if self.center:
                 for s in range(1000):
-                    self.font = pygame.font.Font(default_font, s)
+                    self.font = pygame.font.Font(self.default_font, s)
                     self.size = self.font.size(self.text)
                     if self.size[0] > self.rect.w or self.size[1] > self.rect.h:
-                        self.font = pygame.font.Font(default_font, s - 1)
+                        self.font = pygame.font.Font(self.default_font, s - 1)
                         self.size = self.font.size(self.text)
                         break
             else:
                 for s in range(1000):
-                    self.font = pygame.font.Font(default_font, s)
+                    self.font = pygame.font.Font(self.default_font, s)
                     self.size = self.font.size(self.text)
                     if self.size[0] > self.rect.w - self.rect.w * 0.02 or self.size[1] > self.rect.h:
-                        self.font = pygame.font.Font(default_font, s - 1)
+                        self.font = pygame.font.Font(self.default_font, s - 1)
                         self.size = self.font.size(self.text)
                         break
 
@@ -212,8 +223,9 @@ class Label(pygame.sprite.Sprite):
 
 
 class Slide(pygame.sprite.Sprite):
-    def __init__(self, rect, slide_color, background, base_data, name):
+    def __init__(self, default_font, rect, slide_color, background, base_data, name):
         pygame.sprite.Sprite.__init__(self)
+        self.default_font = default_font
         self.rect = pygame.Rect(rect[0], rect[1], rect[2] * 1.1, rect[3])
         self.slide_rect = pygame.Rect(rect[0], rect[1], rect[2], rect[3] * 0.4)
         # pygame.Rect(self.rect.w * 0.05, (self.rect.h / 2 - self.rect.h * 0.3 / 2 + 1), self.rect.w * 0.9, self.rect.h * 0.3)
@@ -262,8 +274,9 @@ class Slide(pygame.sprite.Sprite):
 
 
 class Element(pygame.sprite.Sprite):
-    def __init__(self, rect, real_rect, text, background, font_color, around, around_select):
+    def __init__(self, default_font, rect, real_rect, text, value, background, font_color, around, around_select):
         pygame.sprite.Sprite.__init__(self)
+        self.default_font = default_font
         self.rect = pygame.Rect(rect)
         self.real_rect = pygame.Rect(real_rect)
         self.background = pygame.Color(background)
@@ -272,6 +285,7 @@ class Element(pygame.sprite.Sprite):
         self.around_select = pygame.Color(around_select)
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         self.text = text
+        self.value = value
         for s in range(1000):
             self.font = pygame.font.Font(default_font, s)
             self.size = self.font.size(self.text)
@@ -280,16 +294,13 @@ class Element(pygame.sprite.Sprite):
                 self.size = self.font.size(self.text)
                 break
 
-    def update(self, mouse):
+    def update(self, mouse) -> str:
         val = int((self.rect.w + self.rect.h) / 100)
         if self.real_rect.collidepoint(pygame.mouse.get_pos()):
             self.image.blit(RoundedRect(self.rect, self.around_select, 1, (1 if not val else val),
                                         self.background), (0, 0))
             if mouse:
-                try:
-                    return literal_eval(self.text)
-                except ValueError:
-                    return self.text
+                return self.value
         else:
             self.image.blit(RoundedRect(self.rect, self.around, 1, (1 if not (val // 2) else val // 2),
                                         self.background), (0, 0))
@@ -302,22 +313,25 @@ class Element(pygame.sprite.Sprite):
 
 
 class List(pygame.sprite.Sprite):
-    def __init__(self, rect, base_text, texts, text_color, background, bg_list, name):
+    def __init__(self, default_font, rect, base_text, base_value, displays_name, values, text_color, background, bg_list, name):
         pygame.sprite.Sprite.__init__(self)
+        self.default_font = default_font
         self.rect = pygame.Rect(rect)
         self.name = str(name)
-        self.value = str(base_text)
-        self.texts = texts
+        self.displayed = str(base_text)
+        self.value = base_value
+        self.texts = displays_name
+        self.values = values
         self.text_color = text_color
         self.bg_list = bg_list
         self.background = background
         self.active = False
         for s in range(1000):
             self.font = pygame.font.Font(default_font, s)
-            self.size = self.font.size(self.value)
+            self.size = self.font.size(self.displayed)
             if self.size[0] > self.rect.w or self.size[1] > self.rect.h:
                 self.font = pygame.font.Font(default_font, s - 1)
-                self.size = self.font.size(self.value)
+                self.size = self.font.size(self.displayed)
                 break
         self.image = pygame.Surface(
             (self.rect.w, self.rect.h + self.size[1] * len(self.texts) + self.size[1] * 0.1 * len(self.texts)),
@@ -326,8 +340,9 @@ class List(pygame.sprite.Sprite):
         for n, tx in enumerate(self.texts):
             tx = str(tx)
             self.elements.add(
-                Element((0, rect[3] * (n + 1), rect[2], rect[3]), (self.rect.x, self.rect.y + self.rect.h * (n + 1),
-                                                                   self.rect.w, self.rect.h), tx, self.bg_list,
+                Element(self.default_font, (0, rect[3] * (n + 1), rect[2], rect[3]),
+                        (self.rect.x, self.rect.y + self.rect.h * (n + 1),
+                         self.rect.w, self.rect.h), tx, self.values[n], self.bg_list,
                         self.text_color, self.bg_list, (89, 111, 146)))
 
     def update(self, mouse):
@@ -336,17 +351,19 @@ class List(pygame.sprite.Sprite):
              self.rect.h + self.size[1] * len(self.texts) + self.size[1] * 0.1 * len(self.texts)),
             pygame.SRCALPHA)
         self.image.blit(RoundedRect(self.rect, self.background, 1), (0, 0))
-        self.image.blit(self.font.render(self.value, True, self.text_color),
+        self.image.blit(self.font.render(str(self.displayed), True, self.text_color),
                         (self.rect.w // 2 - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
         if not self.active and mouse and self.rect.collidepoint(pygame.mouse.get_pos()):
             self.active = True
             return 1
         elif self.active:
             for sprite in self.elements.sprites():
+                sprite: Element
                 update = sprite.update(mouse)
-                if update:
+                if update is not None:
                     self.active = False
-                    self.value = update
+                    self.displayed = sprite.text
+                    self.value = sprite.value
                     return {self.name: self.value}
             else:
                 if mouse:
@@ -370,8 +387,9 @@ class List(pygame.sprite.Sprite):
 
 
 class TextInput(pygame.sprite.Sprite):
-    def __init__(self, rect, background, around, text_color, name, base_text='', text=''):
+    def __init__(self, default_font, rect, background, around, text_color, name, base_text='', text=''):
         pygame.sprite.Sprite.__init__(self)
+        self.default_font = default_font
         self.rect = pygame.Rect(rect)
         wh = int(self.rect.w + self.rect.h) // 100
         wh = wh if wh else 1
@@ -395,7 +413,7 @@ class TextInput(pygame.sprite.Sprite):
                 self.size = self.font.size(self.value if self.value else self.base_text)
                 break
 
-    def update(self,events):
+    def update(self, events):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         if self.active:
             self.image.blit(RoundedRect(self.rect, (0, 255, 0), .5, self.rectInner.x, self.background), (0, 0))
@@ -519,18 +537,19 @@ class TextInput(pygame.sprite.Sprite):
 
     def re_font(self):
         for s in range(0, 1000):
-            self.font = pygame.font.Font(default_font, s)
+            self.font = pygame.font.Font(self.default_font, s)
             self.size = self.font.size(self.value if self.value else self.base_text)
             if self.size[0] >= self.rectInner.w - self.rectInner.x or self.size[
                 1] >= self.rectInner.h * 0.8 - self.rectInner.y:
-                self.font = pygame.font.Font(default_font, s - 1)
+                self.font = pygame.font.Font(self.default_font, s - 1)
                 self.size = self.font.size(self.value if self.value else self.base_text)
                 break
 
 
 class Notification(pygame.sprite.Sprite):
-    def __init__(self, rect, text, background, around, font_color):
+    def __init__(self, default_font, rect, text, background, around, font_color):
         pygame.sprite.Sprite.__init__(self)
+        self.default_font = default_font
         self.rect = pygame.Rect(rect[0], rect[1] - rect[3], rect[2], rect[3] * 3)
         self.NotificationRect = pygame.Rect(rect)
         self.StartRect = pygame.Rect(rect)
@@ -611,8 +630,9 @@ class Notification(pygame.sprite.Sprite):
 
 
 class ProgressBar(pygame.sprite.Sprite):
-    def __init__(self, rect, around, progress_color, value):
+    def __init__(self, default_font, rect, around, progress_color, value):
         pygame.sprite.Sprite.__init__(self)
+        self.default_font = default_font
         self.rect = pygame.Rect(rect)
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         self.around = pygame.Color(around)
@@ -627,11 +647,73 @@ class ProgressBar(pygame.sprite.Sprite):
                         self.progress_color), (self.wh, self.wh))
 
 
+class Path(pygame.sprite.Sprite):
+    def __init__(self, default_font, rect, around, color, font_color, display, name, value, types, typ, multiple):
+        pygame.sprite.Sprite.__init__(self)
+        self.default_font = default_font
+        self.rect = pygame.Rect(rect)
+        wh = int(self.rect.w + self.rect.h) // 100
+        self.wh = wh if wh else 1
+        self.rect_inner = pygame.Rect(rect[0] + self.wh, rect[1] + self.wh, rect[2] - self.wh * 2,
+                                      rect[3] - self.wh * 2)
+        self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+        self.around_color = pygame.Color(around)
+        self.color = pygame.Color(color)
+        self.font_color = pygame.Color(font_color)
+        self.types = types
+        self.typ = typ
+        self.name = name
+        self.display = display
+        self.value = value
+        self.multiple = multiple
+        for s in range(1000):
+            self.font = pygame.font.Font(default_font, s)
+            self.size = self.font.size(self.value)
+            if self.size[0] > self.rect_inner.w or self.size[1] > self.rect_inner.h:
+                self.font = pygame.font.Font(default_font, s - 1)
+                self.size = self.font.size(self.value)
+                break
+
+    def update(self, mouse):
+        if os.path.splitext(self.value)[1] in self.typ:
+            self.image.blit(RoundedRect(self.rect, self.around_color, 1, self.wh, self.color), (0, 0))
+        else:
+            self.image.blit(RoundedRect(self.rect, (255, 0, 0), 1, self.wh, self.color), (0, 0))
+        if '\\' in self.value:
+            sep = '\\'
+        elif '/' in self.value:
+            sep = '/'
+        val = f'.../{"/".join(self.value.split(sep)[-3:])}'
+        for s in range(1000):
+            self.font = pygame.font.Font(self.default_font, s)
+            self.size = self.font.size(val)
+            if self.size[0] >= self.rect_inner.w or self.size[1] >= self.rect_inner.h:
+                self.font = pygame.font.Font(self.default_font, s - 1)
+                self.size = self.font.size(val)
+                break
+
+        self.image.blit(self.font.render(val, True, self.font_color), (self.rect_inner.w / 2 - self.size[0] / 2,
+                                                                       self.rect_inner.h / 2 - self.size[1] / 2))
+        if mouse and self.rect.collidepoint(pygame.mouse.get_pos()):
+            value = easygui.fileopenbox(filetypes=self.types, multiple=self.multiple, title=self.display)
+            if value:
+                if os.path.splitext(value)[1] in self.typ:
+                    self.value = value
+                    return {self.name: self.value}
+                else:
+                    self.value = value
+
+
 class Settings_class:
-    def __init__(self, settings, set_of_settings, set_for_lists, game_language, size, surface):
-        self.all_settings = dict()
+    def __init__(self, settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, game_language,
+                 size, surface):
+        settings = copy.deepcopy(settings)
+        self.all_settings = {}
+        self.default_font = settings['Graphic']['Font']
         self.set_of_settings = set_of_settings
-        self.set_for_lists = set_for_lists
+        self.set_of_settings_type = set_of_settings
+        self.set_for_lists = set_of_settings_type
+        self.set_for_paths = set_for_paths
         self.settings = settings
         self.active_settings = list(self.settings.keys())[0]
         self.active_element = None
@@ -646,15 +728,16 @@ class Settings_class:
             temp_g = []
             SettingsElements = []
             Labels = []
-            SettingsButtons.append(Button((size[0] * 0.05, size[1] * buttons_pad, BaseRect.h * 5, BaseRect.h),
-                                          game_language[type_settings],
-                                          *set_of_settings[
-                                              'buttons active' if type_settings == self.active_element else 'buttons'],
-                                          1, ))
+            SettingsButtons.append(
+                Button(self.default_font, (size[0] * 0.05, size[1] * buttons_pad, BaseRect.h * 5, BaseRect.h),
+                       game_language[type_settings],
+                       *set_of_settings[
+                           'buttons active' if type_settings == self.active_element else 'buttons'],
+                       1, ))
             for element in settings[type_settings]:
                 BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92,
                                        size[1] // 36)
-                if type(settings[type_settings][element]) is bool:
+                if set_of_settings_type[type_settings][element] is Switch:
                     SettingsElements.append(
                         Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1,
                                 BaseRect.y + 1,
@@ -663,28 +746,44 @@ class Settings_class:
                                *set_of_settings['switches'],
                                name=f'{type_settings} {element}',
                                power=settings[type_settings][element]))
-                elif (type(settings[type_settings][element])) in [str, list, tuple]:
-                    temp_g.append(List((BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
-                                        BaseRect.y + 1,
-                                        BaseRect.h * 4 - BaseRect.h * 0.1,
-                                        BaseRect.h - 2),
-                                       settings[type_settings][element],
-                                       set_for_lists[element],
-                                       *set_of_settings['lists'],
-                                       f'{type_settings} {element}'))
-                elif (type(settings[type_settings][element])) in [float, int]:
-                    SettingsElements.append(Slide(
-                        (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
-                         BaseRect.y + 1,
-                         (BaseRect.h - 2) * 10,
-                         BaseRect.h - 2),
-                        *set_of_settings['slides'], base_data=settings[type_settings][element],
-                        name=f'{type_settings} {element}'))
+                elif set_of_settings_type[type_settings][element] is List:
+                    temp_g.append(
+                        List(self.default_font, (BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
+                                                 BaseRect.y + 1,
+                                                 BaseRect.h * 4 - BaseRect.h * 0.1,
+                                                 BaseRect.h - 2),
+                             set_for_lists[element][settings[type_settings][element]],
+                             settings[type_settings][element],
+                             [v for v in set_for_lists[element].values()],
+                             [v for v in set_for_lists[element].keys()],
+                             *set_of_settings['lists'],
+                             f'{type_settings} {element}'))
+                elif set_of_settings_type[type_settings][element] is Slide:
+                    SettingsElements.append(Slide(self.default_font,
+                                                  (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
+                                                   BaseRect.y + 1,
+                                                   (BaseRect.h - 2) * 10,
+                                                   BaseRect.h - 2),
+                                                  *set_of_settings['slides'],
+                                                  base_data=settings[type_settings][element],
+                                                  name=f'{type_settings} {element}'))
+                elif set_of_settings_type[type_settings][element] is Path:
+                    SettingsElements.append(Path(self.default_font,
+                                                 (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
+                                                  BaseRect.y + 1,
+                                                  (BaseRect.h - 2) * 10,
+                                                  BaseRect.h - 2),
+                                                 *set_of_settings['path'], value=settings[type_settings][element],
+                                                 display=set_for_paths[element]['name'],
+                                                 name=f'{type_settings} {element}',
+                                                 multiple=set_for_paths[element]['multiple'],
+                                                 types=set_for_paths[element]['types'],
+                                                 typ=set_for_paths[element]['values']))
                 else:
-                    print(type_settings, element, type(settings[type_settings][element]))
+                    print(type_settings, element, type(set_of_settings_type[type_settings][element]))
                     raise SystemError
                 Labels.append(
-                    Label(BaseRect, game_language[f'{type_settings} {element}'], *set_of_settings['label'], False))
+                    Label(self.default_font, BaseRect, game_language[f'{type_settings} {element}'], *set_of_settings['label'], False))
                 pad += BaseRect.h / size[1] * 1.1
             buttons_pad += (BaseRect.h / size[1] * 1.1)
             for el in reversed(temp_g):
@@ -694,7 +793,7 @@ class Settings_class:
             self.all_settings[type_settings]['buttons'] = SettingsButtons
             self.all_settings[type_settings]['elements'] = SettingsElements
 
-    def update(self, mouse):
+    def update(self, mouse, events):
         self.mouse = mouse
         for label in self.all_settings[self.active_settings]['labels']:
             if self.active_element:
@@ -717,10 +816,10 @@ class Settings_class:
 
         for n, sprite in enumerate(sett['elements']):
             self.surface.blit(sprite.image, sprite.rect)
-            # name_split = sprite.name.split(' ')
-            # if sprite.value != self.settings[name_split[0]][name_split[1]]:
-            #     self.all_settings[self.active_settings]['elements'][n].value = sprite.value
             if not self.active_element:
+                name = sprite.name.split(' ')
+                if sprite.value != self.settings[name[0]][name[1]]:
+                    sprite.value = self.settings[name[0]][name[1]]
                 SpriteUpdate: dict = sprite.update(self.mouse)
                 if SpriteUpdate:
                     if type(SpriteUpdate) is bool:
