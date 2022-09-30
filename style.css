@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto');
+body {
+    background: rgb(24, 24, 24)
+}
+.button {
+  /* Сбрасываем дефолтные стили */
+  border: none;
+  outline: none;
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 50px;
+  /* Можно также использовать любые встроенные и кастомные шрифты, например, отсюда  */
+  font-family: Roboto, Verdana, Tahoma, sans;
+  /* Тут можно поэкспериментировать */
+  padding: 4% 10%;
+  border-radius: 100px;
+  color: #fff;
+}
+
+.button + .button {
+  margin-left: 10%;
+}
+.button.blue {
+  background: #2196F3;
+}
+.button.green {
+  background: #00D350;
+}
+
+.button:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.button:hover.blue {
+  background: #39a1f4;
+}
+.button:hover.green {
+  background: #00FF61;
+}
+.button:active {
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.button:active.blue {
+  background: #0d8aee;
+}
+.button:active.purple {
+  background: #8f4bab;
+}
+
+div {
+  margin: 24px;
+  text-align: center;
+}
