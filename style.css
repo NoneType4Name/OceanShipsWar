@@ -1,55 +1,91 @@
-@import url('https://fonts.googleapis.com/css?family=Roboto');
+@font-face {
+    font-family: "Cascadia";
+    src: url(asets/font.ttf);
+}
 body {
     background: rgb(24, 24, 24)
 }
 .button {
-  /* Сбрасываем дефолтные стили */
-  border: none;
-  outline: none;
-  display: inline-block;
-  text-align: center;
-  text-decoration: none;
-  cursor: pointer;
-  font-size: 50px;
-  /* Можно также использовать любые встроенные и кастомные шрифты, например, отсюда  */
-  font-family: Roboto, Verdana, Tahoma, sans;
-  /* Тут можно поэкспериментировать */
-  padding: 4% 10%;
-  border-radius: 100px;
-  color: #fff;
+    border: 4px solid #fff;
+    font-size: 36px;
+    width: 307px;
+    height: 108px;
+    font-family: Cascadia;
+    display: inline-block;
+    outline: none;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 28px;
+    transform: translate(-50%, -50%);
+    color: #fff;
 }
 
-.button + .button {
-  margin-left: 10%;
-}
-.button.blue {
-  background: #2196F3;
-}
-.button.green {
-  background: #00D350;
+.button.main {
+    color: white;
+    background: black;
 }
 
 .button:hover {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-.button:hover.blue {
-  background: #39a1f4;
-}
-.button:hover.green {
-  background: #00FF61;
-}
-.button:active {
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-.button:active.blue {
-  background: #0d8aee;
-}
-.button:active.purple {
-  background: #8f4bab;
+    color: black;
+    background: rgb(127, 127, 127);
 }
 
-div {
-  margin: 24px;
-  text-align: center;
+/*.tooltip {
+  position: relative;
+  display: inline-block;
+  border-bottom: 1px dotted black;
 }
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 100%;
+    background-color: #555;
+    color: #fff;
+    font-size: 90%;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px ;
+    position: absolute;
+    z-index: 1;
+    bottom: 50%;
+    left: 100%;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
+*/
+
+/* внешний вид меню */
+.context-menu {
+	/* настройки шрифта */
+	font-family: Cascadia;
+	/* устанавливаем абсолютное позиционирование */
+    position: absolute; 
+  /* не показываем меню с самого начала */
+    display: none; 
+  /* цвет фона и настройки рамки вокруг меню */
+    background-color: rgb(24, 24, 24); 
+    border: 1px solid #333; 
+    padding: 5px;
+
+  /* Добавим тени */
+    -moz-box-shadow: 5px 2px 10px rgba(0,0,0,0.5); 
+    -webkit-box-shadow: 5px 2px 10px rgba(0,0,0,0.5); 
+    box-shadow: 5px 2px 10px rgba(0,0,0,0.5); 
+}
+/* общий стиль для списка */
+.context-menu ul { list-style: none; margin: 0; padding: 0; }
+
+/* стиль отдельных элементов */
+.context-menu ul li { margin: 0; padding: 0; background-color: rgb(24, 24, 24); display: block; }
+
+/* стиль ссылок в меню */
+.context-menu ul li a { color: #333; text-decoration: none; font-size: 12px; display: block; padding: 5px; }
+
+/* меняем фон в пункте меню при наведении мыши */
+.context-menu ul li a:hover { background-color: rgb(24, 24, 24); }
