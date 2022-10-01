@@ -1,6 +1,6 @@
 @font-face {
     font-family: "Cascadia";
-    src: url(asets/font.ttf);
+    src: url(./asets/font.ttf);
 }
 body {
     background: rgb(24, 24, 24)
