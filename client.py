@@ -1,5 +1,5 @@
 try:
-    version = '0.0.4b'
+    version = '0.0.6b'
     import copy
     import json
     import math
@@ -20,10 +20,20 @@ try:
     from netifaces import interfaces, ifaddresses, AF_INET
     from Gui import *
     import Reg as reg
+    import win32process
+    import win32gui, win32com.client
     import logging
-    logging.basicConfig(filename='logs.txt', filemode='w', format='%(levelname)s\t[%(asctime)s] [%(module)s in %(funcName)s] line %(lineno)d|\t%(message)s', level=logging.NOTSET)
+    try:
+        os.chdir(sys._MEIPASS)
+        main_dir = os.path.dirname(sys.executable)
+    except AttributeError:
+        os.chdir(os.path.split(__file__)[0])
+        main_dir = os.path.dirname(__file__)
+    logging.basicConfig(filename='logs.txt', filemode='w',
+                        format='%(levelname)s\t[%(asctime)s] [%(module)s in %(funcName)s] line %(lineno)d|\t%(message)s',
+                        level=logging.NOTSET)
     logging.info('import libs')
-
+    shell_win = win32com.client.Dispatch("WScript.Shell")
     link = None
     run_with_links = True
     size = (get_monitors()[0].width, get_monitors()[0].height)
@@ -32,7 +42,6 @@ try:
     default_font = 'asets/notosans.ttf'
     lang = 'rus'
     theme = 0
-
 
     def base_parse_args(args):
         for arg in args:
@@ -93,13 +102,18 @@ try:
                         settings, room, create_game, join_game = [False]*4
                         me = 'client'
                         not_me = 'main'
+                        shell_win.SendKeys("%")
+                        win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
                     except Exception as err:
                         global ERRORS
+                        shell_win.SendKeys("%")
+                        win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
                         ERRORS.append(f'Не верный адрес приглашения.\t{err.args}')
                         GameSettings['my socket'] = ['', 0]
                         re_theme()
             else:
                 logging.warning(f'unknown request:{request} in {unpack_args}')
+
 
     pygame.init()
     logging.debug('SDL success init')
@@ -108,12 +122,6 @@ try:
         logging.debug('mixer success init')
     except pygame.error:
         logging.debug('mixer not init')
-    try:
-        os.chdir(sys._MEIPASS)
-        main_dir = os.path.dirname(sys.executable)
-    except AttributeError:
-        os.chdir(os.path.split(__file__)[0])
-        main_dir = os.path.dirname(__file__)
     # if getattr(sys, 'frozen', False):
     #     main_dir = os.path.dirname(sys.executable)
     # elif __file__:
@@ -131,7 +139,6 @@ try:
     RED = (255, 0, 0)
     GREEN = (0, 255, 0)
     BLUE = (0, 0, 255)
-
     bsize = size[0] // 27.428571428571427
     ships_wh = int(bsize // 7)
     left_margin, upper_margin = (size[0] // 2 - bsize * 5), (size[1] // 2 - bsize * 5)
@@ -709,16 +716,19 @@ try:
 
 
     def update_game(ver):
-        global run
-        mb = 0
-        file = requests.get(f'https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe',
-                            stream=True)
-        with open(fr'{main_dir}\OceanShipsWar {ver}.exe', 'wb') as f:
-            for chunk in file.iter_content(1024 * 1024):
-                f.write(chunk)
-                mb += 1
-        subprocess.Popen(fr'{main_dir}\OceanShipsWar {ver}.exe')
-        run = False
+        global run, ERRORS
+        if (windll.user32.MessageBoxW(pygame.display.get_wm_info()['window'], f"Доступна версия {ver}, продолжить обновление?",
+                                      f"Обновление до версии {ver}", 36)) == 6:
+            ERRORS.append(f'Загружается новая версия: {FromGitVersion}')
+            mb = 0
+            file = requests.get(f'https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe',
+                                stream=True)
+            with open(fr'{main_dir}\OceanShipsWar {ver}.exe', 'wb') as f:
+                for chunk in file.iter_content(1024 * 1024):
+                    f.write(chunk)
+                    mb += 1
+            subprocess.Popen(fr'{main_dir}\OceanShipsWar {ver}.exe')
+            run = False
 
 
     def StartGame():
@@ -769,7 +779,6 @@ try:
                 if from_git_version_int < version_int:
                     ERRORS.append(f'\tПриветствуем участника pre-тестирования!.\t')
                 else:
-                    ERRORS.append(f'Загружается новая версия: {FromGitVersion}')
                     threading.Thread(target=update_game, args=[FromGitVersion]).start()
             elif 'b' in FromGitVersion:
                 ERRORS.append(f'\tПриветствуем участника бетатестирования!.\t')
@@ -1013,7 +1022,6 @@ try:
                     if FromGitVersionInt < versionInt:
                         ERRORS.append('pre-release.')
                     else:
-                        ERRORS.append(f'Загружается новая версия: {FromGitVersion}')
                         threading.Thread(target=update_game, args=[FromGitVersion]).start()
                 else:
                     ERRORS.append('Актуальная версия.')
@@ -1053,6 +1061,8 @@ try:
                     create_game = False
                     game = True
                     is_adm = True
+                    shell_win.SendKeys("%")
+                    win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
                 except BlockingIOError:
                     pass
                 CreateGameWaitUser.update()
@@ -1119,6 +1129,8 @@ try:
                     join_game = False
                     me = 'client'
                     not_me = 'main'
+                    shell_win.SendKeys("%")
+                    win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
                 except Exception as err:
                     ERRORS.append(f'Введите общедоступный IP адрес или хостинг!.\t{err}')
                     GameSettings['my socket'] = ['', 0]
@@ -1566,6 +1578,8 @@ try:
                 Sounds['info_sound'].play()
             Notifications.add(Notification(Settings['Graphic']['Font'], (size[0] // 2 - size[0] * 0.4 // 2, size[1] * 0.07, size[0] * 0.4, size[1] * 0.1),
                                            er, (86, 86, 86), (0, 0, 0), (255, 255, 255)))
+            shell_win.SendKeys("%")
+            win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
             del ERRORS[n]
         for n, s in enumerate(reversed(Notifications.sprites())):
             if not n:
@@ -1599,4 +1613,4 @@ except Exception as err:
                  f'\n\ntime:\t {current_datetime}'
                  f'\nis adm:\t {bool(windll.shell32.IsUserAnAdmin())}',
                  version, 'logs.txt')
-    windll.user32.MessageBoxW(0, traceback_exception, "ERROR INFO", 0)
+    windll.user32.MessageBoxW(pygame.display.get_wm_info()['windows'], traceback_exception, "ERROR INFO", 0)

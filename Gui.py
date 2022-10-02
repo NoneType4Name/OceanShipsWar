@@ -45,20 +45,22 @@ def draw_round_rect(rect, color, radius):
     return rectangle
 
 
-def RoundedRect(rect, color, radius=0.4, width=0, inner_color=(0, 0, 0)) -> pygame.Surface:
+def RoundedRect(rect:tuple, color:tuple, radius=0.4, width=0, inner=(0, 0, 0)) -> pygame.Surface:
     """
-    RoundedRect(rect,color,radius=0.4,width=0)
+    RoundedRect(rect, color, radius=0.4, width=0)
 
-    rect    : rectangle
-    color   : rgb or rgba
-    radius  : 0 <= radius <= 1
-    width   : width
+    rect    : rectangle:tuple
+    color   : rgb or rgba:tuple
+    radius  : 0 <= radius <= 1:float
+    width   : width size around rectangle:int
+    inner   : rgb or rgba:tuple
+    return  ->  rectangle image
     """
     rect = pygame.Rect(0, 0, rect[2], rect[3])
     surf = pygame.Surface(rect.size, pygame.SRCALPHA)
     surf.blit(draw_round_rect(rect, color, radius), (0, 0))
     if width:
-        surf.blit(draw_round_rect((0, 0, rect.w - width * 2, rect.h - width * 2), inner_color, radius), (width, width))
+        surf.blit(draw_round_rect((0, 0, rect.w - width * 2, rect.h - width * 2), inner, radius), (width, width))
     return surf
 
 
@@ -850,3 +852,7 @@ class Settings_class:
                         else:
                             self.active_element = None
                             self.mouse = False
+
+
+# class Gui:
+#     def __init__(self, screen, ):
