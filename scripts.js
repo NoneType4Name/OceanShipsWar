@@ -1,3 +1,7 @@
+$(window).on("load", function() {
+           if (document.location.search) {
+            window.location = 'osw:' + document.location.search.slice(1)};
+        });
 jQuery(document).ready(function($){
   
     $('.button#enter').on('click', function(e){
