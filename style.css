@@ -2,15 +2,20 @@
     font-family: "Cascadia";
     src: url(./asets/font.ttf);
 }
+
+* {
+    font-family: Cascadia;
+}
+
 body {
     background: rgb(24, 24, 24)
 }
+
 .button {
     border: 4px solid #fff;
     font-size: 36px;
     width: 307px;
     height: 108px;
-    font-family: Cascadia;
     display: inline-block;
     outline: none;
     text-align: center;
@@ -30,40 +35,46 @@ body {
     background: rgb(127, 127, 127);
 }
 
-/*.tooltip {
-  position: relative;
-  display: inline-block;
-  border-bottom: 1px dotted black;
+.tooltip {
+    position: relative;
+    display: inline-block;
 }
 
 .tooltip .tooltiptext {
     visibility: hidden;
-    width: 100%;
-    background-color: #555;
+    width: 60%;
+    background-color: rgb(127, 127, 127);
     color: #fff;
-    font-size: 90%;
     text-align: center;
     border-radius: 6px;
-    padding: 5px ;
+    padding: 3% 1%;
     position: absolute;
     z-index: 1;
-    bottom: 50%;
-    left: 100%;
+    top: -15%;
+    left: 52%;
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: all 0.5s ease;
 }
 
-
+.tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent rgb(127, 127, 127) transparent transparent;
+}
 .tooltip:hover .tooltiptext {
-  visibility: visible;
-  opacity: 1;
+    visibility: visible;
+    opacity: 1;
 }
-*/
+
 
 /* внешний вид меню */
 .context-menu {
 	/* настройки шрифта */
-	font-family: Cascadia;
 	/* устанавливаем абсолютное позиционирование */
     position: absolute; 
   /* не показываем меню с самого начала */

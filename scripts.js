@@ -1,9 +1,11 @@
 jQuery(document).ready(function($){
   
     $('.button#enter').on('click', function(e){
-        if (document.location.search) location.href = 'osw:/' + document.location.search;
-        else location.href = 'osw:/';
-        setTimeout(function(){$("h1").text("Если приложение не запустилось, кажется у вас его нет...")}, 3000);});
+        var app_vame = 'osw:'
+        $("h1").text("");
+        if (document.location.search) window.location = app_vame + document.location.search.slice(1);
+        else window.location = app_vame;
+        });
   
     $('.button#download').on('click', function(e){
         e.preventDefault();
