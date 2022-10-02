@@ -13,7 +13,8 @@ jQuery(document).ready(function($){
   
     $('.button#download').on('click', function(e){
         e.preventDefault();
-        location.href="https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe";});
+        window.open("https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe", '_blank');
+    });
 
     $('.button#about').on('click', function(e){
         location.href= './about';});
