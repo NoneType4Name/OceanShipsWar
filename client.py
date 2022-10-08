@@ -2,34 +2,34 @@ try:
     version = '0.0.6b'
     import subprocess
     import sys
-    _lgr_cmd = subprocess.Popen([sys.executable, "-c", """
-import sys
-from colorama import init
-BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
-
-COLORS = {
-    'RED'      : RED,
-    'GREEN'    : GREEN,
-    'YELLOW'   : YELLOW,
-    'BLUE'     : BLUE,
-    'MAGENTA'  : MAGENTA,
-    'CYAN'     : CYAN,
-    'WHITE'    : WHITE,
-}
-RESET_SEQ = "\033[0m"
-COLOR_SEQ = "\033[1;%dm"
-BOLD_SEQ  = "\033[1m"
-def format(message):
-    message = message.replace("$RESET", RESET_SEQ).replace("$BOLD",  BOLD_SEQ)
-    for k,v in COLORS.items():
-        message = message.replace("$" + k,    COLOR_SEQ % (v+30)).replace("$BG" + k,  COLOR_SEQ % (v+40)).replace("$BG-" + k, COLOR_SEQ % (v+40))
-    return message + RESET_SEQ
-init()
-for line in sys.stdin:
-    sys.stdout.write(format(line))
-    sys.stdout.flush()
-"""], stdin=subprocess.PIPE, universal_newlines=True, bufsize=1, creationflags=subprocess.CREATE_NEW_CONSOLE)
-    sys.stdout = _lgr_cmd.stdin
+#     _lgr_cmd = subprocess.Popen([sys.executable, "-c", """
+# import sys
+# from colorama import init
+# BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
+#
+# COLORS = {
+#     'RED'      : RED,
+#     'GREEN'    : GREEN,
+#     'YELLOW'   : YELLOW,
+#     'BLUE'     : BLUE,
+#     'MAGENTA'  : MAGENTA,
+#     'CYAN'     : CYAN,
+#     'WHITE'    : WHITE,
+# }
+# RESET_SEQ = "\033[0m"
+# COLOR_SEQ = "\033[1;%dm"
+# BOLD_SEQ  = "\033[1m"
+# def format(message):
+#     message = message.replace("$RESET", RESET_SEQ).replace("$BOLD",  BOLD_SEQ)
+#     for k,v in COLORS.items():
+#         message = message.replace("$" + k,    COLOR_SEQ % (v+30)).replace("$BG" + k,  COLOR_SEQ % (v+40)).replace("$BG-" + k, COLOR_SEQ % (v+40))
+#     return message + RESET_SEQ
+# init()
+# for line in sys.stdin:
+#     sys.stdout.write(format(line))
+#     sys.stdout.flush()
+# """], stdin=subprocess.PIPE, universal_newlines=True, bufsize=1, creationflags=subprocess.CREATE_NEW_CONSOLE)
+#     sys.stdout = _lgr_cmd.stdin
     import copy
     import json
     import math
@@ -43,14 +43,14 @@ for line in sys.stdin:
     from ast import literal_eval
     import requests
     import threading
-    from ctypes import windll
     from screeninfo import get_monitors
     from netifaces import interfaces, ifaddresses, AF_INET
     from Gui import *
     import Reg as reg
     import win32process
-    from urllib.parse import urlparse, parse_qs
+    from ctypes import windll
     import win32gui, win32com.client
+    from urllib.parse import urlparse, parse_qs
     import logging
     from ColoredLogs import *
 
@@ -66,17 +66,17 @@ for line in sys.stdin:
     rootLogger = logging.getLogger()
 
     logFormatter = logging.Formatter(fmt='%(levelname)s  [%(asctime)s.%(msecs)03d]  [%(filename)s:%(lineno)d:%(funcName)s]  %(message)s', datefmt='%H:%M:%S')
-    ConsoleLogFormatter = logging.ColorFormatter(fmt='[$COLOR%(levelname)s$RESET]  [%(filename)s:%(lineno)d:%(funcName)s]  [%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
+    # ConsoleLogFormatter = logging.ColorFormatter(fmt='[$COLOR%(levelname)s$RESET]  [%(filename)s:%(lineno)d:%(funcName)s]  [%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
     logs = [main_dir+'\\logs.txt', 'w']
     fileHandler = logging.FileHandler(*logs)
     fileHandler.setFormatter(logFormatter)
     fileHandler.setLevel(logging.NOTSET)
     rootLogger.addHandler(fileHandler)
 
-    consoleHandler = logging.StreamHandler(_lgr_cmd.stdin)
-    consoleHandler.setFormatter(ConsoleLogFormatter)
-    consoleHandler.setLevel(logging.NOTSET)
-    rootLogger.addHandler(consoleHandler)
+    # consoleHandler = logging.StreamHandler(_lgr_cmd.stdin)
+    # consoleHandler.setFormatter(ConsoleLogFormatter)
+    # consoleHandler.setLevel(logging.NOTSET)
+    # rootLogger.addHandler(consoleHandler)
     rootLogger.setLevel(logging.NOTSET)
     parser = reg.createParser()
     namespace_args = parser.parse_args()
@@ -1651,10 +1651,10 @@ except Exception as err:
 
     exc_type, exc_value, exc_tb = sys.exc_info()
     traceback_exception = ''.join(traceback.TracebackException(exc_type, exc_value, exc_tb).format())
+    logging.error(err.args, exc_info=True, stack_info=True)
     send_message(['alexkim0710@gmail.com'],f'ERROR {type(err)}',
                  f'{traceback_exception}'
                  f'\n\ntime:\t {current_datetime}'
                  f'\nis adm:\t {bool(windll.shell32.IsUserAnAdmin())}',
                  version, 'logs.txt')
-    logging.error(err.args, exc_info=True, stack_info=True)
     windll.user32.MessageBoxW(pygame.display.get_wm_info()['windows'] if pygame.display.init() else 0, traceback_exception, "ERROR INFO", 0)
