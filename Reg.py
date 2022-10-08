@@ -1,4 +1,5 @@
 import winreg as reg
+import argparse
 APP_NAME = 'osw'
 
 
@@ -59,7 +60,7 @@ def init_deep_links(path_exe):
             set_value(reg.HKEY_CLASSES_ROOT, APP_NAME, 'URL Protocol', None)
 
             set_value(reg.HKEY_CLASSES_ROOT, APP_NAME+r'\DefaultIcon', None, f'{path_exe}, 1')
-            set_value(reg.HKEY_CLASSES_ROOT, APP_NAME+r'\shell\open\command', None, f'{path_exe} "%1"')
+            set_value(reg.HKEY_CLASSES_ROOT, APP_NAME+r'\shell\open\command', None, f'{path_exe} --DeepLinksApi "%1"')
             break
 
 
@@ -68,3 +69,13 @@ def del_deep_link():
         if get_value(reg.HKEY_CLASSES_ROOT, APP_NAME+r'\shell\open\command', None):
             delete_key(reg.HKEY_CLASSES_ROOT, fr'{APP_NAME}')
             break
+
+
+def createParser():
+        parser = argparse.ArgumentParser()
+        parser.add_argument('-l','--links', dest='links', action='store_false')
+        parser.add_argument('-s','--size', dest='size')
+        parser.add_argument('-t','--theme', dest='theme', action='store_true')
+        parser.add_argument('-L','--lang', dest='lang', choices=['rus','eng'])
+        parser.add_argument('--DeepLinksApi', dest='DeepLinksApi')
+        return parser

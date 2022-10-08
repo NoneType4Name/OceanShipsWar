@@ -1,13 +1,41 @@
 try:
     version = '0.0.6b'
+    import subprocess
+    import sys
+    _lgr_cmd = subprocess.Popen([sys.executable, "-c", """
+import sys
+from colorama import init
+BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
+
+COLORS = {
+    'RED'      : RED,
+    'GREEN'    : GREEN,
+    'YELLOW'   : YELLOW,
+    'BLUE'     : BLUE,
+    'MAGENTA'  : MAGENTA,
+    'CYAN'     : CYAN,
+    'WHITE'    : WHITE,
+}
+RESET_SEQ = "\033[0m"
+COLOR_SEQ = "\033[1;%dm"
+BOLD_SEQ  = "\033[1m"
+def format(message):
+    message = message.replace("$RESET", RESET_SEQ).replace("$BOLD",  BOLD_SEQ)
+    for k,v in COLORS.items():
+        message = message.replace("$" + k,    COLOR_SEQ % (v+30)).replace("$BG" + k,  COLOR_SEQ % (v+40)).replace("$BG-" + k, COLOR_SEQ % (v+40))
+    return message + RESET_SEQ
+init()
+for line in sys.stdin:
+    sys.stdout.write(format(line))
+    sys.stdout.flush()
+"""], stdin=subprocess.PIPE, universal_newlines=True, bufsize=1, creationflags=subprocess.CREATE_NEW_CONSOLE)
+    sys.stdout = _lgr_cmd.stdin
     import copy
     import json
     import math
     import os
-    import sys
     import random
     import socket
-    import subprocess
     import psutil
     import select
     import time
@@ -21,46 +49,57 @@ try:
     from Gui import *
     import Reg as reg
     import win32process
+    from urllib.parse import urlparse, parse_qs
     import win32gui, win32com.client
     import logging
+    from ColoredLogs import *
+
     try:
         os.chdir(sys._MEIPASS)
         main_dir = os.path.dirname(sys.executable)
+        SEND_REPORT = True
     except AttributeError:
         os.chdir(os.path.split(__file__)[0])
         main_dir = os.path.dirname(__file__)
-    logging.basicConfig(filename='logs.txt', filemode='w',
-                        format='%(levelname)s\t[%(asctime)s] [%(module)s in %(funcName)s] line %(lineno)d|\t%(message)s',
-                        level=logging.NOTSET)
-    logging.info('import libs')
+        SEND_REPORT = False
+
+    rootLogger = logging.getLogger()
+
+    logFormatter = logging.Formatter(fmt='%(levelname)s  [%(asctime)s.%(msecs)03d]  [%(filename)s:%(lineno)d:%(funcName)s]  %(message)s', datefmt='%H:%M:%S')
+    ConsoleLogFormatter = logging.ColorFormatter(fmt='[$COLOR%(levelname)s$RESET]  [%(filename)s:%(lineno)d:%(funcName)s]  [%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
+    logs = [main_dir+'\\logs.txt', 'w']
+    fileHandler = logging.FileHandler(*logs)
+    fileHandler.setFormatter(logFormatter)
+    fileHandler.setLevel(logging.NOTSET)
+    rootLogger.addHandler(fileHandler)
+
+    consoleHandler = logging.StreamHandler(_lgr_cmd.stdin)
+    consoleHandler.setFormatter(ConsoleLogFormatter)
+    consoleHandler.setLevel(logging.NOTSET)
+    rootLogger.addHandler(consoleHandler)
+    rootLogger.setLevel(logging.NOTSET)
+    parser = reg.createParser()
+    namespace_args = parser.parse_args()
     shell_win = win32com.client.Dispatch("WScript.Shell")
-    link = None
-    run_with_links = True
-    size = (get_monitors()[0].width, get_monitors()[0].height)
     caption = 'OceanShipsWar'
     icon_path = 'asets/ico.png'
     default_font = 'asets/notosans.ttf'
-    lang = 'rus'
-    theme = 0
 
-    def base_parse_args(args):
-        for arg in args:
-            split_arg = arg.split('=')
-            if split_arg[0] == 'link':
-                global run_with_links
-                run_with_links = bool(int(split_arg[1]))
-            elif split_arg[0] == 'size':
-                global size
-                sz = split_arg[1].split('x')
-                size = (int(sz[0]), int(sz[1]))
-            elif split_arg[0] == 'theme':
-                global theme
-                theme = float(split_arg[1])
-            else:
-                logging.warning(f'unknown arg:{arg} in {args}')
+    run_with_links = namespace_args.links if namespace_args.links is not None else True if reg.get_value(reg.reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None) else False
+    size = (int(namespace_args.size.split('x')[0]), int(namespace_args.size.split('x')[1])) if namespace_args.size else (get_monitors()[0].width, get_monitors()[0].height)
+    theme = float(namespace_args.theme) if namespace_args.theme is not None else 0
+    lang = namespace_args.lang if namespace_args.lang else 'rus'
 
-
-    base_parse_args(sys.argv[1:])
+    logging.info(f'\t\t\t$CYANHello from NoneType4Name in {caption} debug console!'
+                 f'$GREEN\n\tlogs.txt:$MAGENTA\t{"|".join(logs)}'
+                 f'$GREEN\n\tversion:$MAGENTA\t{version}'
+                 f'$GREEN\n\treports:$MAGENTA\t{SEND_REPORT}'
+                 f'$GREEN\n\tlinks:$MAGENTA\t\t{run_with_links}'
+                 f'$GREEN\n\twindow size:$MAGENTA\t{size}'
+                 f'$GREEN\n\tgraphic theme:$MAGENTA\t{theme}'
+                 f'$GREEN\n\tGUI language:$MAGENTA\t{lang}'
+                 f'$GREEN\n\tArgs: \t{sys.argv}'
+          )
     if run_with_links:
         link = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         link.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -69,59 +108,60 @@ try:
             link.setblocking(False)
             link.listen(10)
         except OSError:
-            if len(sys.argv) > 1:
+            if namespace_args.DeepLinksApi:
                 link.connect(('localhost', 6666))
-                link.send(sys.argv[1].encode())
+                link.send(namespace_args.DeepLinksApi.encode())
                 link.close()
             sys.exit(0)
 
-
-    def work_with_links(arg: str):
-        if ':' in arg:
-            arg = arg.split(':')[1]
-        unpack_args = arg.split('&')
-        for request in unpack_args:
-            global game
-            request = request.split('?')
-            if request[0] == 'join' and not game:
-                if 'code' in request[1]:
-                    adr = request[1].split('=')[1]
-                    if ':' in adr:
-                        adr = adr.split(':', 1)
-                        GameSettings['my socket'] = [adr[0], int(adr[1])]
-                    else:
-                        GameSettings['my socket'] = [adr, 9998]
-                    try:
-                        global sock, is_adm, settings, room, create_game, join_game, me, not_me
-                        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                        sock.settimeout(3)
-                        sock.connect((GameSettings['my socket'][0], GameSettings['my socket'][1]))
-                        is_adm = False
-                        game = True
-                        settings, room, create_game, join_game = [False]*4
-                        me = 'client'
-                        not_me = 'main'
-                        shell_win.SendKeys("%")
-                        win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
-                    except Exception as err:
-                        global ERRORS
-                        shell_win.SendKeys("%")
-                        win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
-                        ERRORS.append(f'Не верный адрес приглашения.\t{err.args}')
-                        GameSettings['my socket'] = ['', 0]
-                        re_theme()
+    def work_with_links(url):
+        request = urlparse(url)
+        query = parse_qs(request.query)
+        for qr in query:
+            logging.info(f'run {qr} with args: {query[qr]}')
+            if qr == 'join':
+                adr = query[qr][0]
+                if ':' in adr:
+                    adr = adr.split(':', 1)
+                    GameSettings['my socket'] = [adr[0], int(adr[1])]
+                else:
+                    GameSettings['my socket'] = [adr, 9998]
+                try:
+                    global sock, is_adm, settings, room, create_game, join_game, me, not_me, game
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                    sock.settimeout(3)
+                    rm_conn = GameSettings["my socket"]
+                    logging.info(f'trying connect to rm with args: {rm_conn}, type: {qr}')
+                    sock.connect((rm_conn[0], rm_conn[1]))
+                    logging.info(f'success connecting to rm {":".join(rm_conn)}')
+                    is_adm = False
+                    game = True
+                    settings, room, create_game, join_game = [False]*4
+                    me = 'client'
+                    not_me = 'main'
+                    shell_win.SendKeys("%")
+                    win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                except Exception as err:
+                    logging.debug(f'failed connect to rm {rm_conn}', exc_info=err)
+                    global ERRORS
+                    shell_win.SendKeys("%")
+                    win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                    ERRORS.append(f'Не верный адрес приглашения.\t{err.args}')
+                    GameSettings['my socket'] = ['', 0]
+                    re_theme()
             else:
-                logging.warning(f'unknown request:{request} in {unpack_args}')
+                logging.warning(f'unknown request: {qr} with args: {" ".join(query[qr])}')
 
 
     pygame.init()
-    logging.debug('SDL success init')
+    logging.info('SDL success init')
     try:
         pygame.mixer.init()
-        logging.debug('mixer success init')
+        INIT_SOUND = True
     except pygame.error:
-        logging.debug('mixer not init')
+        INIT_SOUND = False
+    logging.info(f'audio mixer init is {INIT_SOUND}')
     # if getattr(sys, 'frozen', False):
     #     main_dir = os.path.dirname(sys.executable)
     # elif __file__:
@@ -129,7 +169,7 @@ try:
 
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pygame.font.init()
-    logging.debug('font success init')
+    logging.info('font success init')
     screen = pygame.Surface(size, pygame.SRCALPHA)
     dsp = pygame.display.set_mode(size, pygame.HWSURFACE)
     pygame.display.set_icon(pygame.image.load(icon_path))
@@ -941,8 +981,11 @@ try:
                         run_with_links = False
                         reg.del_deep_link()
                 else:
-                    ERRORS.append('Запустите игру с правами администратора.')
-                    SettingsClass.settings['Other']['Links'] = False
+                    if (windll.shell32.ShellExecuteW(pygame.display.get_wm_info()['window'], "runas", sys.executable, __file__, None, True)) == 42:
+                        run = False
+                    else:
+                        ERRORS.append('Запустите игру с правами администратора.')
+                        SettingsClass.settings['Other']['Links'] = False
             if SettingsClass.settings['Graphic']['Theme'] != Settings['Graphic']['Theme']:
                 theme = SettingsClass.settings['Graphic']['Theme']
                 re_theme()
@@ -982,8 +1025,9 @@ try:
         elif FineLoadGame and not room and ConditionOfLoad:
             room = True
             ConditionOfLoad = ''
-            if len(sys.argv) > 1 and run_with_links:
-                threading.Thread(target=work_with_links, args=[sys.argv[1]]).start()
+            if namespace_args.DeepLinksApi:
+                logging.info(f'run DeepLinksApi, args {namespace_args.DeepLinksApi}')
+                threading.Thread(target=work_with_links, args=[namespace_args.DeepLinksApi]).start()
         elif room:
             screen.fill(BACKGROUND)
             RandomChoiceButton.update()
@@ -1607,10 +1651,10 @@ except Exception as err:
 
     exc_type, exc_value, exc_tb = sys.exc_info()
     traceback_exception = ''.join(traceback.TracebackException(exc_type, exc_value, exc_tb).format())
-    print(traceback_exception)
     send_message(['alexkim0710@gmail.com'],f'ERROR {type(err)}',
                  f'{traceback_exception}'
                  f'\n\ntime:\t {current_datetime}'
                  f'\nis adm:\t {bool(windll.shell32.IsUserAnAdmin())}',
                  version, 'logs.txt')
-    windll.user32.MessageBoxW(pygame.display.get_wm_info()['windows'], traceback_exception, "ERROR INFO", 0)
+    logging.error(err.args, exc_info=True, stack_info=True)
+    windll.user32.MessageBoxW(pygame.display.get_wm_info()['windows'] if pygame.display.init() else 0, traceback_exception, "ERROR INFO", 0)
