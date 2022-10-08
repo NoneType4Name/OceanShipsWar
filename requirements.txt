@@ -8,3 +8,4 @@ psutil==5.9.2
 DateTime==4.7
 future==0.18.2
 colorama==0.4.5
+pywin32==304
