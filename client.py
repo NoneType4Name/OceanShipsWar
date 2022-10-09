@@ -1,96 +1,82 @@
 try:
     version = '0.0.6b'
-    import subprocess
     import sys
-#     _lgr_cmd = subprocess.Popen([sys.executable, "-c", """
-# import sys
-# from colorama import init
-# BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
-#
-# COLORS = {
-#     'RED'      : RED,
-#     'GREEN'    : GREEN,
-#     'YELLOW'   : YELLOW,
-#     'BLUE'     : BLUE,
-#     'MAGENTA'  : MAGENTA,
-#     'CYAN'     : CYAN,
-#     'WHITE'    : WHITE,
-# }
-# RESET_SEQ = "\033[0m"
-# COLOR_SEQ = "\033[1;%dm"
-# BOLD_SEQ  = "\033[1m"
-# def format(message):
-#     message = message.replace("$RESET", RESET_SEQ).replace("$BOLD",  BOLD_SEQ)
-#     for k,v in COLORS.items():
-#         message = message.replace("$" + k,    COLOR_SEQ % (v+30)).replace("$BG" + k,  COLOR_SEQ % (v+40)).replace("$BG-" + k, COLOR_SEQ % (v+40))
-#     return message + RESET_SEQ
-# init()
-# for line in sys.stdin:
-#     sys.stdout.write(format(line))
-#     sys.stdout.flush()
-# """], stdin=subprocess.PIPE, universal_newlines=True, bufsize=1, creationflags=subprocess.CREATE_NEW_CONSOLE)
-#     sys.stdout = _lgr_cmd.stdin
+    import os
     import copy
     import json
     import math
-    import os
+    import time
     import random
     import socket
     import psutil
     import select
-    import time
     import pygame
-    from ast import literal_eval
-    import requests
-    import threading
-    from screeninfo import get_monitors
-    from netifaces import interfaces, ifaddresses, AF_INET
-    from Gui import *
-    import Reg as reg
-    import win32process
-    from ctypes import windll
-    import win32gui, win32com.client
-    from urllib.parse import urlparse, parse_qs
     import logging
-    from ColoredLogs import *
+    import requests
+    import win32gui
+    import threading
+    import Reg as reg
+    import subprocess
+    import win32process
+    import win32com.client
+    import logging.handlers
+    from netifaces import interfaces, ifaddresses, AF_INET
+    from urllib.parse import urlparse, parse_qs
+    from screeninfo import get_monitors
+    from ast import literal_eval
+    from ctypes import windll
+    from Gui import *
+
+    console_hwnd = 0
 
     try:
         os.chdir(sys._MEIPASS)
         main_dir = os.path.dirname(sys.executable)
         SEND_REPORT = True
+
+        def enum_window_callback(hwnd, pid):
+            global console_hwnd
+            tid, current_pid = win32process.GetWindowThreadProcessId(hwnd)
+            if pid == current_pid and win32gui.IsWindowVisible(hwnd):
+                console_hwnd = hwnd
+        win32gui.EnumWindows(enum_window_callback, os.getppid())
+        win32gui.ShowWindow(console_hwnd, 0)
     except AttributeError:
         os.chdir(os.path.split(__file__)[0])
         main_dir = os.path.dirname(__file__)
         SEND_REPORT = False
 
-    rootLogger = logging.getLogger()
-
-    logFormatter = logging.Formatter(fmt='%(levelname)s  [%(asctime)s.%(msecs)03d]  [%(filename)s:%(lineno)d:%(funcName)s]  %(message)s', datefmt='%H:%M:%S')
-    # ConsoleLogFormatter = logging.ColorFormatter(fmt='[$COLOR%(levelname)s$RESET]  [%(filename)s:%(lineno)d:%(funcName)s]  [%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
-    logs = [main_dir+'\\logs.txt', 'w']
+    logs = [main_dir + '\\logs.txt', 'w']
     fileHandler = logging.FileHandler(*logs)
-    fileHandler.setFormatter(logFormatter)
+    fileHandler.setFormatter(logging.Formatter(fmt='%(levelname)s  [%(asctime)s.%(msecs)03d]  [%(filename)s:%(lineno)d:%(funcName)s]  %(message)s', datefmt='%H:%M:%S'))
     fileHandler.setLevel(logging.NOTSET)
-    rootLogger.addHandler(fileHandler)
 
-    # consoleHandler = logging.StreamHandler(_lgr_cmd.stdin)
-    # consoleHandler.setFormatter(ConsoleLogFormatter)
-    # consoleHandler.setLevel(logging.NOTSET)
-    # rootLogger.addHandler(consoleHandler)
+    rootLogger = logging.getLogger()
+    rootLogger.addHandler(fileHandler)
     rootLogger.setLevel(logging.NOTSET)
+
     parser = reg.createParser()
     namespace_args = parser.parse_args()
+    run_with_links = namespace_args.links if namespace_args.links is not None else True if reg.get_value(reg.reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None) else False
+    size = (int(namespace_args.size.split('x')[0]), int(namespace_args.size.split('x')[1])) if namespace_args.size else (get_monitors()[0].width, get_monitors()[0].height)
+    theme = float(namespace_args.theme) if namespace_args.theme is not None else 0
+    lang = namespace_args.lang if namespace_args.lang else 'rus'
+    debug = namespace_args.debug if namespace_args.debug else False
+    # if debug:
+    #     _lgr_cmd = subprocess.Popen(f'./asets/DebugConsole.exe', creationflags=subprocess.CREATE_NEW_CONSOLE)
+    #     consoleHandler = logging.handlers.SocketHandler('localhost', 9999)
+    #     consoleHandler.setLevel(logging.NOTSET)
+    ConsoleLogFormatter = logging.ColorFormatter(fmt='[$COLOR%(levelname)s$RESET]  [%(filename)s:%(lineno)d:%(funcName)s]  [%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
+    consoleHandler = logging.StreamHandler(sys.stdout)
+    consoleHandler.setFormatter(ConsoleLogFormatter)
+    consoleHandler.setLevel(logging.NOTSET)
+    rootLogger.addHandler(consoleHandler)
     shell_win = win32com.client.Dispatch("WScript.Shell")
     caption = 'OceanShipsWar'
     icon_path = 'asets/ico.png'
     default_font = 'asets/notosans.ttf'
 
-    run_with_links = namespace_args.links if namespace_args.links is not None else True if reg.get_value(reg.reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None) else False
-    size = (int(namespace_args.size.split('x')[0]), int(namespace_args.size.split('x')[1])) if namespace_args.size else (get_monitors()[0].width, get_monitors()[0].height)
-    theme = float(namespace_args.theme) if namespace_args.theme is not None else 0
-    lang = namespace_args.lang if namespace_args.lang else 'rus'
-
-    logging.info(f'\t\t\t$CYANHello from NoneType4Name in {caption} debug console!'
+    logging.info(f'\n$CYANHello from NoneType4Name in {caption} debug console!'
                  f'$GREEN\n\tlogs.txt:$MAGENTA\t{"|".join(logs)}'
                  f'$GREEN\n\tversion:$MAGENTA\t{version}'
                  f'$GREEN\n\treports:$MAGENTA\t{SEND_REPORT}'
@@ -98,18 +84,19 @@ try:
                  f'$GREEN\n\twindow size:$MAGENTA\t{size}'
                  f'$GREEN\n\tgraphic theme:$MAGENTA\t{theme}'
                  f'$GREEN\n\tGUI language:$MAGENTA\t{lang}'
-                 f'$GREEN\n\tArgs: \t{sys.argv}'
-          )
+                 f'$GREEN\n\tdebug:$MAGENTA\t{debug}'
+                 f'$GREEN\n\tArgs:$MAGENTA\t{sys.argv}'
+                 )
     if run_with_links:
         link = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         link.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         try:
-            link.bind(('localhost', 6666))
+            link.bind(('localhost', 9997))
             link.setblocking(False)
             link.listen(10)
         except OSError:
             if namespace_args.DeepLinksApi:
-                link.connect(('localhost', 6666))
+                link.connect(('localhost', 9997))
                 link.send(namespace_args.DeepLinksApi.encode())
                 link.close()
             sys.exit(0)

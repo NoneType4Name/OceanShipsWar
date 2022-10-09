@@ -7,3 +7,4 @@ easygui==0.98.3
 psutil==5.9.2
 DateTime==4.7
 future==0.18.2
+colorama==0.4.5

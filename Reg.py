@@ -78,4 +78,5 @@ def createParser():
         parser.add_argument('-t','--theme', dest='theme', action='store_true')
         parser.add_argument('-L','--lang', dest='lang', choices=['rus','eng'])
         parser.add_argument('--DeepLinksApi', dest='DeepLinksApi')
+        parser.add_argument('--debug', '-d', dest='debug', action='store_true')
         return parser
