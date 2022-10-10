@@ -17,6 +17,7 @@ class Data:
 
 
 def set_value(key, path, name, value):
+    # logging.debug(f'set value with: key:{key}, path: {path}, name: {name}, value: {value}')
     try:
         reg.CreateKey(key, path)
         registry_key = reg.OpenKey(key, path, 0, reg.KEY_WRITE)
@@ -54,14 +55,11 @@ def delete_key(key, path):
 
 
 def init_deep_links(path_exe):
-    while True:
-        if path_exe not in str(get_value(reg.HKEY_CLASSES_ROOT, APP_NAME+r'\shell\open\command', None).data):
-            set_value(reg.HKEY_CLASSES_ROOT, APP_NAME, None, 'Deep Links')
-            set_value(reg.HKEY_CLASSES_ROOT, APP_NAME, 'URL Protocol', None)
-
-            set_value(reg.HKEY_CLASSES_ROOT, APP_NAME+r'\DefaultIcon', None, f'{path_exe}, 1')
-            set_value(reg.HKEY_CLASSES_ROOT, APP_NAME+r'\shell\open\command', None, f'{path_exe} --DeepLinksApi "%1"')
-            break
+    if path_exe not in str(get_value(reg.HKEY_CLASSES_ROOT, APP_NAME+r'\shell\open\command', None).data):
+        set_value(reg.HKEY_CLASSES_ROOT, APP_NAME, None, 'Deep Links')
+        set_value(reg.HKEY_CLASSES_ROOT, APP_NAME, 'URL Protocol', None)
+        set_value(reg.HKEY_CLASSES_ROOT, APP_NAME+r'\DefaultIcon', None, f'{path_exe}, 1')
+        set_value(reg.HKEY_CLASSES_ROOT, APP_NAME+r'\shell\open\command', None, f'{path_exe} --DeepLinksApi "%1"')
 
 
 def del_deep_link():

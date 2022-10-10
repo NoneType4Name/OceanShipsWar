@@ -19,7 +19,7 @@ try:
     import subprocess
     import win32process
     import win32com.client
-    import logging.handlers
+    from log import *
     from netifaces import interfaces, ifaddresses, AF_INET
     from urllib.parse import urlparse, parse_qs
     from screeninfo import get_monitors
@@ -29,18 +29,19 @@ try:
 
     console_hwnd = 0
 
+
+    def enum_window_callback(hwnd, pid):
+        global console_hwnd
+        tid, current_pid = win32process.GetWindowThreadProcessId(hwnd)
+        if pid == current_pid and win32gui.IsWindowVisible(hwnd):
+            console_hwnd = hwnd
+
+    win32gui.EnumWindows(enum_window_callback, os.getppid())
     try:
         os.chdir(sys._MEIPASS)
         main_dir = os.path.dirname(sys.executable)
         SEND_REPORT = True
 
-        def enum_window_callback(hwnd, pid):
-            global console_hwnd
-            tid, current_pid = win32process.GetWindowThreadProcessId(hwnd)
-            if pid == current_pid and win32gui.IsWindowVisible(hwnd):
-                console_hwnd = hwnd
-        win32gui.EnumWindows(enum_window_callback, os.getppid())
-        win32gui.ShowWindow(console_hwnd, 0)
     except AttributeError:
         os.chdir(os.path.split(__file__)[0])
         main_dir = os.path.dirname(__file__)
@@ -62,14 +63,10 @@ try:
     theme = float(namespace_args.theme) if namespace_args.theme is not None else 0
     lang = namespace_args.lang if namespace_args.lang else 'rus'
     debug = namespace_args.debug if namespace_args.debug else False
-    # if debug:
-    #     _lgr_cmd = subprocess.Popen(f'./asets/DebugConsole.exe', creationflags=subprocess.CREATE_NEW_CONSOLE)
-    #     consoleHandler = logging.handlers.SocketHandler('localhost', 9999)
-    #     consoleHandler.setLevel(logging.NOTSET)
-    ConsoleLogFormatter = logging.ColorFormatter(fmt='[$COLOR%(levelname)s$RESET]  [%(filename)s:%(lineno)d:%(funcName)s]  [%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
-    consoleHandler = logging.StreamHandler(sys.stdout)
-    consoleHandler.setFormatter(ConsoleLogFormatter)
-    consoleHandler.setLevel(logging.NOTSET)
+    debug = False if not console_hwnd else debug
+    if not debug:
+        win32gui.ShowWindow(console_hwnd, 0)
+    os.system("title OceanShipsWar DebugConsole - work")
     rootLogger.addHandler(consoleHandler)
     shell_win = win32com.client.Dispatch("WScript.Shell")
     caption = 'OceanShipsWar'
@@ -128,12 +125,12 @@ try:
                     me = 'client'
                     not_me = 'main'
                     shell_win.SendKeys("%")
-                    win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                    windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
                 except Exception as err:
                     logging.debug(f'failed connect to rm {rm_conn}', exc_info=err)
                     global ERRORS
                     shell_win.SendKeys("%")
-                    win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                    windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
                     ERRORS.append(f'Не верный адрес приглашения.\t{err.args}')
                     GameSettings['my socket'] = ['', 0]
                     re_theme()
@@ -285,6 +282,7 @@ try:
                             'Graphic Theme': 'Тема',
                             'Theme List': ['тёмная', 'яркая'],
                             'Other': 'Другое',
+                            'Other Console': 'Консоль отладки',
                             'Other Links': 'Глубокие ссылки'
                             }
         elif lang == 'eng':
@@ -308,7 +306,9 @@ try:
                             'Graphic Theme': 'Theme',
                             'Theme List': ['dark', 'light'],
                             'Other': 'Other',
-                            'Other Links': 'Deep links'}
+                            'Other Console': 'Debug Console',
+                            'Other Links': 'Deep links'
+                            }
 
 
     re_lang()
@@ -325,7 +325,8 @@ try:
             'Game': 1
         },
         'Other': {
-            'Links': True if reg.get_value(reg.reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data and run_with_links else False
+            'Links': True if reg.get_value(reg.reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == main_dir and run_with_links else False,
+            'Console': debug
         }
     }
     sz_modes = pygame.display.list_modes()
@@ -349,7 +350,8 @@ try:
             'Game': Slide
         },
         'Other': {
-            'Links': Switch
+            'Links': Switch,
+            'Console': Switch
         }
     }
     set_for_paths = {
@@ -923,7 +925,6 @@ try:
                 pass
         key_esc = False
         mouse_pos = pygame.mouse.get_pos()
-        SettingsClass_settings = SettingsClass.settings
         if SettingsClass.settings != Settings:
             if SettingsClass.settings['Graphic']['WindowSize'] != Settings['Graphic']['WindowSize']:
                 size = SettingsClass.settings['Graphic']['WindowSize']
@@ -979,6 +980,12 @@ try:
                 SettingsClass = Settings_class(SettingsClass.settings, set_of_settings, set_of_settings_type, set_for_lists,
                                                set_for_paths,
                                                GameLanguage, size, screen)
+            if SettingsClass.settings['Other']['Console'] != Settings['Other']['Console']:
+                if console_hwnd:
+                    win32gui.ShowWindow(console_hwnd, 4 if SettingsClass.settings['Other']['Console'] else 0)
+                else:
+                    ERRORS.append('Игра запущенна из неподдерживаемой консоли.')
+                    SettingsClass.settings['Other']['Console'] = False
             Settings = copy.deepcopy(SettingsClass.settings)
         EVENTS = []
         for event in pygame.event.get():
@@ -1093,7 +1100,7 @@ try:
                     game = True
                     is_adm = True
                     shell_win.SendKeys("%")
-                    win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                    windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
                 except BlockingIOError:
                     pass
                 CreateGameWaitUser.update()
@@ -1161,7 +1168,7 @@ try:
                     me = 'client'
                     not_me = 'main'
                     shell_win.SendKeys("%")
-                    win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                    windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
                 except Exception as err:
                     ERRORS.append(f'Введите общедоступный IP адрес или хостинг!.\t{err}')
                     GameSettings['my socket'] = ['', 0]
@@ -1610,7 +1617,7 @@ try:
             Notifications.add(Notification(Settings['Graphic']['Font'], (size[0] // 2 - size[0] * 0.4 // 2, size[1] * 0.07, size[0] * 0.4, size[1] * 0.1),
                                            er, (86, 86, 86), (0, 0, 0), (255, 255, 255)))
             shell_win.SendKeys("%")
-            win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+            windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
             del ERRORS[n]
         for n, s in enumerate(reversed(Notifications.sprites())):
             if not n:
