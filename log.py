@@ -1,4 +1,14 @@
-import logging
+from logging import *
+from os import chdir, path
+import sys
+
+try:
+    chdir(sys._MEIPASS)
+    main_dir = path.dirname(sys.executable)
+
+except AttributeError:
+    chdir(path.split(__file__)[0])
+    main_dir = path.dirname(__file__)
 
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -23,14 +33,14 @@ COLOR_SEQ = "\033[1;%dm"
 BOLD_SEQ  = "\033[1m"
 
 
-class ColorFormatter(logging.Formatter):
+class ColorFormatter(Formatter):
     def __init__(self, *args, **kwargs):
-        logging.Formatter.__init__(self, *args, **kwargs)
+        Formatter.__init__(self, *args, **kwargs)
 
     def format(self, record):
         levelname = record.levelname
         color = COLOR_SEQ % (30 + COLORS[levelname])
-        message = logging.Formatter.format(self, record)
+        message = Formatter.format(self, record)
         message = message.replace("$RESET", RESET_SEQ)\
                          .replace("$BOLD",  BOLD_SEQ)\
                          .replace("$COLOR", color)
@@ -41,11 +51,17 @@ class ColorFormatter(logging.Formatter):
         return message + RESET_SEQ
 
 
-logging.ColorFormatter = ColorFormatter
-logFormatter = logging.Formatter(fmt='%(levelname)s  [%(asctime)s.%(msecs)03d]  [%(filename)s:%(lineno)d:%(funcName)s]  %(message)s', datefmt='%H:%M:%S')
-ConsoleLogFormatter = logging.ColorFormatter(
-    fmt='[$COLOR%(levelname)s$RESET]  [%(filename)s:%(lineno)d:%(funcName)s]  [%(asctime)s.%(msecs)03d] %(message)s',
-    datefmt='%H:%M:%S')
-consoleHandler = logging.StreamHandler()
-consoleHandler.setFormatter(ConsoleLogFormatter)
-consoleHandler.setLevel(logging.NOTSET)
+ColorFormatter = ColorFormatter
+fileHandler = FileHandler(f'{main_dir}\\logs.txt', 'w')
+fileHandler.setFormatter(Formatter(fmt='%(levelname)s  [%(asctime)s.%(msecs)03d]  [%(filename)s:%(lineno)d:%(funcName)s]  %(message)s', datefmt='%H:%M:%S'))
+fileHandler.setLevel(NOTSET)
+
+consoleHandler = StreamHandler()
+consoleHandler.setFormatter(ColorFormatter(fmt='[$COLOR%(levelname)s$RESET]  [%(filename)s:%(lineno)d]  [%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S'))
+consoleHandler.setLevel(NOTSET)
+
+log = getLogger()
+log.addHandler(fileHandler)
+log.addHandler(consoleHandler)
+log.setLevel(NOTSET)
+log.info('--------\tLogging start\t--------')

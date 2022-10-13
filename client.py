@@ -11,7 +11,6 @@ try:
     import psutil
     import select
     import pygame
-    import logging
     import requests
     import win32gui
     import threading
@@ -19,7 +18,7 @@ try:
     import subprocess
     import win32process
     import win32com.client
-    from log import *
+    from log import log
     from netifaces import interfaces, ifaddresses, AF_INET
     from urllib.parse import urlparse, parse_qs
     from screeninfo import get_monitors
@@ -47,15 +46,6 @@ try:
         main_dir = os.path.dirname(__file__)
         SEND_REPORT = False
 
-    logs = [main_dir + '\\logs.txt', 'w']
-    fileHandler = logging.FileHandler(*logs)
-    fileHandler.setFormatter(logging.Formatter(fmt='%(levelname)s  [%(asctime)s.%(msecs)03d]  [%(filename)s:%(lineno)d:%(funcName)s]  %(message)s', datefmt='%H:%M:%S'))
-    fileHandler.setLevel(logging.NOTSET)
-
-    rootLogger = logging.getLogger()
-    rootLogger.addHandler(fileHandler)
-    rootLogger.setLevel(logging.NOTSET)
-
     parser = reg.createParser()
     namespace_args = parser.parse_args()
     run_with_links = namespace_args.links if namespace_args.links is not None else True if reg.get_value(reg.reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None) else False
@@ -66,15 +56,13 @@ try:
     debug = False if not console_hwnd else debug
     if not debug:
         win32gui.ShowWindow(console_hwnd, 0)
-    os.system("title OceanShipsWar DebugConsole - work")
-    rootLogger.addHandler(consoleHandler)
+    os.system("title OceanShipsWar DebugConsole")
     shell_win = win32com.client.Dispatch("WScript.Shell")
     caption = 'OceanShipsWar'
     icon_path = 'asets/ico.png'
     default_font = 'asets/notosans.ttf'
 
-    logging.info(f'\n$CYANHello from NoneType4Name in {caption} debug console!'
-                 f'$GREEN\n\tlogs.txt:$MAGENTA\t{"|".join(logs)}'
+    log.info(f'\n$CYANHello from NoneType4Name in {caption} debug console!'
                  f'$GREEN\n\tversion:$MAGENTA\t{version}'
                  f'$GREEN\n\treports:$MAGENTA\t{SEND_REPORT}'
                  f'$GREEN\n\tlinks:$MAGENTA\t\t{run_with_links}'
@@ -102,7 +90,7 @@ try:
         request = urlparse(url)
         query = parse_qs(request.query)
         for qr in query:
-            logging.info(f'run {qr} with args: {query[qr]}')
+            log.info(f'run {qr} with args: {query[qr]}')
             if qr == 'join':
                 adr = query[qr][0]
                 if ':' in adr:
@@ -116,9 +104,9 @@ try:
                     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                     sock.settimeout(3)
                     rm_conn = GameSettings["my socket"]
-                    logging.info(f'trying connect to rm with args: {rm_conn}, type: {qr}')
+                    log.info(f'trying connect to rm with args: {rm_conn}, type: {qr}')
                     sock.connect((rm_conn[0], rm_conn[1]))
-                    logging.info(f'success connecting to rm {":".join(rm_conn)}')
+                    log.info(f'success connecting to rm {":".join(rm_conn)}')
                     is_adm = False
                     game = True
                     settings, room, create_game, join_game = [False]*4
@@ -127,7 +115,7 @@ try:
                     shell_win.SendKeys("%")
                     windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
                 except Exception as err:
-                    logging.debug(f'failed connect to rm {rm_conn}', exc_info=err)
+                    log.debug(f'failed connect to rm {rm_conn}', exc_info=err)
                     global ERRORS
                     shell_win.SendKeys("%")
                     windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
@@ -135,17 +123,17 @@ try:
                     GameSettings['my socket'] = ['', 0]
                     re_theme()
             else:
-                logging.warning(f'unknown request: {qr} with args: {" ".join(query[qr])}')
+                log.warning(f'unknown request: {qr} with args: {" ".join(query[qr])}')
 
 
     pygame.init()
-    logging.info('SDL success init')
+    log.info('SDL success init')
     try:
         pygame.mixer.init()
         INIT_SOUND = True
     except pygame.error:
         INIT_SOUND = False
-    logging.info(f'audio mixer init is {INIT_SOUND}')
+    log.info(f'audio mixer init is {INIT_SOUND}')
     # if getattr(sys, 'frozen', False):
     #     main_dir = os.path.dirname(sys.executable)
     # elif __file__:
@@ -153,7 +141,7 @@ try:
 
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pygame.font.init()
-    logging.info('font success init')
+    log.info('font success init')
     screen = pygame.Surface(size, pygame.SRCALPHA)
     dsp = pygame.display.set_mode(size, pygame.HWSURFACE)
     pygame.display.set_icon(pygame.image.load(icon_path))
@@ -398,7 +386,7 @@ try:
                 return pygame.Rect(*cords0.topleft, bsize, cords1.y - cords0.y + bsize)
 
         else:
-            logging.critical(f'{cords}')
+            log.critical(f'{cords}')
             return False
 
 
@@ -406,7 +394,7 @@ try:
         if cords:
             return pygame.Rect(cords[0] - bsize, cords[1] - bsize, cords[2] + bsize * 2, cords[3] + bsize * 2)
         else:
-            logging.critical(f'{cords}')
+            log.critical(f'{cords}')
             return False
 
 
@@ -421,7 +409,7 @@ try:
                     cord.append((pos, cords[0][1]))
             return cord
         else:
-            logging.critical(f'{cords}')
+            log.critical(f'{cords}')
             return False
 
 
@@ -777,8 +765,7 @@ try:
             while run:
                 StartLoadLabel.text = 'Подключение...'
                 try:
-                    FromGitVersion = \
-                        requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest').url.split('/')[-1]
+                    FromGitVersion = json.loads(requests.get('https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name']
                     StartLoadLabel.text = ''
                     break
                 except requests.exceptions.ConnectionError:
@@ -815,7 +802,6 @@ try:
 
 
     threading.Thread(target=StartGame).start()
-
 
     def RandomPlacing():
         global mouse_left_press, solo_ship, duo_ship, trio_ship, quadro_ship, solo, duo, trio, quadro, ship, ships
@@ -1020,7 +1006,7 @@ try:
             room = True
             ConditionOfLoad = ''
             if namespace_args.DeepLinksApi:
-                logging.info(f'run DeepLinksApi, args {namespace_args.DeepLinksApi}')
+                log.info(f'run DeepLinksApi, args {namespace_args.DeepLinksApi}')
                 threading.Thread(target=work_with_links, args=[namespace_args.DeepLinksApi]).start()
         elif room:
             screen.fill(BACKGROUND)
@@ -1645,7 +1631,7 @@ except Exception as err:
 
     exc_type, exc_value, exc_tb = sys.exc_info()
     traceback_exception = ''.join(traceback.TracebackException(exc_type, exc_value, exc_tb).format())
-    logging.error(err.args, exc_info=True, stack_info=True)
+    log.error(err.args, exc_info=True, stack_info=True)
     send_message(['alexkim0710@gmail.com'],f'ERROR {type(err)}',
                  f'{traceback_exception}'
                  f'\n\ntime:\t {current_datetime}'
