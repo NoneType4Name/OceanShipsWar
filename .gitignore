@@ -9,12 +9,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-build/
-dist/
-.idea
-.vs
-README.md
 prod/
+.idea
+logs
 report.py
-logs.txt
 settings.json

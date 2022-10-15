@@ -1,6 +1,9 @@
+import os
 from logging import *
 from os import chdir, path
+from colorama import init
 import sys
+init()
 
 try:
     chdir(sys._MEIPASS)
@@ -52,8 +55,12 @@ class ColorFormatter(Formatter):
 
 
 ColorFormatter = ColorFormatter
-fileHandler = FileHandler(f'{main_dir}\\logs.txt', 'w')
-fileHandler.setFormatter(Formatter(fmt='%(levelname)s  [%(asctime)s.%(msecs)03d]  [%(filename)s:%(lineno)d:%(funcName)s]  %(message)s', datefmt='%H:%M:%S'))
+try:
+    os.mkdir(f'{main_dir}\\logs')
+except Exception:
+    pass
+fileHandler = FileHandler(f'{main_dir}\\logs\\{os.getpid()}log.txt', 'w')
+fileHandler.setFormatter(Formatter(fmt='[%(levelname)s]  [%(asctime)s.%(msecs)03d]  [%(filename)s:%(lineno)d:%(funcName)s]  %(message)s', datefmt='%H:%M:%S'))
 fileHandler.setLevel(NOTSET)
 
 consoleHandler = StreamHandler()
@@ -64,4 +71,10 @@ log = getLogger()
 log.addHandler(fileHandler)
 log.addHandler(consoleHandler)
 log.setLevel(NOTSET)
-log.info('--------\tLogging start\t--------')
+log.debug('out all levels.')
+log.debug('DEBUG.')
+log.info('INFO.')
+log.warning('WARNING.')
+log.error('ERROR.')
+log.critical('CRITICAL')
+log.info('--------\tLogging start.\t--------')
