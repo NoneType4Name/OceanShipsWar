@@ -383,6 +383,12 @@ try:
 
 
     def GetShip(cords: tuple) -> pygame.Rect:
+        """
+        Get ship rectangle from frozen coordinates
+        Return ship window rectangle
+        cords     :    tuple of frozen ship coordinates:   tuple
+        return    ->   real ship coordinates
+        """
         if cords:
             cords0 = GetRect(cords[0])
             cords1 = GetRect(cords[1])
@@ -397,14 +403,33 @@ try:
 
 
     def GetShipEnv(cords: tuple) -> pygame.Rect:
+        """
+        GetShipEnv(cords)
+
+        Get real ship rectangle
+        Return ship environment rectangle within the block radius
+
+        cords     :    tuple of real ship cords:   tuple
+        return    ->   list of all ship blocks
+        """
         if cords:
-            return pygame.Rect(cords[0] - bsize, cords[1] - bsize, cords[2] + bsize * 2, cords[3] + bsize * 2)
+            return pygame.Rect(cords[0] - bsize, cords[1] - bsize,
+                               cords[2] + bsize * 2, cords[3] + bsize * 2)
         else:
             log.critical(f'{cords}.')
             return False
 
 
     def GetShipBlocks(cords: tuple) -> list:
+        """
+        GetShipBlocks(cords)
+
+        Get real ship coordinates
+        Return all ship blocks
+
+        cords     :    tuple of real ship cords:   tuple
+        return    ->   list of all ship blocks
+        """
         if cords:
             cord = []
             if cords[0][0] == cords[1][0]:
