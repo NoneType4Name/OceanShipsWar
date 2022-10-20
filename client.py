@@ -1,127 +1,145 @@
 try:
-    version = '0.0.6b'
+    import sys
+    import os
     import copy
     import json
-    import math
-    import os
-    import sys
+    import time
     import random
     import socket
-    import subprocess
-    import psutil
-    import select
-    import time
     import pygame
-    from ast import literal_eval
     import requests
+    import win32gui
     import threading
-    from ctypes import windll
-    from screeninfo import get_monitors
-    from netifaces import interfaces, ifaddresses, AF_INET
-    from Gui import *
     import Reg as reg
+    import subprocess
+    from log import log
     import win32process
-    import win32gui, win32com.client
-    import logging
+    import win32com.client
+    from netifaces import interfaces, ifaddresses, AF_INET
+    from urllib.parse import urlparse, parse_qs
+    from screeninfo import get_monitors
+    from ast import literal_eval
+    from ctypes import windll
+    from Gui import *
+    log.info('\n$BG-CYAN'+requests.get('https://raw.githubusercontent.com/NoneType4Name/OceanShipsWar/main/LICENSE.txt').text)
+    GameProperties = reg.getFileProperties(sys.executable)
+    version = GameProperties.StringFileInfo.ProductVersion
+    console_hwnd = 0
+
+
+    def enum_window_callback(hwnd, pid):
+        global console_hwnd
+        tid, current_pid = win32process.GetWindowThreadProcessId(hwnd)
+        if pid == current_pid and win32gui.IsWindowVisible(hwnd):
+            console_hwnd = hwnd
+
+
+    win32gui.EnumWindows(enum_window_callback, os.getppid())
     try:
         os.chdir(sys._MEIPASS)
         main_dir = os.path.dirname(sys.executable)
+        isEXE = True
+
     except AttributeError:
         os.chdir(os.path.split(__file__)[0])
         main_dir = os.path.dirname(__file__)
-    logging.basicConfig(filename='logs.txt', filemode='w',
-                        format='%(levelname)s\t[%(asctime)s] [%(module)s in %(funcName)s] line %(lineno)d|\t%(message)s',
-                        level=logging.NOTSET)
-    logging.info('import libs')
+        isEXE = False
+
+    parser = reg.createParser()
+    namespace_args = parser.parse_args()
+    run_with_links = namespace_args.links if namespace_args.links is not None else True if reg.get_value(reg.reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None) else False
+    size = (int(namespace_args.size.split('x')[0]), int(namespace_args.size.split('x')[1])) if namespace_args.size else (get_monitors()[0].width, get_monitors()[0].height)
+    theme = float(namespace_args.theme) if namespace_args.theme is not None else 0
+    lang = namespace_args.lang if namespace_args.lang else 'rus'
+    debug = namespace_args.debug if namespace_args.debug else False
+    debug = False if not console_hwnd else debug
+    if not debug:
+        win32gui.ShowWindow(console_hwnd, 0)
+    os.system("title OceanShipsWar DebugConsole")
     shell_win = win32com.client.Dispatch("WScript.Shell")
-    link = None
-    run_with_links = True
-    size = (get_monitors()[0].width, get_monitors()[0].height)
     caption = 'OceanShipsWar'
     icon_path = 'asets/ico.png'
     default_font = 'asets/notosans.ttf'
-    lang = 'rus'
-    theme = 0
-
-    def base_parse_args(args):
-        for arg in args:
-            split_arg = arg.split('=')
-            if split_arg[0] == 'link':
-                global run_with_links
-                run_with_links = bool(int(split_arg[1]))
-            elif split_arg[0] == 'size':
-                global size
-                sz = split_arg[1].split('x')
-                size = (int(sz[0]), int(sz[1]))
-            elif split_arg[0] == 'theme':
-                global theme
-                theme = float(split_arg[1])
-            else:
-                logging.warning(f'unknown arg:{arg} in {args}')
-
-
-    base_parse_args(sys.argv[1:])
+    log.debug(f'\n$CYANHello from NoneType4Name in {caption} debug console!.'
+              f'$GREEN\n\tversion:$MAGENTA\t{version}.'
+              f'$GREEN\n\treports:$MAGENTA\t{isEXE}.'
+              f'$GREEN\n\tlinks:$MAGENTA\t\t{run_with_links}.'
+              f'$GREEN\n\twindow size:$MAGENTA\t{size}.'
+              f'$GREEN\n\tgraphic theme:$MAGENTA\t{theme}.'
+              f'$GREEN\n\tGUI language:$MAGENTA\t{lang}.'
+              f'$GREEN\n\tdebug:$MAGENTA\t{debug}.'
+              f'$GREEN\n\tArgs:$MAGENTA\t{sys.argv}.'
+              )
     if run_with_links:
         link = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         link.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         try:
-            link.bind(('localhost', 6666))
+            log.debug(f'trying to create api handler.')
+            link.bind(('localhost', 9997))
             link.setblocking(False)
             link.listen(10)
+            log.debug(f'success create api handler.')
         except OSError:
-            if len(sys.argv) > 1:
-                link.connect(('localhost', 6666))
-                link.send(sys.argv[1].encode())
+            log.debug(f'error because, api handler instance is already running.')
+            if namespace_args.DeepLinksApi:
+                log.debug(f'connect to send args from this instance to main.')
+                link.connect(('localhost', 9997))
+                send = link.send(namespace_args.DeepLinksApi.encode())
+                log.debug(f'success send args: {namespace_args.DeepLinksApi}, len: {send}.')
                 link.close()
             sys.exit(0)
 
-
-    def work_with_links(arg: str):
-        if ':' in arg:
-            arg = arg.split(':')[1]
-        unpack_args = arg.split('&')
-        for request in unpack_args:
-            global game
-            request = request.split('?')
-            if request[0] == 'join' and not game:
-                if 'code' in request[1]:
-                    adr = request[1].split('=')[1]
-                    if ':' in adr:
-                        adr = adr.split(':', 1)
-                        GameSettings['my socket'] = [adr[0], int(adr[1])]
-                    else:
-                        GameSettings['my socket'] = [adr, 9998]
-                    try:
-                        global sock, is_adm, settings, room, create_game, join_game, me, not_me
-                        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                        sock.settimeout(3)
-                        sock.connect((GameSettings['my socket'][0], GameSettings['my socket'][1]))
-                        is_adm = False
-                        game = True
-                        settings, room, create_game, join_game = [False]*4
-                        me = 'client'
-                        not_me = 'main'
-                        shell_win.SendKeys("%")
-                        win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
-                    except Exception as err:
-                        global ERRORS
-                        shell_win.SendKeys("%")
-                        win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
-                        ERRORS.append(f'Не верный адрес приглашения.\t{err.args}')
-                        GameSettings['my socket'] = ['', 0]
-                        re_theme()
+    def work_with_links(url):
+        log.debug(f'api not parsed uri: {url}.')
+        request = urlparse(url)
+        log.debug(f'api request: {request}.')
+        query = parse_qs(request.query)
+        log.debug(f'api query: {query}.')
+        for qr in query:
+            log.info(f'run {qr} with args: {query[qr]}.')
+            if qr == 'join':
+                adr = query[qr][0]
+                if ':' in adr:
+                    adr = adr.split(':', 1)
+                    GameSettings['my socket'] = [adr[0], int(adr[1])]
+                else:
+                    GameSettings['my socket'] = [adr, 9998]
+                try:
+                    global sock, is_adm, settings, room, create_game, join_game, me, not_me, game
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                    sock.settimeout(3)
+                    rm_conn = GameSettings["my socket"]
+                    log.info(f'trying connect to rm with args: {rm_conn}, type: {qr}.')
+                    sock.connect((rm_conn[0], rm_conn[1]))
+                    log.info(f'success connecting to rm {":".join(rm_conn)}.')
+                    is_adm = False
+                    game = True
+                    settings, room, create_game, join_game = [False]*4
+                    me = 'client'
+                    not_me = 'main'
+                    shell_win.SendKeys("%")
+                    windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                except Exception as err:
+                    log.debug(f'failed connect to rm {rm_conn}.', exc_info=err)
+                    global ERRORS
+                    shell_win.SendKeys("%")
+                    windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                    ERRORS.append(f'Не верный адрес приглашения.\t{err.args}')
+                    GameSettings['my socket'] = ['', 0]
+                    re_theme()
             else:
-                logging.warning(f'unknown request:{request} in {unpack_args}')
-
+                log.warning(f'unknown request: {qr} with args: {" ".join(query[qr])}.')
+        else:
+            log.debug(f'null args.')
 
     pygame.init()
-    logging.debug('SDL success init')
     try:
         pygame.mixer.init()
-        logging.debug('mixer success init')
+        INIT_SOUND = True
     except pygame.error:
-        logging.debug('mixer not init')
+        INIT_SOUND = False
+    log.debug(f'audio mixer init is {INIT_SOUND}.')
     # if getattr(sys, 'frozen', False):
     #     main_dir = os.path.dirname(sys.executable)
     # elif __file__:
@@ -129,7 +147,7 @@ try:
 
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pygame.font.init()
-    logging.debug('font success init')
+    log.debug('font success init.')
     screen = pygame.Surface(size, pygame.SRCALPHA)
     dsp = pygame.display.set_mode(size, pygame.HWSURFACE)
     pygame.display.set_icon(pygame.image.load(icon_path))
@@ -258,6 +276,7 @@ try:
                             'Graphic Theme': 'Тема',
                             'Theme List': ['тёмная', 'яркая'],
                             'Other': 'Другое',
+                            'Other Console': 'Консоль отладки',
                             'Other Links': 'Глубокие ссылки'
                             }
         elif lang == 'eng':
@@ -281,7 +300,9 @@ try:
                             'Graphic Theme': 'Theme',
                             'Theme List': ['dark', 'light'],
                             'Other': 'Other',
-                            'Other Links': 'Deep links'}
+                            'Other Console': 'Debug Console',
+                            'Other Links': 'Deep links'
+                            }
 
 
     re_lang()
@@ -298,7 +319,8 @@ try:
             'Game': 1
         },
         'Other': {
-            'Links': True if reg.get_value(reg.reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data and run_with_links else False
+            'Links': True if reg.get_value(reg.reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == main_dir and run_with_links else False,
+            'Console': debug
         }
     }
     sz_modes = pygame.display.list_modes()
@@ -322,7 +344,8 @@ try:
             'Game': Slide
         },
         'Other': {
-            'Links': Switch
+            'Links': Switch,
+            'Console': Switch
         }
     }
     set_for_paths = {
@@ -360,6 +383,12 @@ try:
 
 
     def GetShip(cords: tuple) -> pygame.Rect:
+        """
+        Get ship rectangle from frozen coordinates
+        Return ship window rectangle
+        cords     :    tuple of frozen ship coordinates:   tuple
+        return    ->   real ship coordinates
+        """
         if cords:
             cords0 = GetRect(cords[0])
             cords1 = GetRect(cords[1])
@@ -369,19 +398,38 @@ try:
                 return pygame.Rect(*cords0.topleft, bsize, cords1.y - cords0.y + bsize)
 
         else:
-            logging.critical(f'{cords}')
+            log.critical(f'{cords}.')
             return False
 
 
     def GetShipEnv(cords: tuple) -> pygame.Rect:
+        """
+        GetShipEnv(cords)
+
+        Get real ship rectangle
+        Return ship environment rectangle within the block radius
+
+        cords     :    tuple of real ship cords:   tuple
+        return    ->   list of all ship blocks
+        """
         if cords:
-            return pygame.Rect(cords[0] - bsize, cords[1] - bsize, cords[2] + bsize * 2, cords[3] + bsize * 2)
+            return pygame.Rect(cords[0] - bsize, cords[1] - bsize,
+                               cords[2] + bsize * 2, cords[3] + bsize * 2)
         else:
-            logging.critical(f'{cords}')
+            log.critical(f'{cords}.')
             return False
 
 
     def GetShipBlocks(cords: tuple) -> list:
+        """
+        GetShipBlocks(cords)
+
+        Get real ship coordinates
+        Return all ship blocks
+
+        cords     :    tuple of real ship cords:   tuple
+        return    ->   list of all ship blocks
+        """
         if cords:
             cord = []
             if cords[0][0] == cords[1][0]:
@@ -392,7 +440,7 @@ try:
                     cord.append((pos, cords[0][1]))
             return cord
         else:
-            logging.critical(f'{cords}')
+            log.critical(f'{cords}')
             return False
 
 
@@ -743,24 +791,24 @@ try:
                 "info_sound": {"type": 'ogg'},
                 "killed_sound": {"type": 'ogg'},
                 "missed_sound": {"type": 'ogg'},
-                "wounded_sound": {"type": 'ogg'}}
+                "wounded_sound": {"type": 'ogg'}
+            }
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_WAITARROW)
             while run:
                 StartLoadLabel.text = 'Подключение...'
                 try:
-                    FromGitVersion = \
-                        requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest').url.split('/')[-1]
+                    FromGitVersion = json.loads(requests.get('https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name']
                     StartLoadLabel.text = ''
                     break
                 except requests.exceptions.ConnectionError:
                     pass
+            MaxStartLoad = len(list_of_load)*2
             for var in list_of_load:
                 ConditionOfLoad = f'Search: ./asets/{var}'
                 while run:
                     if os.path.exists(f'./asets/{var}.{list_of_load[var]["type"]}'):
-                        MaxStartLoad += 1
+                        StartLoaded += 1
                         break
-
             for var in list_of_load:
                 ConditionOfLoad = f'Load: ./asets/{var}'
                 StartLoaded += 1
@@ -783,9 +831,6 @@ try:
             elif 'b' in FromGitVersion:
                 ERRORS.append(f'\tПриветствуем участника бетатестирования!.\t')
         return
-
-
-    threading.Thread(target=StartGame).start()
 
 
     def RandomPlacing():
@@ -887,7 +932,7 @@ try:
 
 
     SettingsClass = Settings_class(Settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, GameLanguage, size, screen)
-
+    threading.Thread(target=StartGame).start()
     while run:
         if run_with_links and link:
             try:
@@ -896,7 +941,6 @@ try:
                 pass
         key_esc = False
         mouse_pos = pygame.mouse.get_pos()
-        SettingsClass_settings = SettingsClass.settings
         if SettingsClass.settings != Settings:
             if SettingsClass.settings['Graphic']['WindowSize'] != Settings['Graphic']['WindowSize']:
                 size = SettingsClass.settings['Graphic']['WindowSize']
@@ -941,14 +985,23 @@ try:
                         run_with_links = False
                         reg.del_deep_link()
                 else:
-                    ERRORS.append('Запустите игру с правами администратора.')
-                    SettingsClass.settings['Other']['Links'] = False
+                    if (windll.shell32.ShellExecuteW(pygame.display.get_wm_info()['window'], "runas", sys.executable, None if isEXE else __file__, None, True)) == 42:
+                        run = False
+                    else:
+                        ERRORS.append('Запустите игру с правами администратора.')
+                        SettingsClass.settings['Other']['Links'] = False
             if SettingsClass.settings['Graphic']['Theme'] != Settings['Graphic']['Theme']:
                 theme = SettingsClass.settings['Graphic']['Theme']
                 re_theme()
                 SettingsClass = Settings_class(SettingsClass.settings, set_of_settings, set_of_settings_type, set_for_lists,
                                                set_for_paths,
                                                GameLanguage, size, screen)
+            if SettingsClass.settings['Other']['Console'] != Settings['Other']['Console']:
+                if console_hwnd:
+                    win32gui.ShowWindow(console_hwnd, 4 if SettingsClass.settings['Other']['Console'] else 0)
+                else:
+                    ERRORS.append('Игра запущенна из неподдерживаемой консоли.')
+                    SettingsClass.settings['Other']['Console'] = False
             Settings = copy.deepcopy(SettingsClass.settings)
         EVENTS = []
         for event in pygame.event.get():
@@ -982,8 +1035,9 @@ try:
         elif FineLoadGame and not room and ConditionOfLoad:
             room = True
             ConditionOfLoad = ''
-            if len(sys.argv) > 1 and run_with_links:
-                threading.Thread(target=work_with_links, args=[sys.argv[1]]).start()
+            if namespace_args.DeepLinksApi:
+                log.debug(f'run DeepLinksApi, args {namespace_args.DeepLinksApi}.')
+                threading.Thread(target=work_with_links, args=[namespace_args.DeepLinksApi]).start()
         elif room:
             screen.fill(BACKGROUND)
             RandomChoiceButton.update()
@@ -1062,7 +1116,7 @@ try:
                     game = True
                     is_adm = True
                     shell_win.SendKeys("%")
-                    win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                    windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
                 except BlockingIOError:
                     pass
                 CreateGameWaitUser.update()
@@ -1130,7 +1184,7 @@ try:
                     me = 'client'
                     not_me = 'main'
                     shell_win.SendKeys("%")
-                    win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                    windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
                 except Exception as err:
                     ERRORS.append(f'Введите общедоступный IP адрес или хостинг!.\t{err}')
                     GameSettings['my socket'] = ['', 0]
@@ -1573,13 +1627,14 @@ try:
                         else:
                             send_data['move'] = None
         for n, er in enumerate(ERRORS):
+            log.info(er)
             if Settings['Sound']['Notification'] and FineLoadGame:
                 Sounds['info_sound'].set_volume(Settings['Sound']['Notification'])
                 Sounds['info_sound'].play()
             Notifications.add(Notification(Settings['Graphic']['Font'], (size[0] // 2 - size[0] * 0.4 // 2, size[1] * 0.07, size[0] * 0.4, size[1] * 0.1),
                                            er, (86, 86, 86), (0, 0, 0), (255, 255, 255)))
             shell_win.SendKeys("%")
-            win32gui.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+            windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
             del ERRORS[n]
         for n, s in enumerate(reversed(Notifications.sprites())):
             if not n:
@@ -1601,16 +1656,31 @@ try:
 except Exception as err:
     from datetime import datetime
     current_datetime = datetime.now()
+    import sys
+    import os
+    import Reg
     import traceback
-    from ctypes import windll
+    import log
     from report import *
+    from ctypes import windll
+    import pygame
+    try:
+        os.chdir(sys._MEIPASS)
+        main_dir = os.path.dirname(sys.executable)
+        SEND_REPORT = True
+
+    except AttributeError:
+        os.chdir(os.path.split(__file__)[0])
+        main_dir = os.path.dirname(__file__)
+        SEND_REPORT = False
 
     exc_type, exc_value, exc_tb = sys.exc_info()
     traceback_exception = ''.join(traceback.TracebackException(exc_type, exc_value, exc_tb).format())
-    print(traceback_exception)
-    send_message(['alexkim0710@gmail.com'],f'ERROR {type(err)}',
-                 f'{traceback_exception}'
-                 f'\n\ntime:\t {current_datetime}'
-                 f'\nis adm:\t {bool(windll.shell32.IsUserAnAdmin())}',
-                 version, 'logs.txt')
-    windll.user32.MessageBoxW(pygame.display.get_wm_info()['windows'], traceback_exception, "ERROR INFO", 0)
+    log.critical(err.args, exc_info=True, stack_info=True)
+    if SEND_REPORT:
+        send_message(['alexkim0710@gmail.com'], f'ERROR {type(err)}',
+                     f'{traceback_exception}'
+                     f'\n\ntime:\t {current_datetime}'
+                     f'\nis adm:\t {windll.shell32.IsUserAnAdmin()}',
+                     Reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion, fr'{main_dir}\logs\_{os.getpid()}log.txt')
+    windll.user32.MessageBoxW(pygame.display.get_wm_info()['window'] if pygame.display.get_init() else 0, traceback_exception, "ERROR INFO", 0)

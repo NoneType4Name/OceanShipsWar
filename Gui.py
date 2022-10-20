@@ -1,13 +1,6 @@
 import os.path
 import easygui
 import string
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
-from platform import python_version
-from ast import literal_eval
 import pyperclip
 import time
 import pygame
