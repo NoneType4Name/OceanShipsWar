@@ -1629,3 +1629,4 @@ except Exception as err:
                      f'\nis adm:\t {windll.shell32.IsUserAnAdmin()}',
                      Reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion, fr'{main_dir}\logs\{os.getpid()}log.txt')
     windll.user32.MessageBoxW(pygame.display.get_wm_info()['window'] if pygame.display.get_init() else 0, traceback_exception, "ERROR INFO", 0)
+    windll.user32.MessageBoxW(pygame.display.get_wm_info()['window'] if pygame.display.get_init() else 0, traceback_exception, "ERROR INFO", 0)
