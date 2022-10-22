@@ -6,6 +6,7 @@ try:
     import time
     import random
     import socket
+    import psutil
     import pygame
     import requests
     import win32gui
@@ -17,51 +18,18 @@ try:
     import win32com.client
     from netifaces import interfaces, ifaddresses, AF_INET
     from urllib.parse import urlparse, parse_qs
-    from screeninfo import get_monitors
     from ast import literal_eval
     from ctypes import windll
+    from Game import *
     from Gui import *
+
     log.info('\n$BG-CYAN'+requests.get('https://raw.githubusercontent.com/NoneType4Name/OceanShipsWar/main/LICENSE.txt').text)
-    GameProperties = reg.getFileProperties(sys.executable)
-    version = GameProperties.StringFileInfo.ProductVersion
-    console_hwnd = 0
 
-
-    def enum_window_callback(hwnd, pid):
-        global console_hwnd
-        tid, current_pid = win32process.GetWindowThreadProcessId(hwnd)
-        if pid == current_pid and win32gui.IsWindowVisible(hwnd):
-            console_hwnd = hwnd
-
-
-    win32gui.EnumWindows(enum_window_callback, os.getppid())
-    try:
-        os.chdir(sys._MEIPASS)
-        main_dir = os.path.dirname(sys.executable)
-        isEXE = True
-
-    except AttributeError:
-        os.chdir(os.path.split(__file__)[0])
-        main_dir = os.path.dirname(__file__)
-        isEXE = False
-
-    parser = reg.createParser()
-    namespace_args = parser.parse_args()
-    run_with_links = namespace_args.links if namespace_args.links is not None else True if reg.get_value(reg.reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None) else False
-    size = (int(namespace_args.size.split('x')[0]), int(namespace_args.size.split('x')[1])) if namespace_args.size else (get_monitors()[0].width, get_monitors()[0].height)
-    theme = float(namespace_args.theme) if namespace_args.theme is not None else 0
-    lang = namespace_args.lang if namespace_args.lang else 'rus'
-    debug = namespace_args.debug if namespace_args.debug else False
-    debug = False if not console_hwnd else debug
     if not debug:
-        win32gui.ShowWindow(console_hwnd, 0)
-    os.system("title OceanShipsWar DebugConsole")
-    shell_win = win32com.client.Dispatch("WScript.Shell")
-    caption = 'OceanShipsWar'
-    icon_path = 'asets/ico.png'
-    default_font = 'asets/notosans.ttf'
-    log.debug(f'\n$CYANHello from NoneType4Name in {caption} debug console!.'
-              f'$GREEN\n\tversion:$MAGENTA\t{version}.'
+        win32gui.ShowWindow(CONSOLE_HWND, 0)
+    win32gui.SetWindowText(CONSOLE_HWND, CONSOLE_TITLE)
+    log.debug(f'\n$CYANHello from NoneType4Name in {GAME_NAME} debug console!.'
+              f'$GREEN\n\tversion:$MAGENTA\t{VERSION}.'
               f'$GREEN\n\treports:$MAGENTA\t{isEXE}.'
               f'$GREEN\n\tlinks:$MAGENTA\t\t{run_with_links}.'
               f'$GREEN\n\twindow size:$MAGENTA\t{size}.'
@@ -75,7 +43,7 @@ try:
         link.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         try:
             log.debug(f'trying to create api handler.')
-            link.bind(('localhost', 9997))
+            link.bind((API_HOST, API_PORT))
             link.setblocking(False)
             link.listen(10)
             log.debug(f'success create api handler.')
@@ -83,7 +51,7 @@ try:
             log.debug(f'error because, api handler instance is already running.')
             if namespace_args.DeepLinksApi:
                 log.debug(f'connect to send args from this instance to main.')
-                link.connect(('localhost', 9997))
+                link.connect((API_HOST, API_PORT))
                 send = link.send(namespace_args.DeepLinksApi.encode())
                 log.debug(f'success send args: {namespace_args.DeepLinksApi}, len: {send}.')
                 link.close()
@@ -97,7 +65,7 @@ try:
         log.debug(f'api query: {query}.')
         for qr in query:
             log.info(f'run {qr} with args: {query[qr]}.')
-            if qr == 'join':
+            if qr == API_METHOD_JOIN:
                 adr = query[qr][0]
                 if ':' in adr:
                     adr = adr.split(':', 1)
@@ -112,20 +80,17 @@ try:
                     rm_conn = GameSettings["my socket"]
                     log.info(f'trying connect to rm with args: {rm_conn}, type: {qr}.')
                     sock.connect((rm_conn[0], rm_conn[1]))
-                    log.info(f'success connecting to rm {":".join(rm_conn)}.')
+                    log.info(f'success connecting to rm {rm_conn}.')
                     is_adm = False
                     game = True
                     settings, room, create_game, join_game = [False]*4
                     me = 'client'
                     not_me = 'main'
-                    shell_win.SendKeys("%")
-                    windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                    SetForegroundWindow()
                 except Exception as err:
+                    global NOTIFICATIONS
                     log.debug(f'failed connect to rm {rm_conn}.', exc_info=err)
-                    global ERRORS
-                    shell_win.SendKeys("%")
-                    windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
-                    ERRORS.append(f'Не верный адрес приглашения.\t{err.args}')
+                    NOTIFICATIONS.append(f'Не верный адрес приглашения.\t{err.args}')
                     GameSettings['my socket'] = ['', 0]
                     re_theme()
             else:
@@ -133,43 +98,19 @@ try:
         else:
             log.debug(f'null args.')
 
-    pygame.init()
-    try:
-        pygame.mixer.init()
-        INIT_SOUND = True
-    except pygame.error:
-        INIT_SOUND = False
-    log.debug(f'audio mixer init is {INIT_SOUND}.')
-    # if getattr(sys, 'frozen', False):
-    #     main_dir = os.path.dirname(sys.executable)
-    # elif __file__:
-    #     main_dir = os.path.dirname(__file__)
 
     os.environ['SDL_VIDEO_CENTERED'] = '1'
-    pygame.font.init()
-    log.debug('font success init.')
-    screen = pygame.Surface(size, pygame.SRCALPHA)
-    dsp = pygame.display.set_mode(size, pygame.HWSURFACE)
-    pygame.display.set_icon(pygame.image.load(icon_path))
-    pygame.display.set_caption(caption)
-    KILLED_SHIP = (60, 60, 60)
-    WHITE = (255, 255, 255)
-    RED = (255, 0, 0)
-    GREEN = (0, 255, 0)
-    BLUE = (0, 0, 255)
-    bsize = size[0] // 27.428571428571427
-    ships_wh = int(bsize // 7)
-    left_margin, upper_margin = (size[0] // 2 - bsize * 5), (size[1] // 2 - bsize * 5)
-    font = pygame.font.Font(default_font, int(bsize / 1.5))
-    infoSurface = pygame.Surface((size[0] // 2 // 1.5, upper_margin // 2), pygame.SRCALPHA)
-    blocks = {}
+    screen = pygame.display.set_mode(size, pygame.HWSURFACE)
+    pygame.display.set_icon(pygame.image.load(ICON_PATH))
+    pygame.display.set_caption(GAME_NAME)
+
+
     build_ship = False
     build_y = False
     ship = 0
     doSelect = True
     create_ship = None
     ships = {1: {}, 2: {}, 3: {}, 4: {}}
-    ships_env = []
     clock = pygame.time.Clock()
     run = True
     sock = None
@@ -181,7 +122,7 @@ try:
     DUO = duo_ship = 3
     SOLO = solo_ship = 4
     great_build = False
-    ERRORS = []
+    NOTIFICATIONS = []
     LegitBuild = True
     block_block_num = False
     quadro_ship_rect = None
@@ -217,7 +158,6 @@ try:
     JoinGameButtons = pygame.sprite.Group()
     Notifications = pygame.sprite.Group()
     LoadGameGroup = pygame.sprite.Group()
-    letters = []
     solo, duo, trio, quadro = [0] * 4
     send_data = {'ships': {1: {}, 2: {}, 3: {}, 4: {}},
                  'count': 0,
@@ -229,7 +169,6 @@ try:
                  'pass': False,
                  'event': []}
     input_data = send_data
-
     GameLanguage = {'start game': 'Создать игру',
                     'join game': 'Присоеденится к игре',
                     'settings': 'Настройки',
@@ -243,7 +182,7 @@ try:
                     'Language List': ['русский', 'english'],
                     'Graphic WindowSize': 'Размер окна',
                     'Exit': 'Выход',
-                    'version': f'Версия {version}',
+                    'version': f'Версия {VERSION}',
                     'Game random build': 'Случайная расстановка',
                     'Game clear map': 'Очистить карту',
                     'Graphic Font': 'Шрифт',
@@ -269,7 +208,7 @@ try:
                             'Language List': ['русский', 'english'],
                             'Graphic WindowSize': 'Размер окна',
                             'Exit': 'Выход',
-                            'version': f'Версия {version}',
+                            'version': f'Версия {VERSION}',
                             'Game random build': 'Случайная расстановка',
                             'Game clear map': 'Очистить карту',
                             'Graphic Font': 'Шрифт',
@@ -293,7 +232,7 @@ try:
                             'Language List': ['русский', 'english'],
                             'Graphic WindowSize': 'Window size',
                             'Exit': 'Exit',
-                            'version': f'Version {version}',
+                            'version': f'Version {VERSION}',
                             'Game random build': 'Random building',
                             'Game clear map': 'Clear map',
                             'Graphic Font': 'Font',
@@ -310,7 +249,7 @@ try:
         'Graphic': {
             'WindowSize': size,
             'Language': lang,
-            'Font': './asets/notosans.ttf',
+            'Font': f'{FONT_PATH}',
             'Theme': 0
 
         },
@@ -319,10 +258,11 @@ try:
             'Game': 1
         },
         'Other': {
-            'Links': True if reg.get_value(reg.reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == main_dir and run_with_links else False,
+            'Links': True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == main_dir and run_with_links else False,
             'Console': debug
         }
     }
+
     sz_modes = pygame.display.list_modes()
     if size not in sz_modes:
         sz_modes.insert(0, size)
@@ -357,7 +297,7 @@ try:
 
 
     def load_settings():
-        global Settings, ERRORS
+        global Settings, NOTIFICATIONS
         if os.path.exists('./settings.json'):
             try:
                 with open('./settings.json') as f:
@@ -366,7 +306,7 @@ try:
                     for v in t_s[k]:
                         Settings[k][v] = t_s[k][v]
             except json.decoder.JSONDecodeError as err:
-                ERRORS.append(
+                NOTIFICATIONS.append(
                     f'Ошибка инициализации json конфига\tСтрока:{err.lineno}\tСтолбец:{err.colno}\tСимвол:{err.pos}\tОшибка:{err.msg}')
 
 
@@ -483,7 +423,7 @@ try:
                     counter_block_num = 0
                     ships_count[type_ship] -= 1 if ships_count[type_ship] else 0
                 pygame.draw.rect(screen, color, (
-                mid[0] + num_block * (bsize // 2), mid[1] + bsize * (type_ship + 1), bsize // 2, bsize // 2), ships_wh // 3)
+                    mid[0] + num_block * (bsize // 2), mid[1] + bsize * (type_ship + 1), bsize // 2, bsize // 2), ships_wh // 3)
 
 
     def draw():
@@ -517,11 +457,6 @@ try:
 
     draw()
 
-    for num_let in range(len(letters)):
-        blocks[num_let] = []
-        for num in range(len(letters)):
-            blocks[num_let].append(pygame.Rect(left_margin + num_let * bsize, upper_margin + num * bsize, bsize, bsize))
-
     if Settings['Graphic']['Theme']:
         set_of_settings = {
             'up margin': 0.15,
@@ -543,14 +478,14 @@ try:
             'buttons': ((41, 42, 43), (41, 42, 43), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
             'button red': ((255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
             'buttons active': (
-            (255, 255, 255), (91, 92, 93), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
+                (255, 255, 255), (91, 92, 93), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
             'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
             'slides': ((138, 180, 248), (53, 86, 140)),
             'lists': ((232, 234, 236), (29, 29, 31), (41, 42, 45)),
             'path': ((138, 180, 248), (53, 86, 140),(232, 234, 236))
         }
     StartLoadProgress = ProgressBar(Settings['Graphic']['Font'],
-        (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.7, size[0] * 0.2, size[1] * 0.05), LINES, (0, 255, 0), 0)
+                                    (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.7, size[0] * 0.2, size[1] * 0.05), LINES, (0, 255, 0), 0)
     StartLoadLabel = Label(Settings['Graphic']['Font'], (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.6, size[0] * 0.2, size[1] * 0.05), '0 %',
                            (0, 0, 0, 0), (0, 255, 0), center=True)
     StartLoadLabel2 = Label(Settings['Graphic']['Font'], (size[0] // 2 - size[0] * 0.2 / 2, size[1] * 0.65, size[0] * 0.2, size[1] * 0.05), '',
@@ -558,23 +493,23 @@ try:
     Update = Button(Settings['Graphic']['Font'], (-1, size[1] - bsize // 2, bsize * 2, bsize // 2), str(GameLanguage['version']), ButtonsCl1, ButtonsCl2,
                     ButtonsTxtColor, ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
     TextInputCr = TextInput(Settings['Graphic']['Font'],
-        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2, size[1] * 0.1), BACKGROUND,
-        TextInputArCl, TextInputTxCl, 'create', My_ip,
-        GameSettings['my socket'][0])
+                            (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2, size[1] * 0.1), BACKGROUND,
+                            TextInputArCl, TextInputTxCl, 'create', My_ip,
+                            GameSettings['my socket'][0])
     TextInputJn = TextInput(Settings['Graphic']['Font'],
-        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
-         size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'join', '192.168.1.1',
-        GameSettings['my socket'][0])
+                            (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.2,
+                             size[1] * 0.1), BACKGROUND, TextInputArCl, TextInputTxCl, 'join', '192.168.1.1',
+                            GameSettings['my socket'][0])
     CreateGameWaitUser = Label(Settings['Graphic']['Font'],
-        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
-         size[1] * 0.1), f'Ждем соперника... Ваш адрес: {GameSettings["my socket"][0]}:{GameSettings["my socket"][1]}',
-        BACKGROUND, (0, 255, 255), center=True)
+                               (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
+                                size[1] * 0.1), f'Ждем соперника... Ваш адрес: {GameSettings["my socket"][0]}:{GameSettings["my socket"][1]}',
+                               BACKGROUND, (0, 255, 255), center=True)
     JoinGameWaitUser = Label(Settings['Graphic']['Font'],
-        (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
-         size[1] * 0.1),
-        f'Ждем соперника... Адрес будущего соперника: {GameSettings["enemy socket"][0]}:{GameSettings["enemy socket"][1]}',
-        BACKGROUND,
-        (255, 0, 255), center=True)
+                             (size[0] / 2 - (size[0] * 0.2) / 2, size[1] * 0.95 - size[1] * 0.1 // 2, size[0] * 0.2,
+                              size[1] * 0.1),
+                             f'Ждем соперника... Адрес будущего соперника: {GameSettings["enemy socket"][0]}:{GameSettings["enemy socket"][1]}',
+                             BACKGROUND,
+                             (255, 0, 255), center=True)
     SettingsMainLabel = Label(Settings['Graphic']['Font'], (size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
                               GameLanguage['settings'], BACKGROUND, LINES, center=True)
     CreateGameMainLabel = Label(Settings['Graphic']['Font'], (size[0] * 0.05, size[1] * 0.023, size[0] * 0.14, size[1] * 0.05),
@@ -587,25 +522,25 @@ try:
     EscButton = Button(Settings['Graphic']['Font'], (-1, -1, (bsize + bsize * 0.5) // 2, bsize // 2), 'ESC', ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
                        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
     ButtonAdm = Button(Settings['Graphic']['Font'],
-        (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.3 - size[1] * 0.1, size[0] * 0.16,
-         size[1] * 0.1),
-        GameLanguage['start game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
-        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+                       (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.3 - size[1] * 0.1, size[0] * 0.16,
+                        size[1] * 0.1),
+                       GameLanguage['start game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+                       ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
     ButtonClient = Button(Settings['Graphic']['Font'],
-        (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.16,
-         size[1] * 0.1),
-        GameLanguage['join game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
-        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+                          (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.5 - size[1] * 0.1, size[0] * 0.16,
+                           size[1] * 0.1),
+                          GameLanguage['join game'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+                          ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
     if RandomBuildButton:
         RandomChoiceButton = Button(Settings['Graphic']['Font'], (size[0] * 0.2, size[1] * 0.7, size[0] * 0.1, size[1] * 0.05), GameLanguage['Game random build'],
                                     *set_of_settings['buttons'])
     ClearMapButton = Button(Settings['Graphic']['Font'], (size[0] * 0.1, size[1] * 0.7 - size[1] * 0.05, size[0] * 0.1, size[1] * 0.05), GameLanguage['Game clear map'],
                             *set_of_settings['button red'])
     ButtonSettings = Button(Settings['Graphic']['Font'],
-        (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.7 - size[1] * 0.1, size[0] * 0.16,
-         size[1] * 0.1),
-        GameLanguage['settings'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
-        ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
+                            (size[0] / 2 - (size[0] * 0.16) / 2, size[1] * 0.7 - size[1] * 0.1, size[0] * 0.16,
+                             size[1] * 0.1),
+                            GameLanguage['settings'], ButtonsCl1, ButtonsCl2, ButtonsTxtColor,
+                            ButtonsAtcCol1, ButtonsAtcCol2, ButtonsClActT)
     ButtonTheme = Button(Settings['Graphic']['Font'], (size[0] - bsize - bsize // 2, size[1] - bsize - bsize // 2, bsize, bsize),
                          GameLanguage['theme light'] if theme else GameLanguage['theme dark'], ButtonsCl1, ButtonsCl2,
                          ButtonsTxtColor,
@@ -631,18 +566,18 @@ try:
             TextInputArCl = (0, 255, 255)
             TextInputTxCl = (0, 0, 0)
             set_of_settings = {
-                    'up margin': 0.15,
-                    'down margin': 1.9,
-                    'label': ((214, 213, 212), (23, 21, 19), [(0, 0, 0), (200, 200, 200)]),
-                    'buttons': ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
-                    'button red': (
+                'up margin': 0.15,
+                'down margin': 1.9,
+                'label': ((214, 213, 212), (23, 21, 19), [(0, 0, 0), (200, 200, 200)]),
+                'buttons': ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
+                'button red': (
                     (255, 100, 100, 20), (255, 100, 100, 20), (23, 21, 19), (0, 0, 0), (255, 0, 0), (23, 21, 19)),
-                    'buttons active': ((0, 0, 0), (164, 163, 162), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
-                    'switches': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
-                    'slides': ((117, 75, 7), (202, 169, 115)),
-                    'lists': ((23, 21, 19), (226, 226, 224), (214, 213, 210)),
-                    'path': ((117, 75, 7), (202, 169, 115),(23, 21, 19)),
-                }
+                'buttons active': ((0, 0, 0), (164, 163, 162), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
+                'switches': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
+                'slides': ((117, 75, 7), (202, 169, 115)),
+                'lists': ((23, 21, 19), (226, 226, 224), (214, 213, 210)),
+                'path': ((117, 75, 7), (202, 169, 115),(23, 21, 19)),
+            }
         elif not theme:
             KILLED_SHIP = (60, 60, 60)
             LINES = pygame.Color(255, 255, 255)
@@ -764,10 +699,10 @@ try:
 
 
     def update_game(ver):
-        global run, ERRORS
+        global run, NOTIFICATIONS
         if (windll.user32.MessageBoxW(pygame.display.get_wm_info()['window'], f"Доступна версия {ver}, продолжить обновление?",
                                       f"Обновление до версии {ver}", 36)) == 6:
-            ERRORS.append(f'Загружается новая версия: {FromGitVersion}')
+            NOTIFICATIONS.append(f'Загружается новая версия: {FromGitVersion}')
             mb = 0
             file = requests.get(f'https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe',
                                 stream=True)
@@ -788,10 +723,10 @@ try:
             FineLoadGame = False
             ConditionOfLoad = ''
             list_of_load = {
-                "info_sound": {"type": 'ogg'},
-                "killed_sound": {"type": 'ogg'},
-                "missed_sound": {"type": 'ogg'},
-                "wounded_sound": {"type": 'ogg'}
+                "info_sound": {"type": 'ogg', 'path': 0},
+                "killed_sound": {"type": 'ogg', 'path': 0},
+                "missed_sound": {"type": 'ogg', 'path': 0},
+                "wounded_sound": {"type": 'ogg', 'path': 0}
             }
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_WAITARROW)
             while run:
@@ -804,32 +739,39 @@ try:
                     pass
             MaxStartLoad = len(list_of_load)*2
             for var in list_of_load:
-                ConditionOfLoad = f'Search: ./asets/{var}'
+                ConditionOfLoad = f'Search: ./{DATAS_FOLDER_NAME}/{var}'
                 while run:
-                    if os.path.exists(f'./asets/{var}.{list_of_load[var]["type"]}'):
+                    if os.path.exists(f'./{DATAS_FOLDER_NAME}/{var}.{list_of_load[var]["type"]}'):
+                        StartLoaded += 1
+                        break
+                    elif os.path.exists(f'{main_dir}/{var}.{list_of_load[var]["type"]}'):
+                        list_of_load[var]['path'] = 1
                         StartLoaded += 1
                         break
             for var in list_of_load:
-                ConditionOfLoad = f'Load: ./asets/{var}'
+                ConditionOfLoad = f'Load: ./{DATAS_FOLDER_NAME}/{var}'
+                if list_of_load[var]['path']:
+                    Sounds[var] = pygame.mixer.Sound(f'{main_dir}/{DATAS_FOLDER_NAME}/{var}.{list_of_load[var]["type"]}')
+                else:
+                    Sounds[var] = pygame.mixer.Sound(f'./{DATAS_FOLDER_NAME}/{var}.{list_of_load[var]["type"]}')
                 StartLoaded += 1
-                Sounds[var] = pygame.mixer.Sound(f'./asets/{var}.{list_of_load[var]["type"]}')
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
             FineLoadGame = True
         else:
             Settings['Sound']['Notification'] = 0
             Settings['Sound']['Game'] = 0
-            ERRORS.append('Ошибка инициализации звука.')
+            NOTIFICATIONS.append('Ошибка инициализации звука.')
             return
         if FineLoadGame:
-            if version != FromGitVersion:
+            if VERSION != FromGitVersion:
                 from_git_version_int = int(FromGitVersion.replace('.', '').replace('b', ''))
-                version_int = int(version.replace('.', '').replace('b', ''))
+                version_int = int(VERSION.replace('.', '').replace('b', ''))
                 if from_git_version_int < version_int:
-                    ERRORS.append(f'\tПриветствуем участника pre-тестирования!.\t')
+                    NOTIFICATIONS.append(f'\tПриветствуем участника pre-тестирования!.\t')
                 else:
                     threading.Thread(target=update_game, args=[FromGitVersion]).start()
             elif 'b' in FromGitVersion:
-                ERRORS.append(f'\tПриветствуем участника бетатестирования!.\t')
+                NOTIFICATIONS.append(f'\tПриветствуем участника бетатестирования!.\t')
         return
 
 
@@ -898,22 +840,22 @@ try:
                                         quadro += 1
                                     environ = [
                                         (
-                                        [build_ship_this[0][0] - 1 if build_ship_this[0][0] else build_ship_this[0][0],
-                                         build_ship_this[0][1] - 1 if build_ship_this[0][1] else build_ship_this[0][1]],
-                                        [build_ship_this[1][0] + 1 if build_ship_this[1][0] + 1 < len(cord_not_used) else build_ship_this[1][0],
-                                         build_ship_this[1][1] - 1 if build_ship_this[1][1] else build_ship_this[1][1]]
+                                            [build_ship_this[0][0] - 1 if build_ship_this[0][0] else build_ship_this[0][0],
+                                             build_ship_this[0][1] - 1 if build_ship_this[0][1] else build_ship_this[0][1]],
+                                            [build_ship_this[1][0] + 1 if build_ship_this[1][0] + 1 < len(cord_not_used) else build_ship_this[1][0],
+                                             build_ship_this[1][1] - 1 if build_ship_this[1][1] else build_ship_this[1][1]]
                                         ),
                                         (
-                                        [build_ship_this[0][0] - 1 if build_ship_this[0][0] else build_ship_this[0][0],
-                                         build_ship_this[0][1]],
-                                        [build_ship_this[1][0] + 1 if build_ship_this[1][0] + 1 < len(cord_not_used) else build_ship_this[1][0],
-                                         build_ship_this[1][1]]
+                                            [build_ship_this[0][0] - 1 if build_ship_this[0][0] else build_ship_this[0][0],
+                                             build_ship_this[0][1]],
+                                            [build_ship_this[1][0] + 1 if build_ship_this[1][0] + 1 < len(cord_not_used) else build_ship_this[1][0],
+                                             build_ship_this[1][1]]
                                         ),
                                         (
-                                        [build_ship_this[0][0] - 1 if build_ship_this[0][0] else build_ship_this[0][0],
-                                         build_ship_this[0][1] + 1 if build_ship_this[0][1] + 1 < len(cord_not_used) else build_ship_this[0][1]],
-                                        [build_ship_this[1][0] + 1 if build_ship_this[1][0] + 1 < len(cord_not_used) else build_ship_this[1][0],
-                                         build_ship_this[1][1] + 1 if build_ship_this[1][1] + 1 < len(cord_not_used) else build_ship_this[1][1]]
+                                            [build_ship_this[0][0] - 1 if build_ship_this[0][0] else build_ship_this[0][0],
+                                             build_ship_this[0][1] + 1 if build_ship_this[0][1] + 1 < len(cord_not_used) else build_ship_this[0][1]],
+                                            [build_ship_this[1][0] + 1 if build_ship_this[1][0] + 1 < len(cord_not_used) else build_ship_this[1][0],
+                                             build_ship_this[1][1] + 1 if build_ship_this[1][1] + 1 < len(cord_not_used) else build_ship_this[1][1]]
                                         )]
                                     for block in [*GetShipBlocks(environ[0]),
                                                   *GetShipBlocks(environ[1]),
@@ -947,14 +889,13 @@ try:
                 pygame.display.quit()
                 os.environ['SDL_VIDEO_CENTERED'] = '1'
                 pygame.display.init()
-                screen = pygame.Surface(size, pygame.SRCALPHA)
-                dsp = pygame.display.set_mode(size, pygame.HWSURFACE)
+                screen = pygame.display.set_mode(size, pygame.SRCALPHA)
                 pygame.display.set_caption('OceanShipsWar')
-                pygame.display.set_icon(pygame.image.load(icon_path))
+                pygame.display.set_icon(pygame.image.load(ICON_PATH))
                 bsize = size[0] // 27.428571428571427
                 ships_wh = int(bsize // 7)
                 left_margin, upper_margin = (size[0] // 2 - bsize * 5), (size[1] // 2 - bsize * 5)
-                font = pygame.font.Font(default_font, int(bsize / 1.5))
+                font = pygame.font.Font(FONT_PATH, int(bsize / 1.5))
                 infoSurface = pygame.Surface((size[0] // 2 // 1.5, upper_margin // 2), pygame.SRCALPHA)
                 for num_let in range(len(letters)):
                     blocks[num_let] = []
@@ -965,8 +906,8 @@ try:
                 SettingsClass = Settings_class(SettingsClass.settings, set_of_settings, set_of_settings_type, set_for_lists,
                                                set_for_paths, GameLanguage, size, screen)
             if SettingsClass.settings['Graphic']['Font'] != Settings['Graphic']['Font']:
-                default_font = SettingsClass.settings['Graphic']['Font']
-                font = pygame.font.Font(default_font, int(bsize / 1.5))
+                FONT_PATH = SettingsClass.settings['Graphic']['Font']
+                font = pygame.font.Font(FONT_PATH, int(bsize / 1.5))
                 re_theme()
                 SettingsClass = Settings_class(SettingsClass.settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths,
                                                GameLanguage, size, screen)
@@ -985,10 +926,10 @@ try:
                         run_with_links = False
                         reg.del_deep_link()
                 else:
-                    if (windll.shell32.ShellExecuteW(pygame.display.get_wm_info()['window'], "runas", sys.executable, None if isEXE else __file__, None, True)) == 42:
+                    if (windll.shell32.ShellExecuteW(pygame.display.get_wm_info()['window'], "runas", sys.executable, None if isEXE else __file__+' -d', None, True)) == 42:
                         run = False
                     else:
-                        ERRORS.append('Запустите игру с правами администратора.')
+                        NOTIFICATIONS.append('Запустите игру с правами администратора.')
                         SettingsClass.settings['Other']['Links'] = False
             if SettingsClass.settings['Graphic']['Theme'] != Settings['Graphic']['Theme']:
                 theme = SettingsClass.settings['Graphic']['Theme']
@@ -997,10 +938,10 @@ try:
                                                set_for_paths,
                                                GameLanguage, size, screen)
             if SettingsClass.settings['Other']['Console'] != Settings['Other']['Console']:
-                if console_hwnd:
-                    win32gui.ShowWindow(console_hwnd, 4 if SettingsClass.settings['Other']['Console'] else 0)
+                if CONSOLE_HWND:
+                    win32gui.ShowWindow(CONSOLE_HWND, 4 if SettingsClass.settings['Other']['Console'] else 0)
                 else:
-                    ERRORS.append('Игра запущенна из неподдерживаемой консоли.')
+                    NOTIFICATIONS.append('Игра запущенна из неподдерживаемой консоли.')
                     SettingsClass.settings['Other']['Console'] = False
             Settings = copy.deepcopy(SettingsClass.settings)
         EVENTS = []
@@ -1054,7 +995,7 @@ try:
                 mouse_left_press = False
                 settings = True
                 room = False
-                ERRORS.append('Настройки пока работают не исправно!.\tПростите.')
+                NOTIFICATIONS.append('Настройки пока работают не исправно!.\tПростите.')
             elif RoomQuit.isCollide() and mouse_left_press:
                 run = False
             elif ButtonAdm.isCollide() and mouse_left_press:
@@ -1070,15 +1011,15 @@ try:
             elif Update.isCollide() and mouse_left_press:
                 mouse_left_press = False
                 FromGitVersion = requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest').url.split('/')[-1]
-                if version != FromGitVersion:
+                if VERSION != FromGitVersion:
                     FromGitVersionInt = int(FromGitVersion.replace('.', '').replace('b', ''))
-                    versionInt = int(version.replace('.', '').replace('b', ''))
+                    versionInt = int(VERSION.replace('.', '').replace('b', ''))
                     if FromGitVersionInt < versionInt:
-                        ERRORS.append('pre-release.')
+                        NOTIFICATIONS.append('pre-release.')
                     else:
                         threading.Thread(target=update_game, args=[FromGitVersion]).start()
                 else:
-                    ERRORS.append('Актуальная версия.')
+                    NOTIFICATIONS.append('Актуальная версия.')
             sprites.draw(screen)
         elif settings:
             screen.fill(BACKGROUND)
@@ -1115,8 +1056,7 @@ try:
                     create_game = False
                     game = True
                     is_adm = True
-                    shell_win.SendKeys("%")
-                    windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                    SetForegroundWindow()
                 except BlockingIOError:
                     pass
                 CreateGameWaitUser.update()
@@ -1141,7 +1081,7 @@ try:
                             sock.listen(1)
                             re_theme()
                         except Exception as err:
-                            ERRORS.append(f'Введите общедоступный IP адрес или хостинг!.\t{err}')
+                            NOTIFICATIONS.append(f'Введите общедоступный IP адрес или хостинг!.\t{err}')
                             GameSettings['my socket'] = ['', 0]
                             re_theme()
             pygame.draw.rect(screen, BACKGROUND, (0, 0, size[0], size[1] * 0.05))
@@ -1183,10 +1123,9 @@ try:
                     join_game = False
                     me = 'client'
                     not_me = 'main'
-                    shell_win.SendKeys("%")
-                    windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+                    SetForegroundWindow()
                 except Exception as err:
-                    ERRORS.append(f'Введите общедоступный IP адрес или хостинг!.\t{err}')
+                    NOTIFICATIONS.append(f'Введите общедоступный IP адрес или хостинг!.\t{err}')
                     GameSettings['my socket'] = ['', 0]
                     re_theme()
 
@@ -1207,7 +1146,7 @@ try:
                     except (BlockingIOError, OSError):
                         pass
                     except (ConnectionAbortedError, SyntaxError, ConnectionResetError, socket.timeout):
-                        ERRORS.append('Противник отключился.')
+                        NOTIFICATIONS.append('Противник отключился.')
                         game = False
                         room = True
                         sock.close()
@@ -1221,7 +1160,7 @@ try:
                     input_data = literal_eval(sock.recv(2048).decode())
                     run_game = True
                 except (ConnectionResetError, socket.timeout):
-                    ERRORS.append('Противник отключился.')
+                    NOTIFICATIONS.append('Противник отключился.')
                     game = False
                     room = True
                     sock.close()
@@ -1386,14 +1325,14 @@ try:
                                         if GetShipEnv(GetShip(create_ship)).colliderect(rect):
                                             create_ship = None
                                             build_ship = False
-                                            ERRORS.append('Не по правилам!.')
+                                            NOTIFICATIONS.append('Не по правилам!.')
                                             RunCycle = False
                                             break
                                 else:
                                     break
                             else:
                                 if GetShip(create_ship)[index_of_len_ship] / bsize > 4:
-                                    ERRORS.append('Максимальная длина корабля 4 клетки!.')
+                                    NOTIFICATIONS.append('Максимальная длина корабля 4 клетки!.')
                                     create_ship = None
                                     build_ship = False
                                     doSelect = True
@@ -1405,7 +1344,7 @@ try:
                                         quadro += 1
                                         great_build = True
                                     else:
-                                        ERRORS.append('4-х палубные корабли закончились!.')
+                                        NOTIFICATIONS.append('4-х палубные корабли закончились!.')
                                         create_ship = None
                                         build_ship = False
                                         doSelect = True
@@ -1417,7 +1356,7 @@ try:
                                         trio += 1
                                         great_build = True
                                     else:
-                                        ERRORS.append('3-х палубные корабли закончились!.')
+                                        NOTIFICATIONS.append('3-х палубные корабли закончились!.')
                                         create_ship = None
                                         build_ship = False
                                         doSelect = True
@@ -1429,7 +1368,7 @@ try:
                                         duo += 1
                                         great_build = True
                                     else:
-                                        ERRORS.append('2-х палубные корабли закончились!.')
+                                        NOTIFICATIONS.append('2-х палубные корабли закончились!.')
                                         create_ship = None
                                         build_ship = False
                                         doSelect = True
@@ -1441,7 +1380,7 @@ try:
                                         solo += 1
                                         great_build = True
                                     else:
-                                        ERRORS.append('1-о палубные корабли закончились!.')
+                                        NOTIFICATIONS.append('1-о палубные корабли закончились!.')
                                         create_ship = None
                                         build_ship = False
                                         doSelect = True
@@ -1510,11 +1449,11 @@ try:
                     if move == me:
                         if len(input_data['die']['ships']) == input_data['count']:
                             send_data['end game'] = not_me
-                            ERRORS.append('Выйгрыш!.')
+                            NOTIFICATIONS.append('Выйгрыш!.')
                             end_game = True
                         elif len(send_data['die']['ships']) == send_data['count']:
                             send_data['end game'] = me
-                            ERRORS.append('Проигрыш!.')
+                            NOTIFICATIONS.append('Проигрыш!.')
                             end_game = True
                         txt = font.render('Ваш удар!.', True, (0, 255, 0))
                         screen.blit(txt, (size[0] // 2 - txt.get_rect()[2] // 2, size[1] - txt.get_rect()[3] - bsize // 2))
@@ -1590,11 +1529,11 @@ try:
                     elif move == not_me:
                         if len(input_data['die']['ships']) == input_data['count']:
                             send_data['end game'] = not_me
-                            ERRORS.append('Выйгрыш!.')
+                            NOTIFICATIONS.append('Выйгрыш!.')
                             end_game = True
                         elif len(send_data['die']['ships']) == send_data['count']:
                             send_data['end game'] = me
-                            ERRORS.append('Проигрыш!.')
+                            NOTIFICATIONS.append('Проигрыш!.')
                             end_game = True
                         txt = font.render('Ждем...', True, (255, 255, 0))
                         screen.blit(txt, (size[0] // 2 - txt.get_rect()[2] // 2, size[1] - txt.get_rect()[3] - bsize // 2))
@@ -1626,16 +1565,15 @@ try:
                             send_data['move'] = random.choice([me, not_me])
                         else:
                             send_data['move'] = None
-        for n, er in enumerate(ERRORS):
+        for n, er in enumerate(NOTIFICATIONS):
             log.info(er)
             if Settings['Sound']['Notification'] and FineLoadGame:
                 Sounds['info_sound'].set_volume(Settings['Sound']['Notification'])
                 Sounds['info_sound'].play()
             Notifications.add(Notification(Settings['Graphic']['Font'], (size[0] // 2 - size[0] * 0.4 // 2, size[1] * 0.07, size[0] * 0.4, size[1] * 0.1),
                                            er, (86, 86, 86), (0, 0, 0), (255, 255, 255)))
-            shell_win.SendKeys("%")
-            windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
-            del ERRORS[n]
+            SetForegroundWindow()
+            del NOTIFICATIONS[n]
         for n, s in enumerate(reversed(Notifications.sprites())):
             if not n:
                 if s.update(NotificationLeftPress):
@@ -1644,7 +1582,6 @@ try:
                 if s.update(False):
                     NotificationLeftPress = False
         Notifications.draw(screen)
-        dsp.blit(screen, (0, 0))
         pygame.display.flip()
         clock.tick(60)
 
@@ -1653,6 +1590,14 @@ try:
         sock.close()
     if link:
         link.close()
+except KeyboardInterrupt:
+    run = False
+    pygame.quit()
+    if sock:
+        sock.close()
+    if link:
+        link.close()
+    sys.exit(0)
 except Exception as err:
     from datetime import datetime
     current_datetime = datetime.now()
@@ -1682,5 +1627,5 @@ except Exception as err:
                      f'{traceback_exception}'
                      f'\n\ntime:\t {current_datetime}'
                      f'\nis adm:\t {windll.shell32.IsUserAnAdmin()}',
-                     Reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion, fr'{main_dir}\logs\_{os.getpid()}log.txt')
+                     Reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion, fr'{main_dir}\logs\{os.getpid()}log.txt')
     windll.user32.MessageBoxW(pygame.display.get_wm_info()['window'] if pygame.display.get_init() else 0, traceback_exception, "ERROR INFO", 0)
