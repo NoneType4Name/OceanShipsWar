@@ -6,6 +6,8 @@ import time
 import pygame
 import copy
 
+import win32ui
+
 PUNCTUATION = string.punctuation
 pygame.font.init()
 
@@ -690,7 +692,11 @@ class Path(pygame.sprite.Sprite):
         self.image.blit(self.font.render(val, True, self.font_color), (self.rect_inner.w / 2 - self.size[0] / 2,
                                                                        self.rect_inner.h / 2 - self.size[1] / 2))
         if mouse and self.rect.collidepoint(pygame.mouse.get_pos()):
-            value = easygui.fileopenbox(filetypes=self.types, multiple=self.multiple, title=self.display)
+            window = win32ui.CreateFileDialog(1, "", "", 0, "*.ttf|*.ttf|")
+            # value = win32ui.CreateFileDialog(1, ".txt", "default.txt", 0, "Font files (*.ttf)|*.ttf|All Files (*.*)|*.*|")
+            window.DoModal()
+            value = window.GetPathName()
+            # value = easygui.fileopenbox(filetypes=self.types, multiple=self.multiple, title=self.display)
             if value:
                 if os.path.splitext(value)[1] in self.typ:
                     self.value = value

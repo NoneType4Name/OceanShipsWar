@@ -1,27 +1,5 @@
 try:
-    import sys
-    import os
-    import copy
-    import json
-    import time
-    import random
-    import socket
-    import psutil
-    import pygame
-    import requests
-    import win32gui
-    import threading
-    import Reg as reg
-    import subprocess
-    from log import log
-    import win32process
-    import win32com.client
-    from netifaces import interfaces, ifaddresses, AF_INET
-    from urllib.parse import urlparse, parse_qs
-    from ast import literal_eval
-    from ctypes import windll
     from Game import *
-    from Gui import *
 
     log.info('\n$BG-CYAN'+requests.get('https://raw.githubusercontent.com/NoneType4Name/OceanShipsWar/main/LICENSE.txt').text)
 
@@ -112,7 +90,7 @@ try:
     create_ship = None
     ships = {1: {}, 2: {}, 3: {}, 4: {}}
     clock = pygame.time.Clock()
-    run = True
+
     sock = None
     mouse_left_press = False
     NotificationLeftPress = False
@@ -729,7 +707,7 @@ try:
                 "wounded_sound": {"type": 'ogg', 'path': 0}
             }
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_WAITARROW)
-            while run:
+            while RUN:
                 StartLoadLabel.text = 'Подключение...'
                 try:
                     FromGitVersion = json.loads(requests.get('https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name']
@@ -740,7 +718,7 @@ try:
             MaxStartLoad = len(list_of_load)*2
             for var in list_of_load:
                 ConditionOfLoad = f'Search: ./{DATAS_FOLDER_NAME}/{var}'
-                while run:
+                while RUN:
                     if os.path.exists(f'./{DATAS_FOLDER_NAME}/{var}.{list_of_load[var]["type"]}'):
                         StartLoaded += 1
                         break
@@ -875,7 +853,7 @@ try:
 
     SettingsClass = Settings_class(Settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, GameLanguage, size, screen)
     threading.Thread(target=StartGame).start()
-    while run:
+    while RUN:
         if run_with_links and link:
             try:
                 threading.Thread(target=work_with_links, args=[link.accept()[0].recv(1024*2).decode()]).start()
@@ -948,7 +926,7 @@ try:
         for event in pygame.event.get():
             EVENTS.append(event)
             if event.type == pygame.QUIT:
-                run = False
+                RUN = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 step = 0.05
                 if event.button == 1:
@@ -997,7 +975,7 @@ try:
                 room = False
                 NOTIFICATIONS.append('Настройки пока работают не исправно!.\tПростите.')
             elif RoomQuit.isCollide() and mouse_left_press:
-                run = False
+                RUN = False
             elif ButtonAdm.isCollide() and mouse_left_press:
                 mouse_left_press = False
                 room = False
@@ -1591,7 +1569,7 @@ try:
     if link:
         link.close()
 except KeyboardInterrupt:
-    run = False
+    RUN = False
     pygame.quit()
     if sock:
         sock.close()
