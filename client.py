@@ -78,10 +78,9 @@ try:
 
 
     os.environ['SDL_VIDEO_CENTERED'] = '1'
-    screen = pygame.display.set_mode(size, pygame.HWSURFACE)
+    screen = pygame.display.set_mode(size, pygame.HWSURFACE, vsync=1)
     pygame.display.set_icon(pygame.image.load(ICON_PATH))
     pygame.display.set_caption(GAME_NAME)
-
 
     build_ship = False
     build_y = False
@@ -236,7 +235,7 @@ try:
             'Game': 1
         },
         'Other': {
-            'Links': True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == main_dir and run_with_links else False,
+            'Links': True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == MAIN_DIR and run_with_links else False,
             'Console': debug
         }
     }
@@ -269,6 +268,25 @@ try:
     set_for_paths = {
         'Font':{'name':'Select Font (ttf)...', 'multiple': 0, 'types':['*.ttf'], 'values':['.ttf']}
     }
+    # Settings = {
+    #     'Graphic': {
+    #         'WindowSize': {'value': size, 'type': List, 'values': dict(zip(LANGUAGES, Language.LanguageList))},
+    #         'Language': {'value': lang, 'type': List,
+    #                      'values': dict(zip(sz_modes, [f'{val[0]} x {val[1]}' for val in sz_modes]))},
+    #         'Font': {'value': f'{FONT_PATH}', 'type': Path, 'title': 'Select Font (ttf)...', 'multiple': 0, 'types': ['*.ttf']},
+    #         'Theme': {'value': theme, 'type': List, 'values': dict(zip(THEMES, Language.ThemeList))}
+    #
+    #     },
+    #     'Sound': {
+    #         'Notification': {'value': 1, 'type': Slide},
+    #         'Game': {'value': 1, 'type': Slide}
+    #     },
+    #     'Other': {
+    #         'Links': {'value': True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == MAIN_DIR and run_with_links else False,
+    #                   'type': Switch},
+    #         'Console': {'value': debug, 'type': Switch}
+    #     }
+    # }
     GameSettings = {
         'my socket': ['', 0],
         'enemy socket': ['', 0]}
@@ -403,6 +421,10 @@ try:
                 pygame.draw.rect(screen, color, (
                     mid[0] + num_block * (bsize // 2), mid[1] + bsize * (type_ship + 1), bsize // 2, bsize // 2), ships_wh // 3)
 
+    def SetForegroundWindow():
+        win32com.client.Dispatch("WScript.Shell").SendKeys("%")
+        windll.user32.SetForegroundWindow(pygame.display.get_wm_info()['window'])
+
 
     def draw():
         global letters
@@ -453,10 +475,9 @@ try:
             'up margin': 0.15,
             'down margin': 1.9,
             'label': ((41, 42, 43), (232, 234, 236), [(255, 255, 255), (91, 92, 93)]),
-            'buttons': ((41, 42, 43), (41, 42, 43), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
+            'buttons': ((41, 42, 43), (41, 42, 43), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236) ),
             'button red': ((255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
-            'buttons active': (
-                (255, 255, 255), (91, 92, 93), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
+            'buttons active': ((255, 255, 255), (91, 92, 93), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)),
             'switches': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
             'slides': ((138, 180, 248), (53, 86, 140)),
             'lists': ((232, 234, 236), (29, 29, 31), (41, 42, 45)),
@@ -684,11 +705,11 @@ try:
             mb = 0
             file = requests.get(f'https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe',
                                 stream=True)
-            with open(fr'{main_dir}\OceanShipsWar {ver}.exe', 'wb') as f:
+            with open(fr'{MAIN_DIR}\OceanShipsWar {ver}.exe', 'wb') as f:
                 for chunk in file.iter_content(1024 * 1024):
                     f.write(chunk)
                     mb += 1
-            subprocess.Popen(fr'{main_dir}\OceanShipsWar {ver}.exe')
+            subprocess.Popen(fr'{MAIN_DIR}\OceanShipsWar {ver}.exe')
             run = False
 
 
@@ -722,14 +743,14 @@ try:
                     if os.path.exists(f'./{DATAS_FOLDER_NAME}/{var}.{list_of_load[var]["type"]}'):
                         StartLoaded += 1
                         break
-                    elif os.path.exists(f'{main_dir}/{var}.{list_of_load[var]["type"]}'):
+                    elif os.path.exists(f'{MAIN_DIR}/{var}.{list_of_load[var]["type"]}'):
                         list_of_load[var]['path'] = 1
                         StartLoaded += 1
                         break
             for var in list_of_load:
                 ConditionOfLoad = f'Load: ./{DATAS_FOLDER_NAME}/{var}'
                 if list_of_load[var]['path']:
-                    Sounds[var] = pygame.mixer.Sound(f'{main_dir}/{DATAS_FOLDER_NAME}/{var}.{list_of_load[var]["type"]}')
+                    Sounds[var] = pygame.mixer.Sound(f'{MAIN_DIR}/{DATAS_FOLDER_NAME}/{var}.{list_of_load[var]["type"]}')
                 else:
                     Sounds[var] = pygame.mixer.Sound(f'./{DATAS_FOLDER_NAME}/{var}.{list_of_load[var]["type"]}')
                 StartLoaded += 1
@@ -874,7 +895,6 @@ try:
                 ships_wh = int(bsize // 7)
                 left_margin, upper_margin = (size[0] // 2 - bsize * 5), (size[1] // 2 - bsize * 5)
                 font = pygame.font.Font(FONT_PATH, int(bsize / 1.5))
-                infoSurface = pygame.Surface((size[0] // 2 // 1.5, upper_margin // 2), pygame.SRCALPHA)
                 for num_let in range(len(letters)):
                     blocks[num_let] = []
                     for num in range(len(letters)):
@@ -899,7 +919,7 @@ try:
                 if windll.shell32.IsUserAnAdmin():
                     if SettingsClass.settings['Other']['Links']:
                         run_with_links = True
-                        reg.init_deep_links(f'{main_dir}\\OceanShipsWar.exe')
+                        reg.init_deep_links(f'{MAIN_DIR}\\OceanShipsWar.exe')
                     else:
                         run_with_links = False
                         reg.del_deep_link()
@@ -1587,14 +1607,13 @@ except Exception as err:
     from report import *
     from ctypes import windll
     import pygame
-    try:
+    if hasattr(sys, '_MEIPASS'):
         os.chdir(sys._MEIPASS)
-        main_dir = os.path.dirname(sys.executable)
+        MAIN_DIR = os.path.dirname(sys.executable)
         SEND_REPORT = True
-
-    except AttributeError:
+    else:
         os.chdir(os.path.split(__file__)[0])
-        main_dir = os.path.dirname(__file__)
+        MAIN_DIR = os.path.dirname(__file__)
         SEND_REPORT = False
 
     exc_type, exc_value, exc_tb = sys.exc_info()
@@ -1605,6 +1624,5 @@ except Exception as err:
                      f'{traceback_exception}'
                      f'\n\ntime:\t {current_datetime}'
                      f'\nis adm:\t {windll.shell32.IsUserAnAdmin()}',
-                     Reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion, fr'{main_dir}\logs\{os.getpid()}log.txt')
-    windll.user32.MessageBoxW(pygame.display.get_wm_info()['window'] if pygame.display.get_init() else 0, traceback_exception, "ERROR INFO", 0)
+                     Reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion, fr'{MAIN_DIR}\logs\{os.getpid()}log.txt')
     windll.user32.MessageBoxW(pygame.display.get_wm_info()['window'] if pygame.display.get_init() else 0, traceback_exception, "ERROR INFO", 0)

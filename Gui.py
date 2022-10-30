@@ -692,6 +692,7 @@ class Path(pygame.sprite.Sprite):
         self.image.blit(self.font.render(val, True, self.font_color), (self.rect_inner.w / 2 - self.size[0] / 2,
                                                                        self.rect_inner.h / 2 - self.size[1] / 2))
         if mouse and self.rect.collidepoint(pygame.mouse.get_pos()):
+            # os.chdir()
             window = win32ui.CreateFileDialog(1, "", "", 0, "*.ttf|*.ttf|")
             # value = win32ui.CreateFileDialog(1, ".txt", "default.txt", 0, "Font files (*.ttf)|*.ttf|All Files (*.*)|*.*|")
             window.DoModal()
