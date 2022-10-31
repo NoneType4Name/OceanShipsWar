@@ -629,7 +629,6 @@ class Notification(pygame.sprite.Sprite):
 class ProgressBar(pygame.sprite.Sprite):
     def __init__(self, default_font, rect, around, progress_color, value):
         pygame.sprite.Sprite.__init__(self)
-        self.default_font = default_font
         self.rect = pygame.Rect(rect)
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         self.around = pygame.Color(around)

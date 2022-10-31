@@ -19,21 +19,12 @@ import win32com.client
 from constants import *
 from ctypes import windll
 from ast import literal_eval
+from svglib.svglib import svg2rlg
 from screeninfo import get_monitors
 from urllib.parse import urlparse, parse_qs
+from reportlab.graphics import renderPM
 from netifaces import interfaces, ifaddresses, AF_INET
 from Gui import *
-
-
-pygame.init()
-pygame.font.init()
-
-
-try:
-    pygame.mixer.init()
-    INIT_SOUND = True
-except pygame.error:
-    INIT_SOUND = False
 
 
 class DATA(dict):
@@ -107,16 +98,6 @@ except Exception:
     CONSOLE_PROCESS = GAME_PROCESS
 
 
-if hasattr(sys, '_MEIPASS'):
-    os.chdir(sys._MEIPASS)
-    MAIN_DIR = os.path.dirname(sys.executable)
-    isEXE = True
-else:
-    os.chdir(os.path.split(__file__)[0])
-    MAIN_DIR = os.path.dirname(__file__)
-    isEXE = False
-
-
 CONSOLE_HWND = get_hwnd_by_pid(CONSOLE_PROCESS.pid)
 
 
@@ -142,28 +123,67 @@ class Blocks(DATA):
 
 class Game:
     def __init__(self, settings: DATA, language: Language, colors: DATA):
+        self.RUN = False
+        pygame.init()
+        pygame.font.init()
         self.size = None
+        self.flag = None
+        self.depth = None
+        self.display = None
+        self.vsync = None
+        self.caption = None
         self.screen = None
         self.block_size = None
+
         self.Language = language
         self.Settings = settings
         self.Colors = colors
+        self.Sounds = {}
+        self.SOUND = False
         self.SCENE = GAME_SCENE_INIT
+
         self.Notifications = []
         self.GameEvents = []
         self.Properties = reg.getFileProperties(sys.executable)
-        self.VERSION = GameProperties.StringFileInfo.ProductVersion
+        self.VERSION = self.Properties.StringFileInfo.ProductVersion
+        if hasattr(sys, '_MEIPASS'):
+            os.chdir(sys._MEIPASS)
+            self.MAIN_DIR = os.path.dirname(sys.executable)
+            self.EXE = True
+        else:
+            os.chdir(os.path.split(__file__)[0])
+            self.MAIN_DIR = os.path.dirname(__file__)
+            self.EXE = False
 
-    def init(self, caption, icon_path, size, flag):
+    def init(self, caption: str, icon_path: str, size: SIZE, flag: int, depth=0, display=0, vsync=0):
         os.environ['SDL_VIDEO_CENTERED'] = '1'
-        self.screen = pygame.display.set_mode(size, flag)
         self.size = size
+        self.flag = flag
+        self.depth = depth
+        self.display = display
+        self.vsync = vsync
+        self.caption = caption
+        self.screen = pygame.display.set_mode(self.size, self.flag, self.depth)
         pygame.display.set_icon(pygame.image.load(icon_path))
         pygame.display.set_caption(caption)
         self.block_size = int(size.w // BLOCK_ATTITUDE)
+        self.RUN = True
+        self.MixerInit()
+
+    def MixerInit(self):
+        if not self.SOUND:
+            try:
+                pygame.mixer.init()
+                self.SOUND = True
+            except pygame.error:
+                self.SOUND = False
+        if self.SOUND:
+
+
 
     def GameEvent(self, **kwargs):
-        self.GameEvents.append(DATA(kwargs))
+        event = DATA(kwargs)
+        self.GameEvents.append(event)
 
     def AddNotification(self, notification_text, notification_type):
         self.Notifications.append(notification_text)
@@ -171,7 +191,7 @@ class Game:
 
     def SetScene(self, scene):
         self.SCENE = scene
-        self.GameEvent(events=GAME_EVENT_MERGE_SCENE)
+        self.GameEvent(events=GAME_EVENT_MERGE_SCENE, scene=scene)
 
     def init_files(self, list_of_load, dict_for_loaded_files):
         self.scene = GAME_SCENE_INIT
@@ -208,46 +228,19 @@ class Game:
             self.Load += 1
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 
+class LoadScene:
+    def __init__(self, parent: Game, func_to_thread, *args):
+        self.ProgressBar = ProgressBar(None,
+                                       (parent.size.w * 0.4, parent.size.h * 0.7, parent.size.w * 0.2, parent.size.h * 0.05),
+                                       *parent.Colors.ProgressBar, value=0)
+        threading.Thread(func_to_thread, args=[self, parent, args])
+        self.image = pygame.Surface(parent.size, parent.flag)
 
-# blocks = Blocks(Language(LANG_RUS, DEFAULT_DICTIONARY))
-
-# DARK_KIT_FOR_LABEL = ((41, 42, 43), (232, 234, 236), [(255, 255, 255), (91, 92, 93)])
-# DARK_KIT_FOR_BUTTON = (41, 42, 43), (41, 42, 43), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236)
-# DARK_KIT_FOR_RED_BUTTON = ((255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236))
-# DARK_KIT_FOR_SELECTED_BUTTON = ((255, 255, 255), (91, 92, 93), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236))
-# DARK_KIT_FOR_SWITCH = ((0, 255, 0), (255, 255, 255), (64, 64, 64))
-# DARK_KIT_FOR_SLIDE = ((138, 180, 248), (53, 86, 140))
-# DARK_KIT_FOR_LIST =  ((232, 234, 236), (29, 29, 31), (41, 42, 45))
-# DARK_KIT_FOR_PATH = ((138, 180, 248), (53, 86, 140),(232, 234, 236))
-#
-# LIGHT_KIT_FOR_LABEL = ((214, 213, 212), (23, 21, 19), [(0, 0, 0), (200, 200, 200)])
-# LIGHT_KIT_FOR_BUTTON = ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19))
-# LIGHT_KIT_FOR_RED_BUTTON = ((255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236))
-# LIGHT_KIT_FOR_SELECTED_BUTTON = ((255, 255, 255), (91, 92, 93), (232, 234, 236), (255, 255, 255), (91, 92, 93), (232, 234, 236))
-# LIGHT_KIT_FOR_SWITCH = ((0, 255, 0), (255, 255, 255), (64, 64, 64))
-# LIGHT_KIT_FOR_SLIDE = ((138, 180, 248), (53, 86, 140))
-# LIGHT_KIT_FOR_LIST =  ((232, 234, 236), (29, 29, 31), (41, 42, 45))
-# LIGHT_KIT_FOR_PATH = ((138, 180, 248), (53, 86, 140),(232, 234, 236))
+    def update(self):
+        return
 
 
-# Settings = {
-#     'Graphic': {
-#         'WindowSize': {'value': size, 'type': List, 'values': dict(zip(LANGUAGES, Language.LanguageList))},
-#         'Language': {'value': lang, 'type': List, 'values': dict(zip(sz_modes, [f'{val[0]} x {val[1]}' for val in sz_modes]))},
-#         'Font': {'value': f'{FONT_PATH}', 'type': Path, 'title': 'Select Font (ttf)...', 'multiple': 0,
-#                  'types': ['*.ttf']},
-#         'Theme': {'value': theme, 'type': List, 'values': dict(zip(THEMES, Language.ThemeList))}
-#
-#     },
-#     'Sound': {
-#         'Notification': {'value': 1, 'type': Slide},
-#         'Game': {'value': 1, 'type': Slide}
-#     },
-#     'Other': {
-#         'Links': {'value': True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command',
-#                                                  None).data == MAIN_DIR and run_with_links else False,
-#                   'type': Switch},
-#         'Console': {'value': debug, 'type': Switch}}
-# }
+def InitSound(self:LoadScene, parent: Game):
+    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_WAITARROW)
+    while parent.RUN:
 
-# Game = Game(Settings)

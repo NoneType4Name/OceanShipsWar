@@ -55,6 +55,13 @@ ENG_DICT = {'StartGame': 'Create game',
             'OtherLinks': 'Deep links',
             'Letters': 'ABCDEFGHIJ'
             }
+
+SoundsDict = {
+    "info_sound": {"type": 'ogg', 'path': 0},
+    "killed_sound": {"type": 'ogg', 'path': 0},
+    "missed_sound": {"type": 'ogg', 'path': 0},
+    "wounded_sound": {"type": 'ogg', 'path': 0},
+}
 DEFAULT_LANGUAGES = {LANG_RUS:RUS_DICT, LANG_ENG:ENG_DICT}
 DEFAULT_DICTIONARY = DEFAULT_LANGUAGES[DEFAULT_LANGUAGE]
 

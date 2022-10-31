@@ -9,12 +9,6 @@ theme = float(namespace_args.theme) if namespace_args.theme is not None else 0
 lang = namespace_args.lang if namespace_args.lang else LANG_RUS
 debug = namespace_args.debug if namespace_args.debug else False
 
-SoundsList = {
-    "info_sound": {"type": 'ogg', 'path': 0},
-    "killed_sound": {"type": 'ogg', 'path': 0},
-    "missed_sound": {"type": 'ogg', 'path': 0},
-    "wounded_sound": {"type": 'ogg', 'path': 0},
-}
 sz_modes = pygame.display.list_modes()
 if size not in sz_modes:
     sz_modes.insert(0, size)
@@ -59,6 +53,7 @@ if theme == THEME_LIGHT:
         'Slide': ((117, 75, 7), (202, 169, 115)),
         'List': ((23, 21, 19), (226, 226, 224), (214, 213, 210)),
         'Path': ((117, 75, 7), (202, 169, 115), (23, 21, 19)),
+        'ProgressBar': ((24, 24, 24), (0, 255, 0)),
         'Red': (255, 0, 0),
         'Green': (0, 255, 0),
         'Blue': (0, 0, 255),
@@ -77,6 +72,7 @@ elif theme == THEME_DARK:
         'Slide': ((138, 180, 248), (53, 86, 140)),
         'List': ((232, 234, 236), (29, 29, 31), (41, 42, 45)),
         'Path': ((138, 180, 248), (53, 86, 140), (232, 234, 236)),
+        'ProgressBar': ((255, 255, 255), (0, 255, 0)),
         'Red': (255, 0, 0),
         'Green': (0, 255, 0),
         'Blue': (0, 0, 255),
