@@ -21,7 +21,7 @@ RUS_DICT = {'StartGame': 'Создать игру',
             'Exit': 'Выход',
             'Version': 'Версия $VERSION%',
             'GameRandomBuild': 'Случайная расстановка',
-            'GameСlearMap': 'Очистить карту',
+            'GameClearMap': 'Очистить карту',
             'GraphicFont': 'Шрифт',
             'GraphicTheme': 'Тема',
             'ThemeList': ['тёмная', 'яркая'],
@@ -71,13 +71,14 @@ THEMES = [THEME_DARK, THEME_LIGHT]
 
 GAME_NAME = 'OceanShipsWar'
 CONSOLE_TITLE = "OceanShipsWar - Debug Console"
+GITHUB_REPOS_URL = 'https://api.github.com/repos/NoneType4Name/OceanShipsWar/'
 
-GAME_SCENE_INIT = -1
-GAME_SCENE_LOAD = 0
-GAME_SCENE_MAIN = 1
-GAME_SCENE_CREATE = 2
-GAME_SCENE_JOIN = 3
-GAME_SCENE_SETTINGS = 4
+INIT = -1
+MAIN = 0
+LOAD = 1
+CREATE = 2
+JOIN = 3
+SETTINGS = 4
 
 GAME_EVENT_NOTIFICATION = 0
 GAME_EVENT_MERGE_SETTINGS = 1
@@ -94,6 +95,7 @@ GAME_EVENT_EDIT_THEME = 10
 GAME_EVENT_NOTIFICATION_TYPE_DEFAULT = 0
 
 DATAS_FOLDER_NAME = 'assets'
+GAME_FPS = 60
 ICON_PATH = f'{DATAS_FOLDER_NAME}/ico.png'
 FONT_PATH = f'{DATAS_FOLDER_NAME}/default.ttf'
 LANGUAGE_FILE_MASK = '_language.json'
@@ -106,3 +108,4 @@ BLOCK_ATTITUDE = 27.428571428571427
 SHIP_ATTITUDE = 7
 COUNT_BLOCKS_X = 10
 COUNT_BLOCKS_Y = 10
+SPEED_MERGE_SCENE = 80
