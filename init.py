@@ -1,5 +1,3 @@
-import pygame
-
 from Game import *
 
 DISPLAY_SIZE = (get_monitors()[0].width, get_monitors()[0].height)
@@ -106,10 +104,8 @@ elif theme == THEME_DARK:
         }
     })
 
-game = Game(Settings, Language, Colors, MAIN_DIR, EXE)
-game.init(GAME_NAME, ICON_PATH, size, pygame.SRCALPHA, 64)
+game = Game(Settings, Language, Colors, MAIN_DIR, EXE, debug)
+game.init(GAME_NAME, ICON_PATH, size, pygame.SRCALPHA)
 game.MixerInit()
 while game.RUN:
     game.update()
-    pygame.display.flip()
-

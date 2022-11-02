@@ -37,7 +37,6 @@ class DATA(dict):
         super().__init__(data)
 
     def __getattr__(self, item):
-        print(item)
         return self.get(str(item))
 
     def _wrap(self, value):
@@ -100,22 +99,53 @@ def get_hwnd_by_pid(pid):
     return max(hwnd)
 
 
-GAME_PROCESS = psutil.Process(os.getpid())
-try:
-    CONSOLE_PROCESS = psutil.Process(GAME_PROCESS.ppid())
-except Exception:
-    CONSOLE_PROCESS = GAME_PROCESS
+def LoadNewVersion(parent, version):
+    scene = parent.ConverScene.new
+    b = 0
+    scene.ProgressBar = 0
+    scene.PercentLabel = '0%'
+    scene.TextLabel = 'Connecting...'
+    while True:
+        file = requests.get(
+            f'https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe',
+            stream=True)
+        scene.TextLabel = 'Load content...'
+        break
+    with open(fr'{parent.MAIN_DIR}\OceanShipsWar {version}.exe', 'wb') as f:
+        for chunk in file.iter_content(8):
+            f.write(chunk)
+            b += 8
+            scene.PercentLabel = f'{b / file.headers["Content-Length"]}%'
+            scene.PercentLabel = b / file.headers['Content-Length']
+    parent.AddNotification('Launch update?.')
+    if (windll.user32.MessageBoxW(parent.GAME_HWND,
+                                  f"Запустить файл OceanShipsWar {version}.exe?",
+                                  f"Запустить", 36)) == 6:
+        subprocess.Popen(fr'{parent.MAIN_DIR}\OceanShipsWar {version}.exe')
+        parent.RUN = False
 
 
-CONSOLE_HWND = get_hwnd_by_pid(CONSOLE_PROCESS.pid)
+class Version:
+    def __init__(self, string_version: str):
+        self.major, self.minor, self.micro, self.type = map(int, string_version.split('.'))
+        st = string_version.split('.')[:-1]
+        try:
+            str_type = VERSIONS[int(self.type)]
+        except KeyError:
+            str_type = str(self.type)
+        self.string_version = '.'.join(st) + str_type
 
+    def __gt__(self, other):
+        if type(other) is not Version:
+            other = Version(other)
+        return sum([self.major, self.minor, self.micro, self.type]) > sum(
+            [other.major, other.minor, other.micro, other.type])
 
-def GetVersionFromString(string_version):
-    data = int(string_version.replace('.',''))
-    version = data//10
-    graphic_version = '.'.join(list(str(version)))
-    type_version = data % 10
-    return DATA({'version':version, 'string_version':graphic_version, 'type': type_version})
+    def __lt__(self, other):
+        if type(other) is not Version:
+            other = Version(other)
+        return sum([self.major, self.minor, self.micro, self.type]) < sum(
+            [other.major, other.minor, other.micro, other.type])
 
 
 class Blocks(DATA):
@@ -125,15 +155,32 @@ class Blocks(DATA):
         for num_let in range(len(letters)):
             blocks[str(num_let)] = []
             for num in range(len(letters)):
-                blocks[str(num_let)].append(pygame.Rect(left_margin + num_let * block_size, upper_margin + num * block_size, block_size, block_size))
+                blocks[str(num_let)].append(
+                    pygame.Rect(left_margin + num_let * block_size, upper_margin + num * block_size, block_size,
+                                block_size))
         self.blocks = blocks
         super().__init__(self.blocks)
 
 
 class Game:
-    def __init__(self, settings: DATA, language: Language, colors: DATA, main_dir: str, exe: bool):
-        self.RUN = False
+    def __init__(self, settings: DATA, language: Language, colors: DATA, main_dir: str, exe: bool, debug=False):
         pygame.font.init()
+        self.mouse_right_press = False
+        self.mouse_right_release = False
+        self.mouse_left_press = False
+        self.mouse_left_release = False
+        self.mouse_middle_press = False
+        self.mouse_middle_release = False
+        self.mouse_wheel_x = 0
+        self.mouse_wheel_y = 0
+
+        self.FPS = GAME_FPS
+
+        self.CONSOLE_HWND = None
+        self.CONSOLE_PROCESS = None
+        self.GAME_HWND = None
+        self.GAME_PROCESS = None
+        self.RUN = False
         self.size = None
         self.flag = None
         self.depth = None
@@ -143,28 +190,31 @@ class Game:
         self.screen = None
         self.clock = pygame.time.Clock()
         self.block_size = None
+        self.debug = debug
 
         self.Settings = settings
         self.Colors = colors
-        self.Sounds = {}
+        self.Sounds = {SOUND_TYPE_NOTIFICATION:{},
+                       SOUND_TYPE_GAME:{}
+                       }
         self.SOUND = False
-        self.SCENE = None
 
-        self.Notifications = []
+        self.Notifications = pygame.sprite.Group()
         self.GameEvents = []
         self.Properties = reg.getFileProperties(sys.executable)
-        self.VERSION = self.Properties.StringFileInfo.ProductVersion
+        self.version = Version(str(self.Properties.FileVersion))
+        self.VERSION = self.version.string_version
         self.MAIN_DIR = main_dir
         self.EXE = exe
         self.Language = DATA(_replace_str_var(language.__dict__, self))
         self.Scene = DATA(
             {
-                INIT:InitScene,
-                MAIN:MainScene,
-                LOAD:LoadScene,
-                CREATE:None,
-                JOIN:None,
-                SETTINGS:None
+                INIT: InitScene,
+                MAIN: MainScene,
+                LOAD: LoadScene,
+                CREATE: None,
+                JOIN: None,
+                SETTINGS: None
             })
         self.ConvertScene = None
 
@@ -180,8 +230,15 @@ class Game:
         pygame.display.set_icon(pygame.image.load(icon_path))
         pygame.display.set_caption(caption)
         self.block_size = int(size.w // BLOCK_ATTITUDE)
-        self.SCENE = self.Scene[MAIN](self, self.Scene[INIT])
-        self.ConvertScene = ConvertScene(self, self.SCENE, self.Scene[scene], kwargs)
+        self.ConvertScene = ConvertScene(self, self.Scene[INIT](self), self.Scene[MAIN], None)
+        self.GAME_PROCESS = psutil.Process(os.getpid())
+        try:
+            self.CONSOLE_PROCESS = psutil.Process(self.GAME_PROCESS.ppid())
+        except Exception:
+            self.CONSOLE_PROCESS = self.GAME_PROCESS
+        self.GAME_HWND = pygame.display.get_wm_info()['window']
+        self.CONSOLE_HWND = get_hwnd_by_pid(self.CONSOLE_PROCESS.pid)
+        self.ConsoleOC()
         self.RUN = True
 
     def MixerInit(self, frequency=44100, size=-16, channels=2, buffer=512, devicename='', allowedchanges=5):
@@ -204,25 +261,25 @@ class Game:
         if self.SOUND:
             Load = 0
             scene.PercentLabel.value = ''
-            scene.TextLabel.value = ''
+            scene.TextLabel.text = ''
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_WAITARROW)
             while self.RUN:
-                scene.TextLabel.value = 'Подключение...'
+                scene.TextLabel.text = 'Подключение...'
                 try:
-                    requests.get(GITHUB_REPOS_URL+'releases/latest')
-                    scene.TextLabel.value = ''
+                    requests.get(GITHUB_REPOS_URL + 'releases/latest')
+                    scene.TextLabel.text = ''
                     break
                 except requests.exceptions.ConnectionError:
                     pass
-            MaxLoad = len(SoundsDict)*2
+            MaxLoad = len(SoundsDict) * 2
 
             for sound_name in SoundsDict:
-                scene.TextLabel.value = f'Search: ./{DATAS_FOLDER_NAME}/{sound_name}'
+                scene.TextLabel.text = f'Search: ./{DATAS_FOLDER_NAME}/{sound_name}'
                 while self.RUN:
-                    if os.path.exists(f'./{DATAS_FOLDER_NAME}/{sound_name}.{SoundsDict[sound_name]["type"]}'):
+                    if os.path.exists(f'./{DATAS_FOLDER_NAME}/{sound_name}.{SoundsDict[sound_name]["file_type"]}'):
                         Load += 1
                         break
-                    elif os.path.exists(f'{self.MAIN_DIR}/{sound_name}.{SoundsDict[sound_name]["type"]}'):
+                    elif os.path.exists(f'{self.MAIN_DIR}/{sound_name}.{SoundsDict[sound_name]["file_type"]}'):
                         SoundsDict[sound_name]['path'] = 1
                         Load += 1
                         break
@@ -230,35 +287,130 @@ class Game:
                 scene.PercentLabel.value = f'{Load / MaxLoad * 100} %'
 
             for sound_name in SoundsDict:
-                scene.TextLabel.value = f'Load: ./{DATAS_FOLDER_NAME}/{sound_name}'
+                scene.TextLabel.text = f'Load: ./{DATAS_FOLDER_NAME}/{sound_name}'
                 if SoundsDict[sound_name]['path']:
-                    self.Sounds[sound_name] = pygame.mixer.Sound(
-                        f'{self.MAIN_DIR}/{DATAS_FOLDER_NAME}/{sound_name}.{SoundsDict[sound_name]["type"]}')
+                    sound = pygame.mixer.Sound(f'{self.MAIN_DIR}/{DATAS_FOLDER_NAME}/{sound_name}.{SoundsDict[sound_name]["file_type"]}')
                 else:
-                    self.Sounds[sound_name] = pygame.mixer.Sound(
-                        f'./{DATAS_FOLDER_NAME}/{sound_name}.{SoundsDict[sound_name]["type"]}')
+                    sound = pygame.mixer.Sound(f'./{DATAS_FOLDER_NAME}/{sound_name}.{SoundsDict[sound_name]["file_type"]}')
+                self.Sounds[SoundsDict[sound_name]['type']][sound_name] = sound
                 Load += 1
                 scene.ProgressBar.value = Load / MaxLoad
                 scene.PercentLabel.value = f'{Load / MaxLoad * 100} %'
-
+            self.Sounds = DATA(self.Sounds)
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+            self.AddNotification('Hello.')
             return True
 
-    # def GameEvent(self, **kwargs):
-    #     event = DATA(kwargs)
-    #     self.GameEvents.append(event)
+    def GameEvent(self, **kwargs):
+        event = DATA(kwargs)
+        self.GameEvents.append(event)
 
     def AddNotification(self, notification_text):
-        self.Notifications.append(notification_text)
+        self.Notifications.add(Notification(FONT_PATH, (self.size[0] * 0.3, self.size[1] * 0.07,
+                                                        self.size[0] * 0.4, self.size[1] * 0.1),
+                                            notification_text, (86, 86, 86), (0, 0, 0), (255, 255, 255)))
+        self.PlaySound('info_sound',SOUND_TYPE_NOTIFICATION, fade_ms=10)
+
+    def PlaySound(self, sound_name: str, sound_type: str, loops=0, maxtime=0, fade_ms=0):
+        if self.SOUND:
+            if sound_type == SOUND_TYPE_NOTIFICATION and self.Settings.Sound.Notification:
+                self.Sounds[SOUND_TYPE_NOTIFICATION][sound_name].set_volume(self.Settings.Sound.Notification)
+                self.Sounds[SOUND_TYPE_NOTIFICATION][sound_name].play(loops, maxtime, fade_ms)
+            elif sound_type == SOUND_TYPE_GAME and self.Settings.Sound.Game:
+                self.Sounds[SOUND_TYPE_GAME][sound_name].set_volume(self.Settings.Sound.Game)
+                self.Sounds[SOUND_TYPE_GAME][sound_name].play(loops, maxtime, fade_ms)
+
+    def GetUpdate(self):
+        self.AddNotification('Moment...')
+        possible_version = Version('4.0.0.0')
+        # possible_version = Version(json.loads(requests.get('https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name'])
+        if self.version < possible_version:
+            possible_version = json.loads(
+                requests.get('https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)[
+                'tag_name']
+            self.AddNotification('new version is available, load it?')
+            if (windll.user32.MessageBoxW(self.GAME_HWND,
+                                          f"Доступна версия {possible_version}, продолжить обновление?",
+                                          f"Обновление до версии {possible_version}", 36)) == 6:
+                self.SetScene(LOAD, func=LoadNewVersion, args=[self, possible_version])
+                LoadNewVersion(self, possible_version)
+        else:
+            self.AddNotification('Actual version.')
+
+    def ConsoleOC(self):
+        win32gui.ShowWindow(self.CONSOLE_HWND, 4 if self.debug else 0)
+        self.debug = not self.debug
 
     def SetScene(self, scene, **kwargs):
-        self.Scene[self.SCENE.type] = self.SCENE
-        self.SCENE = ConvertScene(self, self.SCENE, self.Scene[scene], kwargs)
+        self.ConvertScene.NewScene(self.Scene[scene], kwargs)
+
+    def UpdateEvents(self):
+        self.mouse_right_press = False
+        self.mouse_right_release = False
+
+        self.mouse_left_release = False
+        self.mouse_left_press = False
+
+        self.mouse_middle_press = False
+        self.mouse_middle_release = False
+
+        self.mouse_wheel_x = 0
+        self.mouse_wheel_y = 0
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.RUN = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == pygame.BUTTON_LEFT:
+                    self.mouse_left_press = True
+                    self.mouse_left_release = False
+                elif event.button == pygame.BUTTON_RIGHT:
+                    self.mouse_right_press = True
+                    self.mouse_right_release = False
+                elif event.button == pygame.BUTTON_MIDDLE:
+                    self.mouse_middle_press = True
+                    self.mouse_middle_release = False
+
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == pygame.BUTTON_LEFT:
+                    self.mouse_left_press = False
+                    self.mouse_left_release = True
+                elif event.button == pygame.BUTTON_RIGHT:
+                    self.mouse_right_press = False
+                    self.mouse_right_release = True
+                elif event.button == pygame.BUTTON_MIDDLE:
+                    self.mouse_middle_press = False
+                    self.mouse_middle_release = True
+            elif event.type == pygame.MOUSEWHEEL:
+                self.mouse_wheel_x = event.x
+                self.mouse_wheel_y = event.y
+
+            elif event.type == pygame.MOUSEMOTION:
+                if event.buttons[0] or event.touch:
+                    self.mouse_wheel_x = event.rel[0]
+                    self.mouse_wheel_y = event.rel[1]
 
     def update(self):
-        self.screen.blit(self.SCENE.update(), (0, 0))
+        self.UpdateEvents()
+        self.Notifications.update(self.mouse_left_press)
+        self.screen.blit(self.ConvertScene.update(), (0, 0))
+        self.Notifications.draw(self.screen)
         pygame.display.flip()
-        self.clock.tick(GAME_FPS)
+        self.clock.tick(self.FPS)
+
+
+class Notifications(pygame.sprite.Group):
+    def __init__(self, parent: Game, *sprites: [pygame.sprite.Sprite]):
+        super().__init__(sprites)
+        self.parent = parent
+
+    def update(self):
+        for n, s in enumerate(reversed(self.sprites())):
+            if not n:
+                if s.update(self.parent.mouse_right_press):
+                    self.parent.mouse_right_press = False
+            else:
+                if s.update(False):
+                    self.parent.mouse_right_press = False
 
 
 class ConvertScene:
@@ -289,7 +441,7 @@ class ConvertScene:
             image_old = self.old.update()
             image_old.set_alpha(self.old_alpha)
             self.image.blit(image_old, (0, 0))
-        image_new = self.new.update()
+        image_new = self.new.update(True)
         image_new.set_alpha(self.new_alpha)
         self.image.blit(image_new, (0, 0))
         return self.image
@@ -301,57 +453,14 @@ class InitScene:
         self.parent = parent
         self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
 
-    def update(self):
+    def update(self, event=False):
         self.image.fill(self.parent.Colors.Background)
-        return self.image
-
-
-class LoadScene:
-    def __init__(self, parent: Game, input_scene, func_to_thread=None, **kwargs):
-        self.type = LOAD
-        self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
-        self.InputScene = input_scene.type
-        self.parent = parent
-        self.func = func_to_thread
-        self.kwargs = kwargs
-        self.Thread = None
-        self.ProgressBar = ProgressBar(None,
-                                       (parent.size.w * 0.4, parent.size.h * 0.7,
-                                        parent.size.w * 0.2, parent.size.h * 0.05),
-                                       *parent.Colors.Scene.Load.ProgressBar,
-                                       value=0
-                                       )
-        self.PercentLabel = Label(FONT_PATH,
-                                  (parent.size[0] * 0.4, parent.size[1] * 0.6,
-                                   parent.size[0] * 0.2, parent.size[1] * 0.05),
-                                  '0 %',
-                                  *parent.Colors.Scene.Load.Label,
-                                  center=True
-                                  )
-        self.TextLabel = Label(FONT_PATH,
-                               (parent.size[0] * 0.4, parent.size[1] * 0.65,
-                                parent.size[0] * 0.2, parent.size[1] * 0.05),
-                               '',
-                               *parent.Colors.Scene.Load.Label,
-                               center=True)
-        self.Elements = pygame.sprite.Group([self.ProgressBar, self.PercentLabel, self.TextLabel])
-        if self.func:
-            self.Thread = threading.Thread(target=self.func, args=[self, self.parent, self.kwargs])
-        else:
-            self.Thread = threading.Thread(target=self.parent.mixer_init_thread(self, self.kwargs))
-        self.Thread.start()
-
-    def update(self):
-        self.image.fill(self.parent.Colors.Background)
-        self.Elements.update()
-        self.Elements.draw(self.image)
-        if not self.Thread.is_alive():
-            self.parent.SetScene(self.InputScene)
         return self.image
 
 
 class MainScene:
-    def __init__(self, parent: Game, input_scene):
+    def __init__(self, parent: Game, input_scene=INIT, kwargs=None):
+        self.UpdateThread = threading.Thread(target=lambda: False)
         self.type = MAIN
         self.parent = parent
         self.InputScene = input_scene
@@ -379,11 +488,80 @@ class MainScene:
         self.ButtonTheme = Button(FONT_PATH,
                                   (parent.size.w - parent.block_size * 1.5, parent.size.h - parent.block_size * 1.5,
                                    parent.block_size, parent.block_size),
-                                  parent.Language.DefaultDict.ThemeLight if parent.Settings.Graphic.Theme is THEME_LIGHT else parent.Language.DefaultDict.ThemeDark, *parent.Colors.Scene.Main.Button)
-        self.Elements = pygame.sprite.Group(self.ButtonUpdate, self.ButtonEsc, self.ButtonCreateGame, self.ButtonJoinGame, self.ButtonSettings, self.ButtonTheme)
+                                  parent.Language.DefaultDict.ThemeLight if parent.Settings.Graphic.Theme is THEME_LIGHT else parent.Language.DefaultDict.ThemeDark,
+                                  *parent.Colors.Scene.Main.Button)
+        self.ButtonQuit = Button(FONT_PATH,
+                                 (parent.size.w - parent.block_size + 1, -1, parent.block_size, parent.block_size),
+                                 parent.Language.DefaultDict.Exit, *parent.Colors.Scene.Main.Button)
+        self.Elements = pygame.sprite.Group(self.ButtonUpdate, self.ButtonEsc, self.ButtonCreateGame,
+                                            self.ButtonJoinGame, self.ButtonSettings, self.ButtonTheme, self.ButtonQuit)
 
-    def update(self):
+    def update(self, event=False):
         self.image.fill(self.parent.Colors.Background)
         self.Elements.update()
         self.Elements.draw(self.image)
+        if event:
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONUP:
+                    if event.button == pygame.BUTTON_LEFT:
+                        if self.ButtonUpdate.isCollide() and not self.UpdateThread.is_alive():
+                            self.UpdateThread = threading.Thread(target=self.parent.GetUpdate)
+                            self.UpdateThread.start()
+                        elif self.ButtonEsc.isCollide():
+                            pass
+                        elif self.ButtonCreateGame.isCollide():
+                            pass
+                        elif self.ButtonJoinGame.isCollide():
+                            pass
+                        elif self.ButtonSettings.isCollide():
+                            pass
+                        elif self.ButtonTheme.isCollide():
+                            pass
+                        elif self.ButtonQuit.isCollide():
+                            self.parent.RUN = False
+
+        return self.image
+
+
+class LoadScene:
+    def __init__(self, parent: Game, input_scene, kwargs):
+        self.type = LOAD
+        self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
+        self.InputScene = input_scene.type
+        self.parent = parent
+        self.func = kwargs.get('func')
+        self.kwargs = kwargs
+        self.Thread = None
+        self.ProgressBar = ProgressBar(None,
+                                       (parent.size.w * 0.4, parent.size.h * 0.7,
+                                        parent.size.w * 0.2, parent.size.h * 0.05),
+                                       *parent.Colors.Scene.Load.ProgressBar,
+                                       value=0
+                                       )
+        self.PercentLabel = Label(FONT_PATH,
+                                  (parent.size[0] * 0.4, parent.size[1] * 0.6,
+                                   parent.size[0] * 0.2, parent.size[1] * 0.05),
+                                  '0 %',
+                                  *parent.Colors.Scene.Load.Label,
+                                  center=True
+                                  )
+        self.TextLabel = Label(FONT_PATH,
+                               (parent.size[0] * 0.4, parent.size[1] * 0.65,
+                                parent.size[0] * 0.2, parent.size[1] * 0.05),
+                               '1',
+                               *parent.Colors.Scene.Load.Label,
+                               center=True)
+        self.Elements = pygame.sprite.Group([self.ProgressBar, self.PercentLabel, self.TextLabel])
+        if self.func:
+            self.Thread = threading.Thread(target=self.func, args=[self, self.parent, self.kwargs.get('args')])
+        else:
+            self.Thread = threading.Thread(target=self.parent.mixer_init_thread, args=[self, self.kwargs])
+        self.Thread.start()
+
+    def update(self, event=False):
+        self.image.fill(self.parent.Colors.Background)
+        self.Elements.update()
+        self.Elements.draw(self.image)
+        if not self.Thread.is_alive():
+            self.parent.SetScene(self.InputScene)
         return self.image

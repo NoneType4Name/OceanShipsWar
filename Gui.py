@@ -5,6 +5,7 @@ import pyperclip
 import time
 import pygame
 import copy
+from constants import *
 
 import win32ui
 
@@ -59,11 +60,16 @@ def RoundedRect(rect:tuple, color:tuple, radius=0.4, width=0, inner=(0, 0, 0)) -
     return surf
 
 
+def GetFontSize(font, text, rect: pygame.Rect):
+    for i in range(0, 256):
+        if not rect.colliderect(pygame.font.Font(font, i).size(text)):
+            return i
+
+
 class Button(pygame.sprite.Sprite):
-    def __init__(self, default_font, rect, text, color1, color2, text_color, color1_act, color2_act, color_act_text,
+    def __init__(self, f, rect, text, color1, color2, text_color, color1_act, color2_act, color_act_text,
                  radius=0.5):
         pygame.sprite.Sprite.__init__(self)
-        self.default_font = default_font
         self.rect = pygame.Rect(rect)
         wh = (int(self.rect.w + self.rect.h) // 100)
         wh = wh if wh else 1
@@ -81,13 +87,13 @@ class Button(pygame.sprite.Sprite):
         self.wh = self.wh if self.wh else 1
         self.radius = radius
         for s in range(1000):
-            self.font = pygame.font.Font(default_font, s)
+            self.font = pygame.font.Font(f, s)
             self.size = self.font.size(self.text)
-            if self.size[0] >= self.rect.w - self.rect.h * 0.1 * 4 or self.size[
-                1] >= self.rect.h - self.rect.h * 0.1 * 4:
-                self.font = pygame.font.Font(default_font, s - 1)
+            if self.size[0] >= self.rect.w - self.rect.h * 0.1 * 4 or self.size[1] >= self.rect.h - self.rect.h * 0.1 * 4:
+                self.font = pygame.font.Font(f, s - 1)
                 self.size = self.font.size(self.text)
                 break
+        # print(s, GetFontSize())
 
     def update(self):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)

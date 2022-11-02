@@ -2,9 +2,16 @@ LANG_RUS = 'rus'
 LANG_ENG = 'eng'
 DEFAULT_LANGUAGE = LANG_RUS
 
+ALPHA = 0
 BETA = 1
 PRE_RELEASE = 2
-RELEASE = 0
+RELEASE = 3
+VERSIONS = {
+    ALPHA:       'a',
+    BETA:        'b',
+    PRE_RELEASE: 'p',
+    RELEASE:     'r'
+}
 
 RUS_DICT = {'StartGame': 'Создать игру',
             'JoinGame': 'Присоеденится к игре',
@@ -56,12 +63,6 @@ ENG_DICT = {'StartGame': 'Create game',
             'Letters': 'ABCDEFGHIJ'
             }
 
-SoundsDict = {
-    "info_sound": {"type": 'ogg', 'path': 0},
-    "killed_sound": {"type": 'ogg', 'path': 0},
-    "missed_sound": {"type": 'ogg', 'path': 0},
-    "wounded_sound": {"type": 'ogg', 'path': 0},
-}
 DEFAULT_LANGUAGES = {LANG_RUS:RUS_DICT, LANG_ENG:ENG_DICT}
 DEFAULT_DICTIONARY = DEFAULT_LANGUAGES[DEFAULT_LANGUAGE]
 
@@ -93,6 +94,15 @@ GAME_EVENT_EDIT_LANGUAGE = 9
 GAME_EVENT_EDIT_THEME = 10
 
 GAME_EVENT_NOTIFICATION_TYPE_DEFAULT = 0
+SOUND_TYPE_NOTIFICATION = 'NOTIFICATION'
+SOUND_TYPE_GAME = 'GAME'
+
+SoundsDict = {
+    "info": {'type':SOUND_TYPE_NOTIFICATION},
+    "kill": {"file_type": 'ogg', 'path': 0, 'type':SOUND_TYPE_GAME},
+    "miss": {"file_type": 'ogg', 'path': 0, 'type':SOUND_TYPE_GAME},
+    "wound": {"file_type": 'ogg', 'path': 0, 'type':SOUND_TYPE_GAME},
+}
 
 DATAS_FOLDER_NAME = 'assets'
 GAME_FPS = 60
@@ -108,4 +118,4 @@ BLOCK_ATTITUDE = 27.428571428571427
 SHIP_ATTITUDE = 7
 COUNT_BLOCKS_X = 10
 COUNT_BLOCKS_Y = 10
-SPEED_MERGE_SCENE = 80
+SPEED_MERGE_SCENE = 50
