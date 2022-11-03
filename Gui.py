@@ -56,25 +56,26 @@ def RoundedRect(rect:tuple, color:tuple, radius=0.4, width=0, inner=(0, 0, 0)) -
     surf = pygame.Surface(rect.size, pygame.SRCALPHA)
     surf.blit(draw_round_rect(rect, color, radius), (0, 0))
     if width:
-        surf.blit(draw_round_rect((0, 0, rect.w - width * 2, rect.h - width * 2), inner, radius), (width, width))
+        img_in = draw_round_rect((0, 0, rect.w - width * 2, rect.h - width * 2), inner, radius)
+        surf.blit(img_in, (width, width))
     return surf
 
 
 def GetFontSize(font, text, rect: pygame.Rect):
     for i in range(0, 256):
-        if not rect.colliderect(pygame.font.Font(font, i).size(text)):
-            return i
+        font_rect = pygame.font.Font(font, i).size(text)
+        if font_rect[0] >= rect.w or font_rect[1] >= rect.h:
+            return i-1
 
 
 class Button(pygame.sprite.Sprite):
-    def __init__(self, f, rect, text, color1, color2, text_color, color1_act, color2_act, color_act_text,
-                 radius=0.5):
+    def __init__(self, f, rect, text, color1, color2, text_color, color1_act, color2_act, color_act_text, radius=0.5):
         pygame.sprite.Sprite.__init__(self)
         self.rect = pygame.Rect(rect)
-        wh = (int(self.rect.w + self.rect.h) // 100)
-        wh = wh if wh else 1
-        self.rectInner = pygame.Rect(wh, wh, self.rect.w - wh * 2,
-                                     self.rect.h - wh * 2)
+        self.border = (self.rect.w + self.rect.h) * 0.01
+        self.border = self.border if self.border > 1 else 1
+        self.rectInner = pygame.Rect(self.border, self.border, self.rect.w - self.border * 2,
+                                     self.rect.h - self.border * 2)
         self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
         self.color1 = pygame.Color(color1)
         self.color2 = pygame.Color(color2)
@@ -83,28 +84,27 @@ class Button(pygame.sprite.Sprite):
         self.text_color = pygame.Color(text_color)
         self.color_act_text = pygame.Color(color_act_text)
         self.text = text
-        self.wh = int((self.rect.w + self.rect.h) / 100)
-        self.wh = self.wh if self.wh else 1
         self.radius = radius
-        for s in range(1000):
-            self.font = pygame.font.Font(f, s)
-            self.size = self.font.size(self.text)
-            if self.size[0] >= self.rect.w - self.rect.h * 0.1 * 4 or self.size[1] >= self.rect.h - self.rect.h * 0.1 * 4:
-                self.font = pygame.font.Font(f, s - 1)
-                self.size = self.font.size(self.text)
-                break
-        # print(s, GetFontSize())
+        self.font = pygame.font.Font(f, GetFontSize(f, self.text, self.rectInner))
+        self.size = self.font.size(self.text)
+        # for s in range(1000):
+        #     self.font = pygame.font.Font(f, s)
+        #     self.size = self.font.size(self.text)
+        #     if self.size[0] >= self.rect.w - self.rect.h * 0.1 * 4 or self.size[1] >= self.rect.h - self.rect.h * 0.1 * 4:
+                # self.font = pygame.font.Font(f, s - 1)
+                # self.size = self.font.size(self.text)
+                # break
 
     def update(self):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         if self.isCollide():
-            self.image.blit(RoundedRect(self.rect, self.color1_act, self.radius, self.wh, self.color2_act), (0, 0))
+            self.image.blit(RoundedRect(self.rect, self.color2_act, self.radius), (0, 0))
             self.image.blit(self.font.render(self.text, True, self.color_act_text),
-                            (self.rect.w // 2 - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
+                            (self.rect.w * 0.5 - self.size[0] * 0.5, self.rect.h * 0.5 - self.size[1] * 0.5))
         else:
-            self.image.blit(RoundedRect(self.rect, self.color1, self.radius, self.wh, self.color2), (0, 0))
+            self.image.blit(RoundedRect(self.rect, self.color2, self.radius), (0, 0))
             self.image.blit(self.font.render(self.text, True, self.text_color),
-                            (self.rect.w // 2 - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
+                            (self.rect.w * 0.5 - self.size[0] * 0.5, self.rect.h * 0.5 - self.size[1] * 0.5))
 
     def isCollide(self):
         return self.rect.collidepoint(pygame.mouse.get_pos())

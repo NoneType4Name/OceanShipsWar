@@ -94,14 +94,14 @@ GAME_EVENT_EDIT_LANGUAGE = 9
 GAME_EVENT_EDIT_THEME = 10
 
 GAME_EVENT_NOTIFICATION_TYPE_DEFAULT = 0
-SOUND_TYPE_NOTIFICATION = 'NOTIFICATION'
-SOUND_TYPE_GAME = 'GAME'
+SOUNDS_DIR = 'Sounds'
+SOUND_TYPE_NOTIFICATION = 'Notification'
+SOUND_TYPE_GAME = 'Game'
+SOUNDS_TYPE = 'ogg'
 
 SoundsDict = {
-    "info": {'type':SOUND_TYPE_NOTIFICATION},
-    "kill": {"file_type": 'ogg', 'path': 0, 'type':SOUND_TYPE_GAME},
-    "miss": {"file_type": 'ogg', 'path': 0, 'type':SOUND_TYPE_GAME},
-    "wound": {"file_type": 'ogg', 'path': 0, 'type':SOUND_TYPE_GAME},
+    SOUND_TYPE_NOTIFICATION:{'in':0},
+    SOUND_TYPE_GAME:{'kill': 0, 'miss': 0, 'wound': 0}
 }
 
 DATAS_FOLDER_NAME = 'assets'

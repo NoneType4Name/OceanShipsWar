@@ -1,4 +1,5 @@
 import glob
+import itertools
 import sys
 import os
 import copy
@@ -162,6 +163,10 @@ class Blocks(DATA):
         super().__init__(self.blocks)
 
 
+def MixerPreInit(frequency=44100, size=-16, channels=2, buffer=512, devicename='', allowedchanges=5):
+    pygame.mixer.pre_init(frequency, size, channels, buffer, devicename, allowedchanges)
+
+
 class Game:
     def __init__(self, settings: DATA, language: Language, colors: DATA, main_dir: str, exe: bool, debug=False):
         pygame.font.init()
@@ -216,7 +221,7 @@ class Game:
                 JOIN: None,
                 SETTINGS: None
             })
-        self.ConvertScene = None
+        self.ConvertScene = ConvertScene(self, self.Scene[INIT])
 
     def init(self, caption: str, icon_path: str, size: SIZE, flag=0, depth=0, display=0, vsync=0):
         os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -230,7 +235,6 @@ class Game:
         pygame.display.set_icon(pygame.image.load(icon_path))
         pygame.display.set_caption(caption)
         self.block_size = int(size.w // BLOCK_ATTITUDE)
-        self.ConvertScene = ConvertScene(self, self.Scene[INIT](self), self.Scene[MAIN], None)
         self.GAME_PROCESS = psutil.Process(os.getpid())
         try:
             self.CONSOLE_PROCESS = psutil.Process(self.GAME_PROCESS.ppid())
@@ -240,9 +244,11 @@ class Game:
         self.CONSOLE_HWND = get_hwnd_by_pid(self.CONSOLE_PROCESS.pid)
         self.ConsoleOC()
         self.RUN = True
+        self.ConvertScene.NewScene(self.Scene[MAIN], None)
 
-    def MixerInit(self, frequency=44100, size=-16, channels=2, buffer=512, devicename='', allowedchanges=5):
+    def MixerInit(self, has_pre_init=False, frequency=44100, size=-16, channels=2, buffer=512, devicename='', allowedchanges=5):
         self.SetScene(LOAD,
+                      pre_init=has_pre_init,
                       frequency=frequency,
                       size=size,
                       channels=channels,
@@ -252,12 +258,15 @@ class Game:
                       )
 
     def mixer_init_thread(self, scene, kwargs):
-        if not self.SOUND:
+        if not kwargs.get('pre_init'):
             try:
-                pygame.mixer.init(*kwargs.values())
+                pygame.mixer.init(*list(list(kwargs.values())[1:]))
                 self.SOUND = True
             except pygame.error:
                 self.SOUND = False
+        else:
+            if pygame.mixer.get_init():
+                self.SOUND = True
         if self.SOUND:
             Load = 0
             scene.PercentLabel.value = ''
@@ -271,31 +280,33 @@ class Game:
                     break
                 except requests.exceptions.ConnectionError:
                     pass
-            MaxLoad = len(SoundsDict) * 2
 
-            for sound_name in SoundsDict:
-                scene.TextLabel.text = f'Search: ./{DATAS_FOLDER_NAME}/{sound_name}'
-                while self.RUN:
-                    if os.path.exists(f'./{DATAS_FOLDER_NAME}/{sound_name}.{SoundsDict[sound_name]["file_type"]}'):
-                        Load += 1
-                        break
-                    elif os.path.exists(f'{self.MAIN_DIR}/{sound_name}.{SoundsDict[sound_name]["file_type"]}'):
-                        SoundsDict[sound_name]['path'] = 1
-                        Load += 1
-                        break
-                scene.ProgressBar.value = Load / MaxLoad
-                scene.PercentLabel.value = f'{Load / MaxLoad * 100} %'
+            MaxLoad = len(list(itertools.chain(*SoundsDict.values()))) * 2
+            for sound_type in SoundsDict:
+                for sound_name in SoundsDict[sound_type]:
+                    scene.TextLabel.text = f'Search: {os.path.join(".", SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'
+                    while self.RUN:
+                        if os.path.exists(f'{os.path.join(".", DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'):
+                            Load += 1
+                            break
+                        elif os.path.exists(f'{os.path.join(self.MAIN_DIR, DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'):
+                            SoundsDict[sound_type][sound_name] = 1
+                            Load += 1
+                            break
+                    scene.ProgressBar.value = Load / MaxLoad
+                    scene.PercentLabel.value = f'{Load / MaxLoad * 100} %'
 
-            for sound_name in SoundsDict:
-                scene.TextLabel.text = f'Load: ./{DATAS_FOLDER_NAME}/{sound_name}'
-                if SoundsDict[sound_name]['path']:
-                    sound = pygame.mixer.Sound(f'{self.MAIN_DIR}/{DATAS_FOLDER_NAME}/{sound_name}.{SoundsDict[sound_name]["file_type"]}')
-                else:
-                    sound = pygame.mixer.Sound(f'./{DATAS_FOLDER_NAME}/{sound_name}.{SoundsDict[sound_name]["file_type"]}')
-                self.Sounds[SoundsDict[sound_name]['type']][sound_name] = sound
-                Load += 1
-                scene.ProgressBar.value = Load / MaxLoad
-                scene.PercentLabel.value = f'{Load / MaxLoad * 100} %'
+            for sound_type in SoundsDict:
+                for sound_name in SoundsDict[sound_type]:
+                    scene.TextLabel.text = f'Load: ./{os.path.join(SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'
+                    if SoundsDict[sound_type][sound_name]:
+                        sound = pygame.mixer.Sound(f'{os.path.join(self.MAIN_DIR, DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}')
+                    else:
+                        sound = pygame.mixer.Sound(f'{os.path.join(DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}')
+                    self.Sounds[sound_type][sound_name] = sound
+                    Load += 1
+                    scene.ProgressBar.value = Load / MaxLoad
+                    scene.PercentLabel.value = f'{Load / MaxLoad * 100} %'
             self.Sounds = DATA(self.Sounds)
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
             self.AddNotification('Hello.')
@@ -309,12 +320,12 @@ class Game:
         self.Notifications.add(Notification(FONT_PATH, (self.size[0] * 0.3, self.size[1] * 0.07,
                                                         self.size[0] * 0.4, self.size[1] * 0.1),
                                             notification_text, (86, 86, 86), (0, 0, 0), (255, 255, 255)))
-        self.PlaySound('info_sound',SOUND_TYPE_NOTIFICATION, fade_ms=10)
+        self.PlaySound('in', SOUND_TYPE_NOTIFICATION)
 
     def PlaySound(self, sound_name: str, sound_type: str, loops=0, maxtime=0, fade_ms=0):
         if self.SOUND:
             if sound_type == SOUND_TYPE_NOTIFICATION and self.Settings.Sound.Notification:
-                self.Sounds[SOUND_TYPE_NOTIFICATION][sound_name].set_volume(self.Settings.Sound.Notification)
+                self.Sounds[SOUND_TYPE_NOTIFICATION][sound_name].set_volume(self.Settings.Sound.Notification.value)
                 self.Sounds[SOUND_TYPE_NOTIFICATION][sound_name].play(loops, maxtime, fade_ms)
             elif sound_type == SOUND_TYPE_GAME and self.Settings.Sound.Game:
                 self.Sounds[SOUND_TYPE_GAME][sound_name].set_volume(self.Settings.Sound.Game)
@@ -414,14 +425,14 @@ class Notifications(pygame.sprite.Group):
 
 
 class ConvertScene:
-    def __init__(self, parent: Game, old, new, kwargs):
-        self.old = old
+    def __init__(self, parent: Game, new):
+        self.old = None
+        self.image = None
         self.parent = parent
-        self.new = new(parent, self.old, kwargs)
+        self.new = new(parent)
         self.old_alpha = 255
         self.new_alpha = 0
         self.step = SPEED_MERGE_SCENE
-        self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
 
     def NewScene(self, new, kwargs):
         self.old = self.new
@@ -448,10 +459,10 @@ class ConvertScene:
 
 
 class InitScene:
-    def __init__(self, parent: Game):
+    def __init__(self, parent: Game, *kwargs):
         self.type = INIT
         self.parent = parent
-        self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
+        self.image = pygame.Surface((0, 0), pygame.SRCALPHA)
 
     def update(self, event=False):
         self.image.fill(self.parent.Colors.Background)
@@ -501,24 +512,22 @@ class MainScene:
         self.Elements.update()
         self.Elements.draw(self.image)
         if event:
-            for event in pygame.event.get():
-                if event.type == pygame.MOUSEBUTTONUP:
-                    if event.button == pygame.BUTTON_LEFT:
-                        if self.ButtonUpdate.isCollide() and not self.UpdateThread.is_alive():
-                            self.UpdateThread = threading.Thread(target=self.parent.GetUpdate)
-                            self.UpdateThread.start()
-                        elif self.ButtonEsc.isCollide():
-                            pass
-                        elif self.ButtonCreateGame.isCollide():
-                            pass
-                        elif self.ButtonJoinGame.isCollide():
-                            pass
-                        elif self.ButtonSettings.isCollide():
-                            pass
-                        elif self.ButtonTheme.isCollide():
-                            pass
-                        elif self.ButtonQuit.isCollide():
-                            self.parent.RUN = False
+            if self.parent.mouse_left_release:
+                if self.ButtonUpdate.isCollide() and not self.UpdateThread.is_alive():
+                    self.UpdateThread = threading.Thread(target=self.parent.GetUpdate)
+                    self.UpdateThread.start()
+                elif self.ButtonEsc.isCollide():
+                    pass
+                elif self.ButtonCreateGame.isCollide():
+                    pass
+                elif self.ButtonJoinGame.isCollide():
+                    pass
+                elif self.ButtonSettings.isCollide():
+                    pass
+                elif self.ButtonTheme.isCollide():
+                    pass
+                elif self.ButtonQuit.isCollide():
+                    self.parent.RUN = False
 
         return self.image
 
