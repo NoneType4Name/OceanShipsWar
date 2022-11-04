@@ -1,13 +1,13 @@
 import os.path
-import easygui
 import string
 import pyperclip
 import time
 import pygame
 import copy
+import win32ui
+
 from constants import *
 
-import win32ui
 
 PUNCTUATION = string.punctuation
 pygame.font.init()
@@ -15,7 +15,7 @@ pygame.font.init()
 
 def draw_round_rect(rect, color, radius):
     rect = pygame.Rect(rect)
-    color = pygame.Color(*color)
+    color = pygame.Color(color)
     alpha = color.a
     color.a = 0
     rectangle = pygame.Surface(rect.size, pygame.SRCALPHA)
@@ -41,23 +41,35 @@ def draw_round_rect(rect, color, radius):
     return rectangle
 
 
-def RoundedRect(rect:tuple, color:tuple, radius=0.4, width=0, inner=(0, 0, 0)) -> pygame.Surface:
+def RoundedRect(rect: tuple, color: tuple, radius=0.4, gradient=False, gradient_start=(), gradient_end=(), border=0) -> pygame.Surface:
     """
     RoundedRect(rect, color, radius=0.4, width=0)
 
     rect    : rectangle:tuple
     color   : rgb or rgba:tuple
     radius  : 0 <= radius <= 1:float
-    width   : width size around rectangle:int
-    inner   : rgb or rgba:tuple
+    gradient   : tuple: (rgb or rgba end color: tuple, rgb or rgba start color: tuple, border)
+
+
     return  ->  rectangle image
     """
     rect = pygame.Rect(0, 0, rect[2], rect[3])
     surf = pygame.Surface(rect.size, pygame.SRCALPHA)
-    surf.blit(draw_round_rect(rect, color, radius), (0, 0))
-    if width:
-        img_in = draw_round_rect((0, 0, rect.w - width * 2, rect.h - width * 2), inner, radius)
-        surf.blit(img_in, (width, width))
+    border = round(border)
+    if gradient:
+        gradient_start = pygame.Color(gradient_start)
+        gradient_end = pygame.Color(gradient_end)
+        r_step = (gradient_end.r - gradient_start.r) / border
+        g_step = (gradient_end.g - gradient_start.g) / border
+        b_step = (gradient_end.b - gradient_start.b) / border
+        gradient_start_list = [gradient_start.r, gradient_start.g, gradient_start.b, gradient_start.a]
+        for pix in range(border):
+            surf.blit(draw_round_rect((0, 0, rect.w - pix * 2, rect.h - pix * 2), gradient_start, radius), (pix, pix))
+            gradient_start_list[0] += r_step
+            gradient_start_list[1] += g_step
+            gradient_start_list[2] += b_step
+            gradient_start = pygame.Color(*map(round, gradient_start_list))
+    surf.blit(draw_round_rect((0, 0, rect.w - border * 2, rect.h - border * 2), color, radius), (border, border))
     return surf
 
 
@@ -69,42 +81,50 @@ def GetFontSize(font, text, rect: pygame.Rect):
 
 
 class Button(pygame.sprite.Sprite):
-    def __init__(self, f, rect, text, color1, color2, text_color, color1_act, color2_act, color_act_text, radius=0.5):
+    def __init__(self, parent, rect, text_rect, text_rect_active, text, text_active,
+                 color, color_active, text_color, text_color_active,
+                 gradient=False, gradient_start=(),
+                 gradient_active=False, gradient_start_active=(),
+                 border=0, radius=0.5, border_active=0, radius_active=0.5):
         pygame.sprite.Sprite.__init__(self)
+        self.parent = parent
         self.rect = pygame.Rect(rect)
-        self.border = (self.rect.w + self.rect.h) * 0.01
-        self.border = self.border if self.border > 1 else 1
-        self.rectInner = pygame.Rect(self.border, self.border, self.rect.w - self.border * 2,
-                                     self.rect.h - self.border * 2)
         self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        self.color1 = pygame.Color(color1)
-        self.color2 = pygame.Color(color2)
-        self.color1_act = pygame.Color(color1_act)
-        self.color2_act = pygame.Color(color2_act)
+        self.text_rect = pygame.Rect(text_rect)
+        self.text_rect_active = pygame.Rect(text_rect_active)
+        self.color = pygame.Color(color)
+        self.color_active = pygame.Color(color_active)
         self.text_color = pygame.Color(text_color)
-        self.color_act_text = pygame.Color(color_act_text)
-        self.text = text
-        self.radius = radius
-        self.font = pygame.font.Font(f, GetFontSize(f, self.text, self.rectInner))
-        self.size = self.font.size(self.text)
-        # for s in range(1000):
-        #     self.font = pygame.font.Font(f, s)
-        #     self.size = self.font.size(self.text)
-        #     if self.size[0] >= self.rect.w - self.rect.h * 0.1 * 4 or self.size[1] >= self.rect.h - self.rect.h * 0.1 * 4:
-                # self.font = pygame.font.Font(f, s - 1)
-                # self.size = self.font.size(self.text)
-                # break
+        self.color_act_text = pygame.Color(text_color_active)
+
+        font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text, self.text_rect))
+        size = font.size(text)
+
+        self.image_base = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+        self.image_base.blit(RoundedRect(self.rect, self.color, radius, gradient, gradient_start, self.color, border), (0, 0))
+        self.image_base.blit(font.render(text, True, self.text_color),
+                             (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
+        font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text_active, self.text_rect_active))
+        size = font.size(text)
+        self.image_active = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+        self.image_active.blit(RoundedRect(self.rect, color_active, radius_active, gradient_active, gradient_start_active, color_active, border_active), (0, 0))
+        self.image_active.blit(font.render(text, True, self.color_act_text),
+                               (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
+        self.collide = False
 
     def update(self):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
-        if self.isCollide():
-            self.image.blit(RoundedRect(self.rect, self.color2_act, self.radius), (0, 0))
-            self.image.blit(self.font.render(self.text, True, self.color_act_text),
-                            (self.rect.w * 0.5 - self.size[0] * 0.5, self.rect.h * 0.5 - self.size[1] * 0.5))
+        if self.isCollide() and not self.collide:
+            self.collide = True
+            self.parent.PlaySound(SOUND_TYPE_GAME, 'active')
+        elif not self.isCollide() and self.collide:
+            self.collide = False
+
+        if self.collide:
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+            self.image = self.image_active
         else:
-            self.image.blit(RoundedRect(self.rect, self.color2, self.radius), (0, 0))
-            self.image.blit(self.font.render(self.text, True, self.text_color),
-                            (self.rect.w * 0.5 - self.size[0] * 0.5, self.rect.h * 0.5 - self.size[1] * 0.5))
+            self.image = self.image_base
 
     def isCollide(self):
         return self.rect.collidepoint(pygame.mouse.get_pos())

@@ -22,7 +22,10 @@ pygame.init()
 sz_modes = pygame.display.list_modes()
 if size not in sz_modes:
     sz_modes.insert(0, size)
-Language = Language(DEFAULT_LANGUAGES.keys(), DEFAULT_LANGUAGES.values(), DEFAULT_LANGUAGE, False)
+
+Language = Language(DEFAULT_LANGUAGES, DEFAULT_LANGUAGE, False)
+
+
 Settings = DATA({
     'Graphic': {
         'WindowSize': {'value': size, 'type': List, 'values': dict(zip(DEFAULT_LANGUAGES, Language.LanguageList))},
@@ -99,7 +102,7 @@ elif theme == THEME_DARK:
                 'Label': ((0, 0, 0, 0), (0, 255, 0)),
                 'ProgressBar': ((24, 24, 24), (0, 255, 0))},
             'Main':{
-                'Button':((255, 255, 255), (0, 0, 0), (255, 255, 255), (255, 255, 255), (127, 127, 127), (0, 0, 0)),
+                'Button':((0, 0, 0), (0, 0, 0), (255, 255, 255), (100, 0, 200), True, (24, 24, 24), True, (24, 24, 24)),
             }
         }
     })
