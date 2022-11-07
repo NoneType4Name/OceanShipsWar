@@ -6,11 +6,13 @@ class LoadScene:
     def __init__(self, parent, input_scene, kwargs):
         self.type = LOAD
         self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
-        self.InputScene = input_scene.type
+        self.InputScene = input_scene
         self.parent = parent
         self.func = kwargs.get('func')
         self.kwargs = kwargs
         self.Thread = None
+        self.cursor = self.parent.cursor
+
         self.ProgressBar = ProgressBar(None,
                                        (parent.size.w * 0.4, parent.size.h * 0.7,
                                         parent.size.w * 0.2, parent.size.h * 0.05),
@@ -37,10 +39,13 @@ class LoadScene:
             self.Thread = threading.Thread(target=self.parent.mixer_init_thread, args=[self, self.kwargs])
         self.Thread.start()
 
-    def update(self, event=False):
+    def update(self, active, events):
         self.image.fill(self.parent.Colors.Background)
         self.Elements.update()
         self.Elements.draw(self.image)
         if not self.Thread.is_alive():
             self.parent.SetScene(self.InputScene)
+            self.parent.cursor = pygame.SYSTEM_CURSOR_ARROW
+        else:
+            self.parent.cursor = pygame.SYSTEM_CURSOR_WAITARROW
         return self.image

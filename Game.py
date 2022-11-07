@@ -3,6 +3,7 @@ import sys
 import os
 import copy
 import json
+import threading
 import time
 import random
 import socket
@@ -18,11 +19,13 @@ import win32process
 import win32com.client
 from constants import *
 from ctypes import windll
+from ast import literal_eval
 from scene.Menu import MainScene
 from scene.Load import LoadScene
-from ast import literal_eval
-from scene.Converter import ConvertScene
 from screeninfo import get_monitors
+from scene.JoinGame import JoinGame
+from scene.Converter import ConvertScene
+from scene.CreateGame import CreateGame
 from scene.Notification import Notifications
 from urllib.parse import urlparse, parse_qs
 from netifaces import interfaces, ifaddresses, AF_INET
@@ -177,6 +180,8 @@ class Game:
         self.mouse_middle_release = False
         self.mouse_wheel_x = 0
         self.mouse_wheel_y = 0
+        self.cursor = pygame.SYSTEM_CURSOR_ARROW
+        self.text_input_events = []
 
         self.FPS = GAME_FPS
 
@@ -216,11 +221,12 @@ class Game:
                 INIT: InitScene,
                 MAIN: MainScene,
                 LOAD: LoadScene,
-                CREATE: None,
-                JOIN: None,
+                CREATE: CreateGame,
+                JOIN: JoinGame,
                 SETTINGS: None
             })
         self.ConvertScene = ConvertScene(self, self.Scene[INIT])
+        self.ConvertSceneThread = threading.Thread(target=lambda _:True)
 
     def init(self, caption: str, icon_path: str, size: SIZE, flag=0, depth=0, display=0, vsync=0):
         os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -233,6 +239,7 @@ class Game:
         self.screen = pygame.display.set_mode(self.size, self.flag, self.depth)
         pygame.display.set_icon(pygame.image.load(icon_path))
         pygame.display.set_caption(caption)
+        pygame.scrap.init()
         self.block_size = int(size.w // BLOCK_ATTITUDE)
         self.GAME_PROCESS = psutil.Process(os.getpid())
         try:
@@ -265,7 +272,6 @@ class Game:
             Load = 0
             scene.PercentLabel.value = ''
             scene.TextLabel.text = ''
-            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_WAITARROW)
             while self.RUN:
                 scene.TextLabel.text = 'Подключение...'
                 try:
@@ -302,8 +308,6 @@ class Game:
                     scene.ProgressBar.value = Load / MaxLoad
                     scene.PercentLabel.text = f'{round(Load / MaxLoad * 100)}%'
             self.Sounds = DATA(self.Sounds)
-            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-            self.AddNotification('Hello.')
             self.SOUND = True
             return
 
@@ -363,6 +367,8 @@ class Game:
         self.mouse_wheel_y = 0
 
         self.mouse_pos = pygame.mouse.get_pos()
+        self.cursor = pygame.SYSTEM_CURSOR_ARROW
+        self.text_input_events = []
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.RUN = False
@@ -396,10 +402,18 @@ class Game:
                     self.mouse_wheel_x = event.rel[0]
                     self.mouse_wheel_y = event.rel[1]
 
+            elif event.type == pygame.KEYDOWN:
+                self.text_input_events.append(event)
+
     def update(self):
         self.UpdateEvents()
+        if not self.ConvertSceneThread.is_alive():
+            self.ConvertSceneThread = threading.Thread(target=self.ConvertScene.update, args=[self.text_input_events])
+            self.ConvertSceneThread.start()
         self.Notifications.update(self.mouse_left_press)
-        self.screen.blit(self.ConvertScene.update(), (0, 0))
+        # self.screen.blit(self.ConvertScene.update(self.text_input_events), (0, 0))
+        self.screen.blit(self.ConvertScene.image, (0, 0))
+        pygame.mouse.set_cursor(self.cursor)
         self.Notifications.draw(self.screen)
         pygame.display.flip()
         self.clock.tick(self.FPS)
@@ -411,6 +425,6 @@ class InitScene:
         self.parent = parent
         self.image = pygame.Surface((0, 0), pygame.SRCALPHA)
 
-    def update(self, event=False):
+    def update(self, active=False):
         self.image.fill(self.parent.Colors.Background)
         return self.image

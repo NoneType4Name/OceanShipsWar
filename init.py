@@ -99,6 +99,7 @@ elif theme == THEME_DARK:
         'White': (0, 0, 255),
         'Scene':{
             'Load':{
+
                 'Label': ((0, 0, 0, 0), (0, 255, 0)),
                 'ProgressBar': ((24, 24, 24), (0, 255, 0))},
             'Main':{

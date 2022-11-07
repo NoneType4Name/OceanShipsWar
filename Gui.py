@@ -1,6 +1,5 @@
 import os.path
 import string
-import pyperclip
 import time
 import pygame
 import copy
@@ -9,7 +8,10 @@ import win32ui
 from constants import *
 
 
-PUNCTUATION = string.punctuation
+PUNCTUATION = string.punctuation+' '
+ESCAPE_CHARS = '\n\a\b\f\r\t\v\x00'
+ESCAPE_CHARS_TRANSLATER = str.maketrans(dict.fromkeys(list(ESCAPE_CHARS), None))
+
 pygame.font.init()
 
 
@@ -41,7 +43,7 @@ def draw_round_rect(rect, color, radius):
     return rectangle
 
 
-def RoundedRect(rect: tuple, color: tuple, radius=0.4, gradient=False, gradient_start=(), gradient_end=(), border=0) -> pygame.Surface:
+def RoundedRect(rect: tuple, color: tuple, radius=0.4, gradient=False, gradient_start=(), gradient_end=(), border=0, border_color=()) -> pygame.Surface:
     """
     RoundedRect(rect, color, radius=0.4, width=0)
 
@@ -69,6 +71,8 @@ def RoundedRect(rect: tuple, color: tuple, radius=0.4, gradient=False, gradient_
             gradient_start_list[1] += g_step
             gradient_start_list[2] += b_step
             gradient_start = pygame.Color(*map(round, gradient_start_list))
+    elif border:
+        surf.blit(draw_round_rect(rect, border_color, radius), (0, 0))
     surf.blit(draw_round_rect((0, 0, rect.w - border * 2, rect.h - border * 2), color, radius), (border, border))
     return surf
 
@@ -92,22 +96,32 @@ class Button(pygame.sprite.Sprite):
         self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
         self.text_rect = pygame.Rect(text_rect)
         self.text_rect_active = pygame.Rect(text_rect_active)
+        self.text = text
+        self.text_active = text_active
         self.color = pygame.Color(color)
         self.color_active = pygame.Color(color_active)
         self.text_color = pygame.Color(text_color)
         self.color_act_text = pygame.Color(text_color_active)
+        self.gradient = gradient
+        self.gradient_start = gradient_start
+        self.gradient_active = gradient_active
+        self.gradient_start_active = gradient_start_active
+        self.border_active = border
+        self.radius = radius
+        self.border = border_active
+        self.radius_active = radius_active
 
         font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text, self.text_rect))
         size = font.size(text)
 
         self.image_base = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
-        self.image_base.blit(RoundedRect(self.rect, self.color, radius, gradient, gradient_start, self.color, border), (0, 0))
+        self.image_base.blit(RoundedRect(self.rect, self.color, self.radius, self.gradient, self.gradient_start, self.color, self.border), (0, 0))
         self.image_base.blit(font.render(text, True, self.text_color),
                              (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
         font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text_active, self.text_rect_active))
         size = font.size(text)
         self.image_active = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
-        self.image_active.blit(RoundedRect(self.rect, color_active, radius_active, gradient_active, gradient_start_active, color_active, border_active), (0, 0))
+        self.image_active.blit(RoundedRect(self.rect, self.color_active, self.radius_active, self.gradient_active, self.gradient_start_active, self.color_active, self.border_active), (0, 0))
         self.image_active.blit(font.render(text, True, self.color_act_text),
                                (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
         self.collide = False
@@ -116,12 +130,12 @@ class Button(pygame.sprite.Sprite):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         if self.isCollide() and not self.collide:
             self.collide = True
-            self.parent.PlaySound(SOUND_TYPE_GAME, 'active')
+            self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'active')
         elif not self.isCollide() and self.collide:
             self.collide = False
 
         if self.collide:
-            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+            self.parent.parent.cursor = pygame.SYSTEM_CURSOR_HAND
             self.image = self.image_active
         else:
             self.image = self.image_base
@@ -410,147 +424,146 @@ class List(pygame.sprite.Sprite):
 
 
 class TextInput(pygame.sprite.Sprite):
-    def __init__(self, default_font, rect, background, around, text_color, name, base_text='', text=''):
+    def __init__(self, parent, rect, border, radius, background, text_color, border_color=(), default_text='', text=''):
         pygame.sprite.Sprite.__init__(self)
-        self.default_font = default_font
+        self.parent = parent
         self.rect = pygame.Rect(rect)
-        wh = int(self.rect.w + self.rect.h) // 100
-        wh = wh if wh else 1
-        self.rectInner = pygame.Rect(wh, wh, self.rect.w - wh * 2,
-                                     self.rect.h - wh * 2)
+        self.rectInner = pygame.Rect(border, border, self.rect.w - border * 2, self.rect.h - border * 2)
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         self.background = pygame.Color(background)
-        self.around = pygame.Color(around)
+        self.border = border
+        self.radius = radius
+        self.border_color = pygame.Color(border_color) if self.border else self.background
         self.text_color = pygame.Color(text_color)
-        self.base_text = base_text
-        self.value = text
+        self.default = default_text
+        self.text = text
+        self.value = self.text if self.text else self.default
         self.active = False
-        self.cursor = 0
-        self.name = name
-        for s in range(0, 1000):
-            self.font = pygame.font.Font(default_font, s)
-            self.size = self.font.size(self.value if self.value else self.base_text)
-            if self.size[0] > self.rectInner.w - self.rectInner.x or self.size[
-                1] > self.rectInner.h * 0.8 - self.rectInner.y:
-                self.font = pygame.font.Font(default_font, s - 1)
-                self.size = self.font.size(self.value if self.value else self.base_text)
-                break
+        self.return_value = False
+        self.collide = False
+        self.pos = len(self.value)
+        self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.value, self.rectInner))
+        self.size = self.font.size(self.value)
 
     def update(self, events):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+        if self.isCollide() and not self.collide:
+            self.collide = True
+        elif not self.isCollide() and self.collide:
+            self.collide = False
         if self.active:
-            self.image.blit(RoundedRect(self.rect, (0, 255, 0), .5, self.rectInner.x, self.background), (0, 0))
+            if pygame.Rect(self.rect.x + self.rectInner.x,
+                           self.rect.y + self.rectInner.y,
+                           self.rectInner.w,
+                           self.rectInner.h).collidepoint(pygame.mouse.get_pos()):
+                self.parent.parent.cursor = pygame.SYSTEM_CURSOR_IBEAM
+            self.image.blit(RoundedRect(self.rect, self.background, self.radius, border=self.border, border_color=(0, 255, 0)), (0, 0))
+            width = int(self.font.size(self.text[:self.pos])[1] * 0.1)
             pygame.draw.line(self.image,
                              (self.background.r - 100 if self.background.r - 100 > 0 else 100,
                               self.background.g - 100 if self.background.g - 100 > 0 else 100,
                               self.background.b - 100 if self.background.b - 100 > 0 else 100),
 
-                             (self.rect.h * 0.05 + self.font.size(self.value[:self.cursor])[0] +
-                              self.font.size(self.value[:self.cursor])[1] * 0.1,
-                              (self.rect.h // 2 - self.size[1] // 2)),
-                             (self.rect.h * 0.05 + self.font.size(self.value[:self.cursor])[0] +
-                              self.font.size(self.value[:self.cursor])[1] * 0.1,
-                              (self.rect.h // 2 - self.size[1] // 2) + (
-                                      self.rect.h - (self.rect.h // 2 - self.size[1] // 2) * 2)),
-                             int(self.font.size(self.value[:self.cursor])[1] * 0.1))
+                             # ((self.rect.w * 0.5 - self.size[0] * 0.5) - width + self.font.size(self.text[:self.pos])[0] +
+                             #  self.font.size(self.text[:self.pos])[1] * 0.1,
+                             #  (self.rect.h // 2 - self.size[1] // 2)),
+                             # ((self.rect.w * 0.5 - self.size[0] * 0.5) - width + self.font.size(self.text[:self.pos])[0] +
+                             #  self.font.size(self.text[:self.pos])[1] * 0.1,
+                             #  (self.rect.h // 2 - self.size[1] // 2) + (
+                             #          self.rect.h - (self.rect.h // 2 - self.size[1] // 2) * 2)),
+                             ((self.rectInner.w * 0.5 - self.size[0] * 0.5) - width + self.font.size(self.text[:self.pos])[0] + self.rectInner.x,
+                              self.rectInner.h * 0.5 - self.size[1] * 0.5 + self.rectInner.y),
+                             ((self.rectInner.w * 0.5 - self.size[0] * 0.5) - width + self.font.size(self.text[:self.pos])[0] + self.rectInner.x,
+                              self.rectInner.h * 0.5 + self.size[1] * 0.5 + self.rectInner.y),
+                             int(self.font.size(self.text[:self.pos])[1] * 0.1))
         else:
-            self.image.blit(RoundedRect(self.rect, self.around, .5, self.rectInner.x, self.background), (0, 0))
-
-        if self.value:
+            if pygame.Rect(self.rect.x+self.rectInner.x,
+                           self.rect.y+self.rectInner.y,
+                           self.rectInner.w,
+                           self.rectInner.h).collidepoint(pygame.mouse.get_pos()):
+                self.parent.parent.cursor = pygame.SYSTEM_CURSOR_HAND
+                self.image.blit(RoundedRect(self.rect, self.background, self.radius, border=self.border, border_color=(self.border_color.r, self.border_color.g, self.border_color.b, 255)), (0, 0))
+            else:
+                self.image.blit(RoundedRect(self.rect, self.background, self.radius, border=self.border, border_color=self.border_color), (0, 0))
+        if self.text:
             self.image.blit(self.font.render(self.value, True, self.text_color),
-                            (self.rect.h * 0.1, self.rect.h // 2 - self.size[1] // 2))
+                            (self.rect.w * 0.5 - self.size[0] * 0.5, self.rect.h * 0.5 - self.size[1] * 0.5))
         else:
             self.image.blit(
-                self.font.render(self.base_text, True, (self.text_color.r - 100 if self.text_color.r - 100 > 0 else 100,
-                                                        self.text_color.g - 100 if self.text_color.g - 100 > 0 else 100,
-                                                        self.text_color.b - 100 if self.text_color.b - 100 > 0 else 100)),
-                (self.rect.h * 0.1, self.rect.h // 2 - self.size[1] // 2))
+                self.font.render(self.value, True, (self.text_color.r - 100 if self.text_color.r - 100 > 0 else 100,
+                                                    self.text_color.g - 100 if self.text_color.g - 100 > 0 else 100,
+                                                    self.text_color.b - 100 if self.text_color.b - 100 > 0 else 100)),
+                (self.rect.w * 0.5 - self.size[0] * 0.5, self.rect.h * 0.5 - self.size[1] * 0.5))
         for event in events:
-            if self.isCollide() and event.type == pygame.MOUSEBUTTONDOWN and not self.active:
-                if event.button == 1:
-                    self.active = True
-                    self.cursor = len(self.value)
-                    pygame.key.start_text_input()
-                    pygame.key.set_repeat(500, 50)
-            elif not self.isCollide() and event.type == pygame.MOUSEBUTTONDOWN and self.active:
-                if event.button == 1:
-                    self.active = False
-                    pygame.key.set_repeat(0, 0)
-                    pygame.key.stop_text_input()
-                    return {self.name: self.value}
             if self.active:
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_BACKSPACE and self.cursor:
+                if event.key == pygame.K_BACKSPACE:
+                    if self.pos:
                         if pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                            for n, sim in enumerate(self.value[::-1]):
+                            for n, sim in enumerate(self.text[::-1]):
                                 if sim in PUNCTUATION:
-                                    self.value = self.value[:self.cursor - (n if n != 0 else 1)] + self.value[
-                                                                                                   self.cursor:]
-                                    self.cursor -= n if n != 0 else 1
+                                    self.text = self.text[:self.pos - (n if n != 0 else 1)] + self.text[
+                                                                                                self.pos:]
+                                    self.pos -= n if n != 0 else 1
                                     break
                             else:
-                                self.value = ''
-                                self.cursor = 0
+                                self.text = ''
+                                self.pos = 0
                         else:
-                            self.value = self.value[:self.cursor - 1] + self.value[self.cursor:]
-                            self.cursor -= 1
-                        self.re_font()
-                    elif event.key == pygame.K_LEFT:
-                        if pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                            for n, sim in enumerate(self.value[:self.cursor][::-1]):
-                                if sim in PUNCTUATION:
-                                    self.cursor -= n if n != 0 else 1
-                                    break
-                            else:
-                                self.cursor = 0
-                        elif self.cursor - 1 >= 0:
-                            self.cursor -= 1
-                    elif event.key == pygame.K_RIGHT:
-                        if pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                            for n, sim in enumerate(self.value[self.cursor:]):
-                                if sim in PUNCTUATION:
-                                    self.cursor += n if n != 0 else 1
-                                    break
-                            else:
-                                self.cursor = len(self.value)
-                        elif self.cursor + 1 <= len(self.value):
-                            self.cursor += 1
-                    elif event.key == pygame.K_DELETE:
-                        if pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                            for n, sim in enumerate(self.value[self.cursor:]):
-                                if sim in PUNCTUATION:
-                                    self.value = self.value[:self.cursor] + self.value[
-                                                                            self.cursor + n if n != 0 else 1:]
-                                    break
-                            else:
-                                self.value = self.value[:self.cursor]
+                            self.text = self.text[:self.pos - 1] + self.text[self.pos:]
+                            self.pos -= 1
+                elif event.key == pygame.K_LEFT:
+                    if pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                        for n, sim in enumerate(self.text[:self.pos][::-1]):
+                            if sim in PUNCTUATION:
+                                self.pos -= n if n != 0 else 1
+                                break
                         else:
-                            self.value = self.value[:self.cursor] + self.value[self.cursor + 1:]
-                        self.re_font()
-                    elif event.key == pygame.K_HOME:
-                        self.cursor = 0
-                    elif event.key == pygame.K_END:
-                        self.cursor = len(self.value)
-                    elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:  # or event.key == pygame.K_ESCAPE
-                        if self.value:
-                            self.active = False
-                            pygame.key.set_repeat(0, 0)
-                            pygame.key.stop_text_input()
-                            return {self.name: self.value}
-                        elif pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                            self.value = self.base_text
-                            self.cursor = len(self.value)
-                            self.re_font()
-                    elif event.key == pygame.K_v and pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                        paste_text = pyperclip.paste()
-                        if paste_text:
-                            self.value = self.value = self.value[:self.cursor] + paste_text + self.value[self.cursor:]
-                            self.cursor += len(paste_text)
-                            self.re_font()
-                if event.type == pygame.TEXTINPUT:
-                    self.value = self.value[:self.cursor] + event.text + self.value[self.cursor:]
-                    self.cursor += 1 if event.text else 0
-                    self.re_font()
+                            self.pos = 0
+                    elif self.pos - 1 >= 0:
+                        self.pos -= 1
+                elif event.key == pygame.K_RIGHT:
+                    if pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                        for n, sim in enumerate(self.text[self.pos:]):
+                            if sim in PUNCTUATION:
+                                self.pos += n if n != 0 else 1
+                                break
+                        else:
+                            self.pos = len(self.text)
+                    elif self.pos + 1 <= len(self.text):
+                        self.pos += 1
+                elif event.key == pygame.K_DELETE:
+                    if pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                        for n, sim in enumerate(self.text[self.pos:]):
+                            if sim in PUNCTUATION:
+                                self.text = self.text[:self.pos] + self.text[self.pos + n if n != 0 else 1:]
+                                break
+                        else:
+                            self.text = self.text[:self.pos]
+                    else:
+                        self.text = self.text[:self.pos] + self.text[self.pos + 1:]
+                elif event.key == pygame.K_HOME:
+                    self.pos = 0
+                elif event.key == pygame.K_END:
+                    self.pos = len(self.text)
+                elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER or event.key == pygame.K_ESCAPE:
+                    if pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                        self.text = self.default
+                        self.pos = len(self.text)
+                    else:
+                        self.return_value = True
+                elif event.key == pygame.K_v and pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                    pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
+                    paste_text = pygame.scrap.get(pygame.SCRAP_TEXT).decode().translate(ESCAPE_CHARS_TRANSLATER)
+                    if paste_text:
+                        self.text = self.text = self.text[:self.pos] + paste_text + self.text[self.pos:]
+                        self.pos += len(paste_text)
+                else:
+                    if event.unicode.isalpha() or event.unicode.isnumeric() or event.unicode in PUNCTUATION:
+                        self.text = self.text[:self.pos] + event.unicode + self.text[self.pos:]
+                        self.pos += 1 if event.unicode else 0
+                self.value = self.text if self.text else self.default
+                self.NewFont()
+        return self.image
 
     def isCollide(self):
         if self.rect.collidepoint(pygame.mouse.get_pos()):
@@ -558,15 +571,26 @@ class TextInput(pygame.sprite.Sprite):
         else:
             return False
 
-    def re_font(self):
-        for s in range(0, 1000):
-            self.font = pygame.font.Font(self.default_font, s)
-            self.size = self.font.size(self.value if self.value else self.base_text)
-            if self.size[0] >= self.rectInner.w - self.rectInner.x or self.size[
-                1] >= self.rectInner.h * 0.8 - self.rectInner.y:
-                self.font = pygame.font.Font(self.default_font, s - 1)
-                self.size = self.font.size(self.value if self.value else self.base_text)
-                break
+    def Activate(self):
+        self.active = True
+        self.return_value = False
+        self.pos = len(self.text)
+        while not pygame.key.get_focused() or not pygame.key.get_repeat()[0]:
+            pygame.key.start_text_input()
+            pygame.key.set_repeat(500, 50)
+        self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'active')
+
+    def Deactivate(self):
+        self.active = False
+        self.return_value = False
+        self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select')
+        # while pygame.key.get_repeat()[0]:
+        # pygame.key.stop_text_input()
+        pygame.key.set_repeat(0, 0)
+
+    def NewFont(self):
+        self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.value, self.rectInner))
+        self.size = self.font.size(self.value)
 
 
 class Notification(pygame.sprite.Sprite):
@@ -732,8 +756,7 @@ class Path(pygame.sprite.Sprite):
 
 
 class Settings_class:
-    def __init__(self, settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, game_language,
-                 size, surface):
+    def __init__(self, settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, game_language, size, surface):
         settings = copy.deepcopy(settings)
         self.all_settings = {}
         self.default_font = settings['Graphic']['Font']
