@@ -40,7 +40,6 @@ class CreateGame:
                 if self.Input.isCollide():
                     if not self.Input.active:
                         self.Input.Activate()
-
                 elif not self.Input.isCollide() and self.Input.active:
                     self.Input.return_value = True
 

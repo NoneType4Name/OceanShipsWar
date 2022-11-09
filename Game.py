@@ -250,10 +250,11 @@ class Game:
         self.CONSOLE_HWND = get_hwnd_by_pid(self.CONSOLE_PROCESS.pid)
         self.ConsoleOC()
         self.RUN = True
-        self.ConvertScene.NewScene(self.Scene[MAIN], None)
+        self.ConvertScene.NewScene(self.Scene[INIT], None)
 
     def MixerInit(self, frequency=44100, size=-16, channels=2, buffer=512, devicename='', allowedchanges=5):
         self.SetScene(LOAD,
+                      parent=MAIN,
                       frequency=frequency,
                       size=size,
                       channels=channels,
@@ -425,6 +426,6 @@ class InitScene:
         self.parent = parent
         self.image = pygame.Surface((0, 0), pygame.SRCALPHA)
 
-    def update(self, active=False):
+    def update(self, active, events):
         self.image.fill(self.parent.Colors.Background)
         return self.image

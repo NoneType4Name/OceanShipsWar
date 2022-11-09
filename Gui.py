@@ -87,9 +87,9 @@ def GetFontSize(font, text, rect: pygame.Rect):
 class Button(pygame.sprite.Sprite):
     def __init__(self, parent, rect, text_rect, text_rect_active, text, text_active,
                  color, color_active, text_color, text_color_active,
-                 gradient=False, gradient_start=(),
-                 gradient_active=False, gradient_start_active=(),
-                 border=0, radius=0.5, border_active=0, radius_active=0.5):
+                 gradient=False, gradient_start=(), gradient_end=(),
+                 gradient_active=False, gradient_start_active=(), gradient_end_active=(),
+                 border=0, radius=0.5, border_active=0, radius_active=0.5, func=None):
         pygame.sprite.Sprite.__init__(self)
         self.parent = parent
         self.rect = pygame.Rect(rect)
@@ -104,24 +104,28 @@ class Button(pygame.sprite.Sprite):
         self.color_act_text = pygame.Color(text_color_active)
         self.gradient = gradient
         self.gradient_start = gradient_start
+        self.gradient_end = gradient_end
         self.gradient_active = gradient_active
         self.gradient_start_active = gradient_start_active
+        self.gradient_end_active = gradient_end_active
         self.border_active = border
         self.radius = radius
         self.border = border_active
         self.radius_active = radius_active
+        self.func = func[0]
+        self.args = func[1:]
 
         font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text, self.text_rect))
         size = font.size(text)
 
         self.image_base = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
-        self.image_base.blit(RoundedRect(self.rect, self.color, self.radius, self.gradient, self.gradient_start, self.color, self.border), (0, 0))
+        self.image_base.blit(RoundedRect(self.rect, self.color, self.radius, self.gradient, self.gradient_start, self.gradient_end, self.border), (0, 0))
         self.image_base.blit(font.render(text, True, self.text_color),
                              (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
         font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text_active, self.text_rect_active))
         size = font.size(text)
         self.image_active = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
-        self.image_active.blit(RoundedRect(self.rect, self.color_active, self.radius_active, self.gradient_active, self.gradient_start_active, self.color_active, self.border_active), (0, 0))
+        self.image_active.blit(RoundedRect(self.rect, self.color_active, self.radius_active, self.gradient_active, self.gradient_start_active, self.gradient_end_active, self.border_active), (0, 0))
         self.image_active.blit(font.render(text, True, self.color_act_text),
                                (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
         self.collide = False
@@ -146,6 +150,9 @@ class Button(pygame.sprite.Sprite):
     def RectEdit(self, x=0, y=0):
         self.rect.x += x
         self.rect.y += y
+
+    def Function(self):
+        self.func(*self.args)
 
 
 class Switch(pygame.sprite.Sprite):

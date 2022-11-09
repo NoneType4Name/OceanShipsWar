@@ -14,10 +14,11 @@ class ConvertScene:
     def NewScene(self, new, kwargs):
         self.image = pygame.Surface(self.parent.size, pygame.SRCALPHA)
         self.old = self.new
-        if kwargs and kwargs.get('last'):
-            last = kwargs.get('last')
-            del kwargs['last']
-            self.new = new(self.parent, self.parent.Scene[last], kwargs)
+        kwargs:dict
+        if kwargs and 'parent' in kwargs:
+            last = kwargs.get('parent')
+            del kwargs['parent']
+            self.new = new(self.parent, last, kwargs)
         else:
             self.new = new(self.parent, self.old.type, kwargs)
         self.old_alpha = 255

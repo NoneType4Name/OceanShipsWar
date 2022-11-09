@@ -1,8 +1,89 @@
-# from Gui import *
-#
-#
-# class Settings:
-#     def __init__(self, settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, game_language, size, surface):
+import pygame
+
+from Gui import *
+
+
+class Settings:
+    def __init__(self, parent, input_scene, kwargs):
+        self.type = SETTINGS
+        self.parent = parent
+        self.InputScene = input_scene
+        self.image = pygame.Surface(self.parent.size, pygame.SRCALPHA)
+        self.elements = {}
+        self.active_element = list(self.parent.Settings.keys())[0]
+
+    def LoadElements(self):
+        buttons_pad = pad = SETTINGS_UPPER_MARGIN
+        language = self.parent.Language.DefaultDict
+        BaseRect = pygame.Rect(self.parent.size[0] * 0.24, self.parent.size[1] * pad, self.parent.size[0] * 0.52,
+                               self.parent.size[1] * 0.027)
+        for type_settings in self.parent.Settings:
+            elements = {'default': Button(
+                self,
+                (self.parent.size[0] * 0.05, self.parent.size[1] * buttons_pad, BaseRect.h * 5, BaseRect.h),
+                (2, 2, BaseRect.h * 5 - 4, BaseRect.h - 4),
+                (2, 2, BaseRect.h * 5 - 4, BaseRect.h - 4),
+                language[type_settings],
+                *self.parent.Colors['ButtonActive' if type_settings == self.active_element else 'Button'], border=2)}
+            # for element in self.parent.Settings[type_settings]:
+            #     BaseRect = pygame.Rect(self.parent.size[0] * 0.24, self.parent.size[1] * pad, self.parent.size[0] * 0.52,
+            #                            self.parent.size[1] * 0.027)
+            #     if self.parent.Settings[type_settings][element] is Switch:
+            #         elements[element] = Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1,
+            #                     BaseRect.y + 1,
+            #                     BaseRect.h * 2 - BaseRect.h * 0.1,
+            #                     BaseRect.h - 2),
+            #                    *set_of_settings['Switch'],
+            #                    name=f'{type_settings} {element}',
+            #                    power=settings[type_settings][element])
+            #     elif self.parent.Settings[type_settings][element]['type'] is List:
+            #         temp_g[element] = List(self.default_font, (BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
+            #                                      BaseRect.y + 1,
+            #                                      BaseRect.h * 4 - BaseRect.h * 0.1,
+            #                                      BaseRect.h - 2),
+            #                  set_for_lists[element][settings[type_settings][element]],
+            #                  settings[type_settings][element],
+            #                  [v for v in set_for_lists[element].values()],
+            #                  [v for v in set_for_lists[element].keys()],
+            #                  *set_of_settings['List'],
+            #                  f'{type_settings} {element}')
+            #     elif self.parent.Settings[type_settings][element]['type'] is Slide:
+            #         elements[element] = Slide(self.default_font,
+            #                                       (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
+            #                                        BaseRect.y + 1,
+            #                                        (BaseRect.h - 2) * 10,
+            #                                        BaseRect.h - 2),
+            #                                       *set_of_settings['Slide'],
+            #                                       base_data=settings[type_settings][element],
+            #                                       name=f'{type_settings} {element}')
+            #     elif self.parent.Settings[type_settings][element]['type'] is Path:
+            #         elements[element] = Path(self.default_font,
+            #                                      (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
+            #                                       BaseRect.y + 1,
+            #                                       (BaseRect.h - 2) * 10,
+            #                                       BaseRect.h - 2),
+            #                                      *set_of_settings['Path'], value=settings[type_settings][element],
+            #                                      display=set_for_paths[element]['name'],
+            #                                      name=f'{type_settings} {element}',
+            #                                      multiple=set_for_paths[element]['multiple'],
+            #                                      types=set_for_paths[element]['types'],
+            #                                      typ=set_for_paths[element]['values'])
+            #     else:
+            #         print(type_settings, element, type(set_of_settings_type[type_settings][element]))
+            #         raise Exception
+            #     elements[element+'_label'] = Label(self.default_font, BaseRect, language[type_settings+element], *set_of_settings['label'], False)
+            #     pad += BaseRect.h / size[1] * 1.1
+            buttons_pad += (BaseRect.h / self.parent.size[1] * 1.1)
+            self.elements[type_settings] = {}
+            self.elements[type_settings] = elements
+
+    def update(self, active, events):
+        for type_settings in self.elements:
+            for element in self.elements[type_settings]:
+                element: pygame.sprite.Sprite
+                element.update()
+                self.image.blit(element.image, element.rect.topleft)
+        return self.image
 #         settings = copy.deepcopy(settings)
 #         self.all_settings = {}
 #         self.default_font = settings['Graphic']['Font']
