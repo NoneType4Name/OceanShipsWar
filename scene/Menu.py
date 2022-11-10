@@ -90,7 +90,8 @@ class MainScene:
                     self.parent.SetScene(JOIN)
                     self.parent.PlaySound(SOUND_TYPE_GAME, 'select')
                 elif self.ButtonSettings.isCollide():
-                    pass
+                    self.parent.SetScene(SETTINGS)
+                    self.parent.PlaySound(SOUND_TYPE_GAME, 'select')
                 elif self.ButtonTheme.isCollide():
                     pass
                 elif self.ButtonQuit.isCollide():

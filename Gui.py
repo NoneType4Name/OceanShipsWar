@@ -1,5 +1,6 @@
 import os.path
 import string
+import threading
 import time
 import pygame
 import copy
@@ -112,8 +113,12 @@ class Button(pygame.sprite.Sprite):
         self.radius = radius
         self.border = border_active
         self.radius_active = radius_active
-        self.func = func[0]
-        self.args = func[1:]
+        if func:
+            self.func = func[0]
+            self.args = func[1:]
+        else:
+            self.func = lambda _: False
+            self.args = [False]
 
         font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text, self.text_rect))
         size = font.size(text)
@@ -156,15 +161,16 @@ class Button(pygame.sprite.Sprite):
 
 
 class Switch(pygame.sprite.Sprite):
-    def __init__(self, rect, color_on, color_off, background, name, power=False):
+    def __init__(self, rect, color_on, color_off, background, power, func=None):
         pygame.sprite.Sprite.__init__(self)
         self.rect = pygame.Rect(rect)
         self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
         self.color_on = pygame.Color(color_on)
         self.color_off = pygame.Color(color_off)
         self.background = pygame.Color(background)
-        self.name = name
         self.value = power
+        self.func = func[0]
+        self.args = func[1:]
 
     def isCollide(self):
         if self.rect.collidepoint(pygame.mouse.get_pos()):
@@ -172,25 +178,27 @@ class Switch(pygame.sprite.Sprite):
         else:
             return False
 
-    def update(self, mouse):
+    def update(self):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         if self.value:
             self.image.blit(RoundedRect(self.rect, self.background, 1), (0, 0))
-            # self.image.blit(RoundedRect((0,0,self.rect.w-self.rect.w*0.2,self.rect.h-self.rect.h*0.2),self.background,1),(self.rect.w*0.1,self.rect.h*0.1))
             pygame.draw.circle(self.image, self.color_on, (self.rect.w / 2 + self.rect.h * 0.55, self.rect.h / 2),
                                self.rect.h / 2 - self.rect.h * 0.1)
         elif not self.value:
-            # self.image.blit(RoundedRect((0, 0, self.rect.w - self.rect.w * 0.1, self.rect.h - self.rect.h * 0.1), self.background, 1),(self.rect.w * 0.1, self.rect.h * 0.1))
             self.image.blit(RoundedRect(self.rect, self.background, 1), (0, 0))
             pygame.draw.circle(self.image, self.color_off, (self.rect.w / 2 - self.rect.h / 2, self.rect.h / 2),
                                self.rect.h / 2 - self.rect.h * 0.1)
-        if self.isCollide() and mouse:
-            self.value = not self.value
-            return {self.name: self.value}
 
     def RectEdit(self, x=0, y=0):
         self.rect.x += x
         self.rect.y += y
+
+    def EditValue(self):
+        self.value = not self.value
+        threading.Thread(target=self.func, args=self.args)
+
+    def Function(self):
+        self.func(*self.args)
 
 
 class Label(pygame.sprite.Sprite):

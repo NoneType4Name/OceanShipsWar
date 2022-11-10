@@ -1,6 +1,15 @@
+import threading
+
 import pygame
 
 from Gui import *
+
+
+def ButtonActivate(self, name, *args):
+    if self.active_element == name:
+        return
+    self.active_element = name
+    self.LoadElements()
 
 
 class Settings:
@@ -11,6 +20,7 @@ class Settings:
         self.image = pygame.Surface(self.parent.size, pygame.SRCALPHA)
         self.elements = {}
         self.active_element = list(self.parent.Settings.keys())[0]
+        threading.Thread(target=self.LoadElements).start()
 
     def LoadElements(self):
         buttons_pad = pad = SETTINGS_UPPER_MARGIN
@@ -24,19 +34,18 @@ class Settings:
                 (2, 2, BaseRect.h * 5 - 4, BaseRect.h - 4),
                 (2, 2, BaseRect.h * 5 - 4, BaseRect.h - 4),
                 language[type_settings],
-                *self.parent.Colors['ButtonActive' if type_settings == self.active_element else 'Button'], border=2)}
+                language[type_settings],
+                *self.parent.Colors['ButtonActive' if type_settings == self.active_element else 'Button'], border=2, border_active=2, func=[ButtonActivate, self, type_settings])}
             # for element in self.parent.Settings[type_settings]:
-            #     BaseRect = pygame.Rect(self.parent.size[0] * 0.24, self.parent.size[1] * pad, self.parent.size[0] * 0.52,
-            #                            self.parent.size[1] * 0.027)
+            #     BaseRect = pygame.Rect(self.parent.size[0] * 0.24, self.parent.size[1] * pad,
+            #                            self.parent.size[0] * 0.52, self.parent.size[1] * 0.027)
             #     if self.parent.Settings[type_settings][element] is Switch:
-            #         elements[element] = Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1,
-            #                     BaseRect.y + 1,
-            #                     BaseRect.h * 2 - BaseRect.h * 0.1,
-            #                     BaseRect.h - 2),
+            #         elements[element] = Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1, BaseRect.y + 1,
+            #                                     BaseRect.h * 2 - BaseRect.h * 0.1, BaseRect.h - 2),
             #                    *set_of_settings['Switch'],
             #                    name=f'{type_settings} {element}',
             #                    power=settings[type_settings][element])
-            #     elif self.parent.Settings[type_settings][element]['type'] is List:
+                # elif self.parent.Settings[type_settings][element]['type'] is List:
             #         temp_g[element] = List(self.default_font, (BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
             #                                      BaseRect.y + 1,
             #                                      BaseRect.h * 4 - BaseRect.h * 0.1,
@@ -78,9 +87,9 @@ class Settings:
             self.elements[type_settings] = elements
 
     def update(self, active, events):
+        self.image.fill(self.parent.Colors.Background)
         for type_settings in self.elements:
-            for element in self.elements[type_settings]:
-                element: pygame.sprite.Sprite
+            for element in self.elements[type_settings].values():
                 element.update()
                 self.image.blit(element.image, element.rect.topleft)
         return self.image

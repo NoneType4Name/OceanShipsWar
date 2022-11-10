@@ -14,11 +14,13 @@ import win32gui
 import itertools
 import Reg as reg
 import subprocess
+
 from log import log
 import win32process
 import win32com.client
 from constants import *
 from ctypes import windll
+from scene.Settings import *
 from ast import literal_eval
 from scene.Menu import MainScene
 from scene.Load import LoadScene
@@ -29,7 +31,6 @@ from scene.CreateGame import CreateGame
 from scene.Notification import Notifications
 from urllib.parse import urlparse, parse_qs
 from netifaces import interfaces, ifaddresses, AF_INET
-from Gui import *
 
 
 class DATA(dict):
@@ -223,7 +224,7 @@ class Game:
                 LOAD: LoadScene,
                 CREATE: CreateGame,
                 JOIN: JoinGame,
-                SETTINGS: None
+                SETTINGS: Settings
             })
         self.ConvertScene = ConvertScene(self, self.Scene[INIT])
         self.ConvertSceneThread = threading.Thread(target=lambda _:True)
