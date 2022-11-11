@@ -19,7 +19,8 @@ class JoinGame:
                                 (-1, -1,
                                  rect_w, rect_h),
                                 text_rect, text_rect_active,
-                                'ESC', 'ESC', *parent.Colors.Scene.Main.Button, border=border, border_active=border_active)
+                                'ESC', 'ESC', *parent.Colors.Scene.Main.Button, border=border, border_active=border_active,
+                                func=[EscActivate, self])
         self.Input = TextInput(self, (parent.size.w * 0.4, parent.size.h * 0.4, parent.size.w * 0.2,parent.size.h * 0.1),
                                parent.size.h * 0.01, 0.5, parent.Colors.Background, parent.Colors.Lines, (100, 0, 255, 100), 'white IP address')
         self.Elements = pygame.sprite.Group(self.ButtonEsc)
@@ -31,8 +32,7 @@ class JoinGame:
             self.Elements.update()
             for event in events:
                 if event.key == pygame.K_ESCAPE:
-                    self.parent.SetScene(self.InputScene)
-                    self.parent.PlaySound(SOUND_TYPE_GAME, 'select')
+                    self.ButtonEsc.Function()
 
             self.image.blit(self.Input.image, self.Input.rect.topleft)
             self.Elements.draw(self.image)
@@ -45,8 +45,7 @@ class JoinGame:
                     self.Input.return_value = True
 
                 elif self.ButtonEsc.isCollide():
-                    self.parent.SetScene(self.InputScene)
-                    self.parent.PlaySound(SOUND_TYPE_GAME, 'select')
+                    self.ButtonEsc.Function()
 
             if self.Input.return_value:
                 self.Input.Deactivate()

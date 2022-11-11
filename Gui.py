@@ -5,6 +5,7 @@ import time
 import pygame
 import copy
 import win32ui
+import itertools
 
 from constants import *
 
@@ -14,6 +15,28 @@ ESCAPE_CHARS = '\n\a\b\f\r\t\v\x00'
 ESCAPE_CHARS_TRANSLATER = str.maketrans(dict.fromkeys(list(ESCAPE_CHARS), None))
 
 pygame.font.init()
+
+
+def EscActivate(self, **kwargs):
+    self.parent.SetScene(self.InputScene, *kwargs)
+    self.parent.PlaySound(SOUND_TYPE_GAME, 'select')
+
+
+def GetDeepData(data):
+    rtn = []
+    for val in data.values():
+        if isinstance(val, dict):
+            v = GetDeepData(val)
+            for x in v:
+                rtn.append(x)
+        elif isinstance(val, (list, set, frozenset)):
+            rtn += val
+        elif isinstance(val, pygame.sprite.Group):
+            for x in val:
+                rtn.append(x)
+        else:
+            rtn.append(val)
+    return rtn
 
 
 def draw_round_rect(rect, color, radius):
@@ -156,8 +179,8 @@ class Button(pygame.sprite.Sprite):
         self.rect.x += x
         self.rect.y += y
 
-    def Function(self):
-        self.func(*self.args)
+    def Function(self, *args):
+        self.func(*list(itertools.chain(self.args, args)))
 
 
 class Switch(pygame.sprite.Sprite):
@@ -272,6 +295,9 @@ class Label(pygame.sprite.Sprite):
     def RectEdit(self, x=0, y=0):
         self.rect.x += x
         self.rect.y += y
+
+    def isCollide(self):
+        return self.rect.collidepoint(pygame.mouse.get_pos())
 
 
 class Slide(pygame.sprite.Sprite):

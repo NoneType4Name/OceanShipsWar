@@ -11,7 +11,6 @@ import psutil
 import pygame
 import requests
 import win32gui
-import itertools
 import Reg as reg
 import subprocess
 
