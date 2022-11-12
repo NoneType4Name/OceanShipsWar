@@ -67,7 +67,7 @@ def draw_round_rect(rect, color, radius):
     return rectangle
 
 
-def RoundedRect(rect: tuple, color: tuple, radius=0.4, gradient=False, gradient_start=(), gradient_end=(), border=0, border_color=()) -> pygame.Surface:
+def RoundedRect(rect: tuple, color: tuple, radius=0.4, gradient=False, gradient_start=(), gradient_end=(), border=0) -> pygame.Surface:
     """
     RoundedRect(rect, color, radius=0.4, width=0)
 
@@ -96,7 +96,7 @@ def RoundedRect(rect: tuple, color: tuple, radius=0.4, gradient=False, gradient_
             gradient_start_list[2] += b_step
             gradient_start = pygame.Color(*map(round, gradient_start_list))
     elif border:
-        surf.blit(draw_round_rect(rect, border_color, radius), (0, 0))
+        surf.blit(draw_round_rect(rect, gradient_start, radius), (0, 0))
     surf.blit(draw_round_rect((0, 0, rect.w - border * 2, rect.h - border * 2), color, radius), (border, border))
     return surf
 
@@ -242,13 +242,8 @@ class Label(pygame.sprite.Sprite):
         self.center = center
         self.width = width
         if self.center:
-            for s in range(1000):
-                self.font = pygame.font.Font(default_font, s)
-                self.size = self.font.size(self.text)
-                if self.size[0] > self.rect.w or self.size[1] > self.rect.h:
-                    self.font = pygame.font.Font(default_font, s - 1)
-                    self.size = self.font.size(self.text)
-                    break
+            self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text, self.text_rect))
+            self.size = self.font.size(text)
         else:
             for s in range(1000):
                 self.font = pygame.font.Font(default_font, s)
@@ -260,7 +255,7 @@ class Label(pygame.sprite.Sprite):
 
     def update(self, name=''):
         if self.width and (
-                (self.rect.collidepoint(pygame.mouse.get_pos()) and not name) or (name and name == self.text)):
+                (self.isCollide() and not name) or (name and name == self.text)):
             # for i in range(self.val2):
             #     self.image.blit(RoundedRect((0, 0, self.rect.w - i * 2, self.rect.h - i * 2), (100, 20, 255, int(255 * (i/self.val2))), 1), (i, i))
             self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), self.around, 1, 1, self.around_main), (0, 0))

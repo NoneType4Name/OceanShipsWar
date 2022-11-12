@@ -38,10 +38,10 @@ class Settings:
     def LoadElements(self):
         pad = SETTINGS_UPPER_MARGIN
         language = self.parent.Language.DefaultDict
-        settings_elements = {}
         BaseRect = pygame.Rect(self.parent.size[0] * 0.24, self.parent.size[1] * pad, self.parent.size[0] * 0.52,
                                self.parent.size[1] * 0.027)
         for type_settings in self.parent.Settings:
+            settings_elements = {}
             buttons_pad = pad = SETTINGS_UPPER_MARGIN
             self.elements['default'][type_settings] = pygame.sprite.Group()
             for _type_settings in self.parent.Settings:
