@@ -119,8 +119,9 @@ class Settings:
                 pass
 
             for event in events:
-                if event.key == pygame.K_ESCAPE:
-                    self.ButtonEsc.Function()
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_ESCAPE:
+                        self.ButtonEsc.Function()
 
             if self.parent.mouse_left_release:
                 if self.ButtonEsc.isCollide():

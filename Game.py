@@ -181,7 +181,7 @@ class Game:
         self.mouse_wheel_x = 0
         self.mouse_wheel_y = 0
         self.cursor = pygame.SYSTEM_CURSOR_ARROW
-        self.text_input_events = []
+        self.events = []
 
         self.FPS = GAME_FPS
 
@@ -369,7 +369,7 @@ class Game:
 
         self.mouse_pos = pygame.mouse.get_pos()
         self.cursor = pygame.SYSTEM_CURSOR_ARROW
-        self.text_input_events = []
+        self.events = []
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.RUN = False
@@ -402,14 +402,12 @@ class Game:
                 if event.buttons[0] or event.touch:
                     self.mouse_wheel_x = event.rel[0]
                     self.mouse_wheel_y = event.rel[1]
-
-            elif event.type == pygame.KEYDOWN:
-                self.text_input_events.append(event)
+            self.events.append(event)
 
     def update(self):
         self.UpdateEvents()
         if not self.ConvertSceneThread.is_alive():
-            self.ConvertSceneThread = threading.Thread(target=self.ConvertScene.update, args=[self.text_input_events])
+            self.ConvertSceneThread = threading.Thread(target=self.ConvertScene.update, args=[self.events])
             self.ConvertSceneThread.start()
         self.Notifications.update(self.mouse_left_press)
         # self.screen.blit(self.ConvertScene.update(self.text_input_events), (0, 0))

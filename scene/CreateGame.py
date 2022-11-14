@@ -31,8 +31,9 @@ class CreateGame:
             self.Input.update(events)
             self.Elements.update()
             for event in events:
-                if event.key == pygame.K_ESCAPE:
-                    self.ButtonEsc.Function()
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_ESCAPE:
+                        self.ButtonEsc.Function()
 
             self.image.blit(self.Input.image, self.Input.rect.topleft)
             self.Elements.draw(self.image)
