@@ -355,14 +355,13 @@ class Game:
         self.ConvertScene.NewScene(self.Scene[scene], kwargs)
 
     def UpdateEvents(self):
-        self.mouse_right_press = False
-        self.mouse_right_release = False
-
         self.mouse_left_release = False
-        self.mouse_left_press = False
-
-        self.mouse_middle_press = False
+        self.mouse_right_release = False
         self.mouse_middle_release = False
+
+        # self.mouse_left_press = False
+        # self.mouse_right_press = False
+        # self.mouse_middle_press = False
 
         self.mouse_wheel_x = 0
         self.mouse_wheel_y = 0

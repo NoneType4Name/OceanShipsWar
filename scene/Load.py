@@ -13,25 +13,23 @@ class LoadScene:
         self.Thread = None
         self.cursor = self.parent.cursor
 
-        self.ProgressBar = ProgressBar(None,
-                                       (parent.size.w * 0.4, parent.size.h * 0.7,
+        self.ProgressBar = ProgressBar((parent.size.w * 0.4, parent.size.h * 0.7,
                                         parent.size.w * 0.2, parent.size.h * 0.05),
                                        *parent.Colors.Scene.Load.ProgressBar,
                                        value=0
                                        )
-        self.PercentLabel = Label(FONT_PATH,
-                                  (parent.size[0] * 0.4, parent.size[1] * 0.6,
-                                   parent.size[0] * 0.2, parent.size[1] * 0.05),
+        self.PercentLabel = Label(self,
+                                  *[(parent.size[0] * 0.4, parent.size[1] * 0.6, parent.size[0] * 0.2, parent.size[1] * 0.05)] * 2,
+                                  0.5,
                                   '0%',
                                   *parent.Colors.Scene.Load.Label,
-                                  center=True
                                   )
-        self.TextLabel = Label(FONT_PATH,
-                               (parent.size[0] * 0.4, parent.size[1] * 0.65,
-                                parent.size[0] * 0.2, parent.size[1] * 0.05),
-                               '1',
-                               *parent.Colors.Scene.Load.Label,
-                               center=True)
+        self.TextLabel = Label(self,
+                               (parent.size[0] * 0.4, parent.size[1] * 0.65, parent.size[0] * 0.2, parent.size[1] * 0.05),
+                               (parent.size[0] * 0.4, parent.size[1] * 0.65, parent.size[0] * 0.2, parent.size[1] * 0.05),
+                               0.5,
+                               '',
+                               *parent.Colors.Scene.Load.Label)
         self.Elements = pygame.sprite.Group([self.ProgressBar, self.PercentLabel, self.TextLabel])
         if self.func:
             self.Thread = threading.Thread(target=self.func, args=[self, self.parent, self.kwargs.get('args')])

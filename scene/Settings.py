@@ -7,7 +7,6 @@ def ButtonActivate(self, name, *args):
     if self.active_element == name:
         return
     self.active_element = name
-    # threading.Thread(target=self.LoadElements).start()
 
 
 class Settings:
@@ -98,7 +97,9 @@ class Settings:
                 #     else:
                 #         print(type_settings, element, type(set_of_settings_type[type_settings][element]))
                 #         raise Exception
-                settings_elements[element+'_label'] = Label(FONT_PATH, BaseRect, language[type_settings+element], *self.parent.Colors['Label'], False)
+
+                settings_elements[element+'_label'] = Label(self, BaseRect, BaseRect, 0.15, language[type_settings+element],
+                                                            *self.parent.Colors['Label'], border=1, border_active=1, radius=1, radius_active=1)
                 pad += BaseRect.h / self.parent.size[1] * 1.1
             self.settings_elements[type_settings] = {}
             self.settings_elements[type_settings] = settings_elements

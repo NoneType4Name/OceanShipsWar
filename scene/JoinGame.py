@@ -1,6 +1,13 @@
 from Gui import *
 
 
+def IO(self, ip, *args):
+    if ' ' not in ip:
+        print(ip)
+    else:
+        self.Activate()
+
+
 class JoinGame:
     def __init__(self, parent, input_scene, kwargs=None):
         self.type = MAIN
@@ -21,8 +28,21 @@ class JoinGame:
                                 text_rect, text_rect_active,
                                 'ESC', 'ESC', *parent.Colors.Scene.Main.Button, border=border, border_active=border_active,
                                 func=[EscActivate, self])
-        self.Input = TextInput(self, (parent.size.w * 0.4, parent.size.h * 0.4, parent.size.w * 0.2,parent.size.h * 0.1),
-                               parent.size.h * 0.01, 0.5, parent.Colors.Background, parent.Colors.Lines, (100, 0, 255, 100), 'white IP address')
+        rect_w, rect_h = parent.size.w * 0.2, parent.size.h * 0.1
+        border = parent.size.h * 0.01
+        text_rect = (border, border, rect_w - border * 2, rect_h - border * 2)
+        self.Input = TextInput(self, (parent.size.w * 0.4, parent.size.h * 0.4, rect_w, rect_h),
+                               text_rect,
+                               'White IP address',
+                               '',
+                               0.5,
+                               *self.parent.Colors.TextInput,
+                               border=border,
+                               border_active=border,
+                               radius=0.5,
+                               radius_active=0.5,
+                               func=IO)
+        self.Input.active = True
         self.Elements = pygame.sprite.Group(self.ButtonEsc)
 
     def update(self, active, events):
@@ -38,19 +58,14 @@ class JoinGame:
             self.image.blit(self.Input.image, self.Input.rect.topleft)
             self.Elements.draw(self.image)
             if self.parent.mouse_left_release:
-                if self.Input.isCollide():
-                    if not self.Input.active:
-                        self.Input.Activate()
+                if self.Input.isCollide() and not self.Input.active:
+                    self.Input.Activate()
 
                 elif not self.Input.isCollide() and self.Input.active:
-                    self.Input.return_value = True
+                    self.Input.Deactivate()
 
                 elif self.ButtonEsc.isCollide():
                     self.ButtonEsc.Function()
-
-            if self.Input.return_value:
-                self.Input.Deactivate()
-                print(self.Input.value)
 
         return self.image
 
