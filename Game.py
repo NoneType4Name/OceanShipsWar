@@ -359,17 +359,13 @@ class Game:
         self.mouse_right_release = False
         self.mouse_middle_release = False
 
-        # self.mouse_left_press = False
-        # self.mouse_right_press = False
-        # self.mouse_middle_press = False
-
         self.mouse_wheel_x = 0
         self.mouse_wheel_y = 0
 
         self.mouse_pos = pygame.mouse.get_pos()
         self.cursor = pygame.SYSTEM_CURSOR_ARROW
-        self.events = []
-        for event in pygame.event.get():
+        self.events = pygame.event.get()
+        for event in self.events:
             if event.type == pygame.QUIT:
                 self.RUN = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -401,15 +397,13 @@ class Game:
                 if event.buttons[0] or event.touch:
                     self.mouse_wheel_x = event.rel[0]
                     self.mouse_wheel_y = event.rel[1]
-            self.events.append(event)
 
     def update(self):
         self.UpdateEvents()
         if not self.ConvertSceneThread.is_alive():
-            self.ConvertSceneThread = threading.Thread(target=self.ConvertScene.update, args=[self.events])
+            self.ConvertSceneThread = threading.Thread(target=self.ConvertScene.update)
             self.ConvertSceneThread.start()
         self.Notifications.update(self.mouse_left_press)
-        # self.screen.blit(self.ConvertScene.update(self.text_input_events), (0, 0))
         self.screen.blit(self.ConvertScene.image, (0, 0))
         pygame.mouse.set_cursor(self.cursor)
         self.Notifications.draw(self.screen)
@@ -423,6 +417,6 @@ class InitScene:
         self.parent = parent
         self.image = pygame.Surface((0, 0), pygame.SRCALPHA)
 
-    def update(self, active, events):
+    def update(self, active, args):
         self.image.fill(self.parent.Colors.Background)
         return self.image

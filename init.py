@@ -28,11 +28,11 @@ Language = Language(DEFAULT_LANGUAGES, DEFAULT_LANGUAGE, False)
 
 Settings = DATA({
     'Graphic': {
-        'WindowSize': {'value': size, 'type': List, 'values': dict(zip(DEFAULT_LANGUAGES, Language.LanguageList))},
-        'Language': {'value': lang, 'type': List, 'values': dict(zip(sz_modes, [f'{val[0]} x {val[1]}' for val in sz_modes]))},
-        'Font': {'value': f'{FONT_PATH}', 'type': Path, 'title': 'Select Font (ttf)...', 'multiple': 0,
-                 'types': ['*.ttf']},
-        'Theme': {'value': theme, 'type': List, 'values': dict(zip(THEMES, Language.DefaultDict.ThemeList))}
+        # 'WindowSize': {'value': size, 'type': List, 'values': dict(zip(DEFAULT_LANGUAGES, Language.LanguageList))},
+        # 'Language': {'value': lang, 'type': List, 'values': dict(zip(sz_modes, [f'{val[0]} x {val[1]}' for val in sz_modes]))},
+        # 'Font': {'value': f'{FONT_PATH}', 'type': Path, 'title': 'Select Font (ttf)...', 'multiple': 0,
+        #          'types': ['*.ttf']},
+        # 'Theme': {'value': theme, 'type': List, 'values': dict(zip(THEMES, Language.DefaultDict.ThemeList))}
 
     },
     'Sound': {
@@ -40,9 +40,9 @@ Settings = DATA({
         'Game': {'value': 1, 'type': Slide}
     },
     'Other': {
-        'Links': {'value': True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == MAIN_DIR and run_with_links else False,
-                  'type': Switch},
-        'Console': {'value': debug, 'type': Switch}
+        # 'Links': {'value': True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == MAIN_DIR and run_with_links else False,
+        #           'type': Switch},
+        # 'Console': {'value': debug, 'type': Switch}
     }
 })
 
@@ -89,7 +89,7 @@ elif theme == THEME_DARK:
         'ButtonRed': ((255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
         'ButtonActive': ((255, 255, 255), (255, 255, 255), (91, 92, 93), (91, 92, 93), False, (100, 0, 200), (), False, (91, 92, 93)),
         'Switch': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
-        'Slide': ((138, 180, 248), (53, 86, 140)),
+        'Slide': ((53, 86, 140), (53, 86, 140), (38, 80, 148), (138, 180, 248)),
         'List': ((232, 234, 236), (29, 29, 31), (41, 42, 45)),
         'Path': ((138, 180, 248), (53, 86, 140), (232, 234, 236)),
         'ProgressBar': ((255, 255, 255), (0, 255, 0)),

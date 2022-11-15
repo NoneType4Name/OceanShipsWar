@@ -70,7 +70,7 @@ class MainScene:
         self.Elements = pygame.sprite.Group(self.ButtonUpdate, self.ButtonCreateGame, self.ButtonJoinGame,
                                             self.ButtonSettings, self.ButtonTheme, self.ButtonQuit)
 
-    def update(self, active, events):
+    def update(self, active, *args):
         if active:
             self.image.fill(self.parent.Colors.Background)
             self.Elements.update()

@@ -167,8 +167,8 @@ class Button(pygame.sprite.Sprite):
             self.collide = False
 
         if self.collide:
-            self.parent.parent.cursor = pygame.SYSTEM_CURSOR_HAND
             self.image = self.image_active
+            self.parent.parent.cursor = pygame.SYSTEM_CURSOR_HAND
         else:
             self.image = self.image_base
 
@@ -280,40 +280,77 @@ class Label(pygame.sprite.Sprite):
         self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.text, self.text_rect))
         self.size = self.font.size(self.text)
 
+    def Function(self):
+        pass
+
 
 class Slide(pygame.sprite.Sprite):
-    def __init__(self, default_font, rect, slide_color, background, base_data, name):
+    def __init__(self, parent, rect, slide_width, value, color, color_active, slide_color, slide_color_active,
+                 gradient=False, gradient_start=(), gradient_end=(),
+                 gradient_active=False, gradient_start_active=(), gradient_end_active=(),
+                 border=0, radius=0.5, border_active=0, radius_active=0.5, func=None):
         pygame.sprite.Sprite.__init__(self)
-        self.default_font = default_font
+        self.parent = parent
         self.rect = pygame.Rect(rect[0], rect[1], rect[2] * 1.1, rect[3])
-        self.slide_rect = pygame.Rect(rect[0], rect[1], rect[2], rect[3] * 0.4)
-        # pygame.Rect(self.rect.w * 0.05, (self.rect.h / 2 - self.rect.h * 0.3 / 2 + 1), self.rect.w * 0.9, self.rect.h * 0.3)
-        self.slide_color = pygame.Color(slide_color)
-        self.background = pygame.Color(background)
-        self.value = base_data
+        self.slide_rect = pygame.Rect(rect)
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
-        self.name = name
+        self.value = value
+        self.slide_width = slide_width
+        self.color = pygame.Color(color)
+        self.color_active = pygame.Color(color_active)
+        self.slide_color = pygame.Color(slide_color)
+        self.slide_color_active = pygame.Color(slide_color_active)
+        self.gradient = gradient
+        self.gradient_start = gradient_start
+        self.gradient_end = gradient_end
+        self.gradient_active = gradient_active
+        self.gradient_start_active = gradient_start_active
+        self.gradient_end_active = gradient_end_active
+        self.border = border
+        self.border_active = border_active
+        self.radius = radius
+        self.radius_active = radius_active
+        self.func = func if func else lambda p, v: False
         self.active = False
 
-    def update(self, mouse):
+    def update(self):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
-        self.image.blit(RoundedRect((0, 0, self.rect.w, self.slide_rect.h), self.background, 1),
-                        (0, self.rect.h / 2 - self.slide_rect.h / 2))
-        self.image.blit(RoundedRect((0, 0, self.slide_rect.w * self.value + (self.rect.h * 1 if self.value else
-                                                                             0), self.slide_rect.h),
-                                    self.slide_color, 1), (0, self.rect.h / 2 - self.slide_rect.h / 2))
-        pygame.draw.circle(self.image, self.slide_color,
-                           (self.slide_rect.w * self.value + (self.rect.h // 2), self.rect.h // 2),
-                           self.rect.h // 2)
-        if self.active and mouse:
-            self.value = self.GetValue()
-        if not self.active and self.isCollide() and mouse:
-            self.active = True
-            self.value = self.GetValue()
-            return True
-        if self.active and not mouse:
-            self.active = False
-            return {self.name: self.value}
+        self.image.blit(RoundedRect((0, 0, self.slide_rect.w * self.value + (self.rect.h * 1 if self.value else 0),
+                                     self.rect.h * self.slide_width), self.slide_color, self.radius, False), (0, self.rect.h * self.slide_width * 0.5))
+        if self.isCollide() and not self.active:
+            self.image.blit(RoundedRect(self.slide_rect,
+                                        self.color_active,
+                                        self.radius_active,
+                                        self.gradient_active, self.gradient_start_active, self.gradient_end_active), (0, 0))
+            pygame.draw.circle(self.image, self.slide_color_active,
+                               (self.rect.w * self.value + (self.rect.h // 2), self.rect.h // 2),
+                               self.rect.h * self.slide_width * 0.5)
+        elif self.active:
+            self.image.blit(RoundedRect(self.slide_rect,
+                                        self.color_active,
+                                        self.radius_active,
+                                        self.gradient_active, self.gradient_start_active, self.gradient_end_active), (0, 0))
+            pygame.draw.circle(self.image, self.slide_color_active,
+                               (self.rect.w * self.value + (self.rect.h // 2), self.rect.h // 2),
+                               self.rect.h * self.slide_width * 0.5)
+        else:
+            self.image.blit(RoundedRect(self.rect,
+                                        self.color,
+                                        self.radius,
+                                        self.gradient, self.gradient_start, self.gradient_end), (0, 0))
+            pygame.draw.circle(self.image, self.slide_color,
+                               (self.rect.w * self.value + (self.rect.h // 2), self.rect.h // 2),
+                               self.rect.h // 2)
+        if self.parent.parent.mouse_left_press and self.isCollide():
+            if not self.active:
+                self.active = True
+        elif not self.parent.parent.mouse_left_press:
+            if self.active:
+                self.active = False
+        if self.active:
+            if self.value != self.GetValue():
+                self.value = self.GetValue()
+                self.func(self, self.value)
 
     def GetValue(self):
         rtn = round((pygame.mouse.get_pos()[0] - self.rect.x) / self.rect.w, 1)
@@ -325,11 +362,14 @@ class Slide(pygame.sprite.Sprite):
             return 1
 
     def isCollide(self):
-        return self.rect.collidepoint(pygame.mouse.get_pos())
+        return self.slide_rect.collidepoint(pygame.mouse.get_pos())
 
     def RectEdit(self, x=0, y=0):
         self.rect.x += x
         self.rect.y += y
+
+    def Function(self):
+        pass
 
 
 class Element(pygame.sprite.Sprite):
@@ -517,74 +557,76 @@ class TextInput(pygame.sprite.Sprite):
         else:
             self.image.blit(self.font.render(self.value, True, self.text_color),
                             (self.rect.w * self.left_padding - self.size[0] * 0.5, self.rect.h * 0.5 - self.size[1] * 0.5))
-        for event in events:
-            if self.active:
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_BACKSPACE:
-                        if self.pos:
-                            if pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                                for n, sim in enumerate(self.text[self.pos::-1]):
-                                    if sim in PUNCTUATION:
-                                        self.text = self.text[:self.pos - (n if n != 0 else 1)] + self.text[self.pos:]
-                                        self.pos -= n if n != 0 else 1
-                                        break
+
+        if any(map(lambda e: e.type in (pygame.KEYDOWN, pygame.TEXTEDITING, pygame.TEXTINPUT), events)):
+            for event in events:
+                    if self.active:
+                        if event.type == pygame.KEYDOWN:
+                            if event.key == pygame.K_BACKSPACE:
+                                if self.pos:
+                                    if pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                                        for n, sim in enumerate(self.text[self.pos::-1]):
+                                            if sim in PUNCTUATION:
+                                                self.text = self.text[:self.pos - (n if n != 0 else 1)] + self.text[self.pos:]
+                                                self.pos -= n if n != 0 else 1
+                                                break
+                                        else:
+                                            self.text = self.text[self.pos:]
+                                            self.pos = 0
+                                    else:
+                                        self.text = self.text[:self.pos - 1] + self.text[self.pos:]
+                                        self.pos -= 1
+                            elif event.key == pygame.K_LEFT:
+                                if pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                                    for n, sim in enumerate(self.text[:self.pos][::-1]):
+                                        if sim in PUNCTUATION:
+                                            self.pos -= n if n != 0 else 1
+                                            break
+                                    else:
+                                        self.pos = 0
+                                elif self.pos - 1 >= 0:
+                                    self.pos -= 1
+                            elif event.key == pygame.K_RIGHT:
+                                if pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                                    for n, sim in enumerate(self.text[self.pos:]):
+                                        if sim in PUNCTUATION:
+                                            self.pos += n if n != 0 else 1
+                                            break
+                                    else:
+                                        self.pos = len(self.text)
+                                elif self.pos + 1 <= len(self.text):
+                                    self.pos += 1
+                            elif event.key == pygame.K_DELETE:
+                                if pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                                    for n, sim in enumerate(self.text[self.pos:]):
+                                        if sim in PUNCTUATION:
+                                            self.text = self.text[:self.pos] + self.text[self.pos + n if n != 0 else 1:]
+                                            break
+                                    else:
+                                        self.text = self.text[:self.pos]
                                 else:
-                                    self.text = self.text[self.pos:]
-                                    self.pos = 0
-                            else:
-                                self.text = self.text[:self.pos - 1] + self.text[self.pos:]
-                                self.pos -= 1
-                    elif event.key == pygame.K_LEFT:
-                        if pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                            for n, sim in enumerate(self.text[:self.pos][::-1]):
-                                if sim in PUNCTUATION:
-                                    self.pos -= n if n != 0 else 1
-                                    break
-                            else:
+                                    self.text = self.text[:self.pos] + self.text[self.pos + 1:]
+                            elif event.key == pygame.K_HOME:
                                 self.pos = 0
-                        elif self.pos - 1 >= 0:
-                            self.pos -= 1
-                    elif event.key == pygame.K_RIGHT:
-                        if pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                            for n, sim in enumerate(self.text[self.pos:]):
-                                if sim in PUNCTUATION:
-                                    self.pos += n if n != 0 else 1
-                                    break
-                            else:
+                            elif event.key == pygame.K_END:
                                 self.pos = len(self.text)
-                        elif self.pos + 1 <= len(self.text):
-                            self.pos += 1
-                    elif event.key == pygame.K_DELETE:
-                        if pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                            for n, sim in enumerate(self.text[self.pos:]):
-                                if sim in PUNCTUATION:
-                                    self.text = self.text[:self.pos] + self.text[self.pos + n if n != 0 else 1:]
-                                    break
-                            else:
-                                self.text = self.text[:self.pos]
-                        else:
-                            self.text = self.text[:self.pos] + self.text[self.pos + 1:]
-                    elif event.key == pygame.K_HOME:
-                        self.pos = 0
-                    elif event.key == pygame.K_END:
-                        self.pos = len(self.text)
-                    elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER or event.key == pygame.K_ESCAPE:
-                        if pygame.key.get_mods() & pygame.KMOD_LCTRL and not self.text:
-                            self.text = self.default
-                            self.pos = len(self.text)
-                        else:
-                            self.Deactivate()
-                    elif event.key == pygame.K_v and pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                        pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
-                        paste_text = pygame.scrap.get(pygame.SCRAP_TEXT).decode().translate(ESCAPE_CHARS_TRANSLATER)
-                        if paste_text:
-                            self.text = self.text = self.text[:self.pos] + paste_text + self.text[self.pos:]
-                            self.pos += len(paste_text)
-                elif event.type == pygame.TEXTINPUT:
-                    self.text = self.text[:self.pos] + event.text + self.text[self.pos:]
-                    self.pos += len(event.text)
-                self.value = self.text if self.text else self.default
-                self.NewFont()
+                            elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER or event.key == pygame.K_ESCAPE:
+                                if pygame.key.get_mods() & pygame.KMOD_LCTRL and not self.text:
+                                    self.text = self.default
+                                    self.pos = len(self.text)
+                                else:
+                                    self.Deactivate()
+                            elif event.key == pygame.K_v and pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                                pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
+                                paste_text = pygame.scrap.get(pygame.SCRAP_TEXT).decode().translate(ESCAPE_CHARS_TRANSLATER)
+                                if paste_text:
+                                    self.text = self.text = self.text[:self.pos] + paste_text + self.text[self.pos:]
+                                    self.pos += len(paste_text)
+                        elif event.type == pygame.TEXTINPUT:
+                            self.text = self.text[:self.pos] + event.text + self.text[self.pos:]
+                            self.pos += len(event.text)
+                        self.value = self.text if self.text else self.default
+                        self.NewFont()
         return self.image
 
     def isCollide(self):
@@ -604,8 +646,6 @@ class TextInput(pygame.sprite.Sprite):
     def Deactivate(self):
         self.active = False
         self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select')
-        # while pygame.key.get_repeat()[0]:
-        # pygame.key.stop_text_input()
         pygame.key.set_repeat(0, 0)
         self.func(self, self.value)
 

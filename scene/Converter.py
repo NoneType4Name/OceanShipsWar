@@ -24,7 +24,7 @@ class ConvertScene:
         self.old_alpha = 255
         self.new_alpha = 0
 
-    def update(self, args):
+    def update(self, *args):
         if self.old_alpha - self.step > 0 and self.new_alpha + self.step < 255:
             self.new_alpha += self.step
             self.old_alpha -= self.step

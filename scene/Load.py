@@ -37,7 +37,7 @@ class LoadScene:
             self.Thread = threading.Thread(target=self.parent.mixer_init_thread, args=[self, self.kwargs])
         self.Thread.start()
 
-    def update(self, active, events):
+    def update(self, active, *args):
         self.image.fill(self.parent.Colors.Background)
         self.Elements.update()
         self.Elements.draw(self.image)

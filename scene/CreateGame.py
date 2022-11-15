@@ -47,12 +47,12 @@ class CreateGame:
         self.Input.active = True
         self.Elements = pygame.sprite.Group(self.ButtonEsc)
 
-    def update(self, active, events):
+    def update(self, active, args):
         if active:
             self.image.fill(self.parent.Colors.Background)
-            self.Input.update(events)
             self.Elements.update()
-            for event in events:
+            self.Input.update(self.parent.events)
+            for event in self.parent.events:
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_ESCAPE:
                         self.ButtonEsc.Function()
@@ -60,14 +60,14 @@ class CreateGame:
             self.image.blit(self.Input.image, self.Input.rect.topleft)
             self.Elements.draw(self.image)
             if self.parent.mouse_left_release:
-                if self.Input.isCollide() and not self.Input.active:
+                if self.ButtonEsc.isCollide():
+                    self.ButtonEsc.Function()
+
+                elif self.Input.isCollide() and not self.Input.active:
                     self.Input.Activate()
 
                 elif not self.Input.isCollide() and self.Input.active:
                     self.Input.Deactivate()
-
-                elif self.ButtonEsc.isCollide():
-                    self.ButtonEsc.Function()
 
         return self.image
 

@@ -56,6 +56,8 @@ class Settings:
             for element in self.parent.Settings[type_settings]:
                 BaseRect = pygame.Rect(self.parent.size[0] * 0.24, self.parent.size[1] * pad,
                                        self.parent.size[0] * 0.52, self.parent.size[1] * 0.027)
+                settings_elements[element+'_label'] = Label(self, BaseRect, BaseRect, 0.15, language[type_settings+element],
+                                                            *self.parent.Colors['Label'], border=1, border_active=1, radius=1, radius_active=1)
                 # if self.parent.Settings[type_settings][element] is Switch:
                 #     settings_elements[element] = Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1, BaseRect.y + 1,
                 #                                 BaseRect.h * 2 - BaseRect.h * 0.1, BaseRect.h - 2),
@@ -73,15 +75,15 @@ class Settings:
                 #                  [v for v in set_for_lists[element].keys()],
                 #                  *set_of_settings['List'],
                 #                  f'{type_settings} {element}')
-                #     elif self.parent.Settings[type_settings][element]['type'] is Slide:
-                #         settings_elements[element] = Slide(self.default_font,
-                #                                       (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
-                #                                        BaseRect.y + 1,
-                #                                        (BaseRect.h - 2) * 10,
-                #                                        BaseRect.h - 2),
-                #                                       *set_of_settings['Slide'],
-                #                                       base_data=settings[type_settings][element],
-                #                                       name=f'{type_settings} {element}')
+                if self.parent.Settings[type_settings][element]['type'] is Slide:
+                    settings_elements[element] = Slide(self, (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1, BaseRect.y + 1, (BaseRect.h - 2) * 10, BaseRect.h - 2),
+                                                       0.5,
+                                                       self.parent.Settings[type_settings][element]['value'],
+                                                       *self.parent.Colors['Slide'],
+                                                       border=1,
+                                                       border_active=1,
+                                                       radius=1,
+                                                       radius_active=1)
                 #     elif self.parent.Settings[type_settings][element]['type'] is Path:
                 #         settings_elements[element] = Path(self.default_font,
                 #                                      (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
@@ -98,28 +100,25 @@ class Settings:
                 #         print(type_settings, element, type(set_of_settings_type[type_settings][element]))
                 #         raise Exception
 
-                settings_elements[element+'_label'] = Label(self, BaseRect, BaseRect, 0.15, language[type_settings+element],
-                                                            *self.parent.Colors['Label'], border=1, border_active=1, radius=1, radius_active=1)
                 pad += BaseRect.h / self.parent.size[1] * 1.1
             self.settings_elements[type_settings] = {}
             self.settings_elements[type_settings] = settings_elements
             self.elements[type_settings] = pygame.sprite.Group(settings_elements.values())
 
-    def update(self, active, events):
+    def update(self, active, args):
         self.image.fill(self.parent.Colors.Background)
         if active:
             self.elements['default'][None].update()
             self.elements['default'][None].draw(self.image)
             try:
                 self.elements['default'][self.active_element].update()
-                # self.image.blit(self.elements['default'][self.active_element].image, self.elements['default'][self.active_element].rect.topleft)
                 self.elements['default'][self.active_element].draw(self.image)
                 self.elements[self.active_element].update()
                 self.elements[self.active_element].draw(self.image)
             except KeyError:
                 pass
 
-            for event in events:
+            for event in self.parent.events:
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_ESCAPE:
                         self.ButtonEsc.Function()
