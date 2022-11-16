@@ -410,6 +410,10 @@ class Game:
         pygame.display.flip()
         self.clock.tick(self.FPS)
 
+    def EditSettings(self, setting_type, name, value):
+        self.Settings[setting_type][name]['value'] = value
+        self.Settings = DATA(self.Settings.__dict__)
+
 
 class InitScene:
     def __init__(self, parent: Game, *kwargs):

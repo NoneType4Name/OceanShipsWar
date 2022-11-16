@@ -9,6 +9,19 @@ def ButtonActivate(self, name, *args):
     self.active_element = name
 
 
+def SlideValue(self):
+    self.parent.parent.EditSettings(self.type_settings, self.name, self.value)
+    self.parent.selected = self.name
+
+
+def SlideDeactivate(self):
+    self.parent.selected = None
+
+
+def SwitchValue(self):
+    self.parent.parent.EditSettings(self.type_settings, self.name, self.value)
+
+
 class Settings:
     def __init__(self, parent, input_scene, kwargs):
         self.type = SETTINGS
@@ -17,6 +30,7 @@ class Settings:
         self.image = pygame.Surface(self.parent.size, pygame.SRCALPHA)
         self.settings_elements = {}
         self.active_element = list(self.parent.Settings.keys())[0]
+        self.selected = None
 
         rect_w, rect_h = parent.block_size * 0.75, parent.block_size * 0.5
         border = rect_h * BORDER_ATTITUDE
@@ -35,6 +49,7 @@ class Settings:
         threading.Thread(target=self.LoadElements).start()
 
     def LoadElements(self):
+        self.selected = None
         pad = SETTINGS_UPPER_MARGIN
         language = self.parent.Language.DefaultDict
         BaseRect = pygame.Rect(self.parent.size[0] * 0.24, self.parent.size[1] * pad, self.parent.size[0] * 0.52,
@@ -58,12 +73,14 @@ class Settings:
                                        self.parent.size[0] * 0.52, self.parent.size[1] * 0.027)
                 settings_elements[element+'_label'] = Label(self, BaseRect, BaseRect, 0.15, language[type_settings+element],
                                                             *self.parent.Colors['Label'], border=1, border_active=1, radius=1, radius_active=1)
-                # if self.parent.Settings[type_settings][element] is Switch:
-                #     settings_elements[element] = Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1, BaseRect.y + 1,
-                #                                 BaseRect.h * 2 - BaseRect.h * 0.1, BaseRect.h - 2),
-                #                    *set_of_settings['Switch'],
-                #                    name=f'{type_settings} {element}',
-                #                    power=settings[type_settings][element])
+                if self.parent.Settings[type_settings][element]['type'] is Switch:
+                    settings_elements[element] = Switch(self, (BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1, BaseRect.y + 1, BaseRect.h * 2 - BaseRect.h * 0.1, BaseRect.h - 2),
+                                                        type_settings,
+                                                        element,
+                                                        self.parent.Settings[type_settings][element]['value'],
+                                                        *self.parent.Colors['Switch'],
+                                                        func=SwitchValue
+                                                        )
                 # elif self.parent.Settings[type_settings][element]['type'] is List:
                 #         temp_g[element] = List(self.default_font, (BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
                 #                                      BaseRect.y + 1,
@@ -78,12 +95,16 @@ class Settings:
                 if self.parent.Settings[type_settings][element]['type'] is Slide:
                     settings_elements[element] = Slide(self, (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1, BaseRect.y + 1, (BaseRect.h - 2) * 10, BaseRect.h - 2),
                                                        0.5,
+                                                       type_settings,
+                                                       element,
                                                        self.parent.Settings[type_settings][element]['value'],
                                                        *self.parent.Colors['Slide'],
                                                        border=1,
                                                        border_active=1,
                                                        radius=1,
-                                                       radius_active=1)
+                                                       radius_active=1,
+                                                       func_activate=SlideValue,
+                                                       func_deactivate=SlideDeactivate)
                 #     elif self.parent.Settings[type_settings][element]['type'] is Path:
                 #         settings_elements[element] = Path(self.default_font,
                 #                                      (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
@@ -113,7 +134,10 @@ class Settings:
             try:
                 self.elements['default'][self.active_element].update()
                 self.elements['default'][self.active_element].draw(self.image)
-                self.elements[self.active_element].update()
+                if self.selected:
+                    self.settings_elements[self.active_element][self.selected].update()
+                else:
+                    self.elements[self.active_element].update()
                 self.elements[self.active_element].draw(self.image)
             except KeyError:
                 pass

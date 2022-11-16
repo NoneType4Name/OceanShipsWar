@@ -184,44 +184,43 @@ class Button(pygame.sprite.Sprite):
 
 
 class Switch(pygame.sprite.Sprite):
-    def __init__(self, rect, color_on, color_off, background, power, func=None):
+    def __init__(self, parent, rect,  type_settings, name, value, color, color_active, color_on, color_off, func=None):
         pygame.sprite.Sprite.__init__(self)
+        self.parent = parent
         self.rect = pygame.Rect(rect)
         self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+        self.color = pygame.Color(color)
+        self.color_active = pygame.Color(color_active)
         self.color_on = pygame.Color(color_on)
         self.color_off = pygame.Color(color_off)
-        self.background = pygame.Color(background)
-        self.value = power
-        self.func = func[0]
-        self.args = func[1:]
+        self.type_settings = type_settings
+        self.name = name
+        self.value = value
+        self.func = func
 
     def isCollide(self):
-        if self.rect.collidepoint(pygame.mouse.get_pos()):
-            return True
-        else:
-            return False
+        return self.rect.collidepoint(pygame.mouse.get_pos())
 
     def update(self):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         if self.value:
-            self.image.blit(RoundedRect(self.rect, self.background, 1), (0, 0))
+            self.image.blit(RoundedRect(self.rect, self.color_active, 1), (0, 0))
             pygame.draw.circle(self.image, self.color_on, (self.rect.w / 2 + self.rect.h * 0.55, self.rect.h / 2),
                                self.rect.h / 2 - self.rect.h * 0.1)
         elif not self.value:
-            self.image.blit(RoundedRect(self.rect, self.background, 1), (0, 0))
+            self.image.blit(RoundedRect(self.rect, self.color, 1), (0, 0))
             pygame.draw.circle(self.image, self.color_off, (self.rect.w / 2 - self.rect.h / 2, self.rect.h / 2),
                                self.rect.h / 2 - self.rect.h * 0.1)
+        if self.isCollide() and self.parent.parent.mouse_left_release:
+            self.value = not self.value
+            self.func(self)
 
     def RectEdit(self, x=0, y=0):
         self.rect.x += x
         self.rect.y += y
 
-    def EditValue(self):
-        self.value = not self.value
-        threading.Thread(target=self.func, args=self.args)
-
     def Function(self):
-        self.func(*self.args)
+        pass
 
 
 class Label(pygame.sprite.Sprite):
@@ -285,17 +284,17 @@ class Label(pygame.sprite.Sprite):
 
 
 class Slide(pygame.sprite.Sprite):
-    def __init__(self, parent, rect, slide_width, value, color, color_active, slide_color, slide_color_active,
+    def __init__(self, parent, rect, slide_width, type_settings, name, value, color, color_active, slide_color, slide_color_active,
                  gradient=False, gradient_start=(), gradient_end=(),
                  gradient_active=False, gradient_start_active=(), gradient_end_active=(),
-                 border=0, radius=0.5, border_active=0, radius_active=0.5, func=None):
+                 border=0, radius=0.5, border_active=0, radius_active=0.5, func_activate=None, func_deactivate=None):
         pygame.sprite.Sprite.__init__(self)
         self.parent = parent
         self.rect = pygame.Rect(rect[0], rect[1], rect[2] * 1.1, rect[3])
-        self.slide_rect = pygame.Rect(rect)
+        self.slide_rect = pygame.Rect(rect[0], rect[1], rect[2], rect[3] * slide_width)
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+        self.type_settings, self.name = type_settings, name
         self.value = value
-        self.slide_width = slide_width
         self.color = pygame.Color(color)
         self.color_active = pygame.Color(color_active)
         self.slide_color = pygame.Color(slide_color)
@@ -310,50 +309,52 @@ class Slide(pygame.sprite.Sprite):
         self.border_active = border_active
         self.radius = radius
         self.radius_active = radius_active
-        self.func = func if func else lambda p, v: False
+        self.func_activate = func_activate if func_activate else lambda p: False
+        self.func_deactivate = func_deactivate if func_deactivate else lambda p: False
         self.active = False
 
     def update(self):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         self.image.blit(RoundedRect((0, 0, self.slide_rect.w * self.value + (self.rect.h * 1 if self.value else 0),
-                                     self.rect.h * self.slide_width), self.slide_color, self.radius, False), (0, self.rect.h * self.slide_width * 0.5))
+                                     self.slide_rect.h * 0.5), self.slide_color, self.radius, False), (0, (self.rect.h * 0.5) - (self.slide_rect.h * 0.26)))
         if self.isCollide() and not self.active:
-            self.image.blit(RoundedRect(self.slide_rect,
+            self.image.blit(RoundedRect(self.rect,
                                         self.color_active,
                                         self.radius_active,
                                         self.gradient_active, self.gradient_start_active, self.gradient_end_active), (0, 0))
             pygame.draw.circle(self.image, self.slide_color_active,
-                               (self.rect.w * self.value + (self.rect.h // 2), self.rect.h // 2),
-                               self.rect.h * self.slide_width * 0.5)
+                               (self.slide_rect.w * self.value + (self.rect.h * 0.5), self.rect.h * 0.5),
+                               self.rect.h * 0.5)
         elif self.active:
-            self.image.blit(RoundedRect(self.slide_rect,
+            self.image.blit(RoundedRect(self.rect,
                                         self.color_active,
                                         self.radius_active,
                                         self.gradient_active, self.gradient_start_active, self.gradient_end_active), (0, 0))
             pygame.draw.circle(self.image, self.slide_color_active,
-                               (self.rect.w * self.value + (self.rect.h // 2), self.rect.h // 2),
-                               self.rect.h * self.slide_width * 0.5)
+                               (self.slide_rect.w * self.value + (self.rect.h * 0.5), self.rect.h * 0.5),
+                               self.rect.h * 0.5)
         else:
             self.image.blit(RoundedRect(self.rect,
                                         self.color,
                                         self.radius,
                                         self.gradient, self.gradient_start, self.gradient_end), (0, 0))
             pygame.draw.circle(self.image, self.slide_color,
-                               (self.rect.w * self.value + (self.rect.h // 2), self.rect.h // 2),
-                               self.rect.h // 2)
+                               (self.slide_rect.w * self.value + (self.rect.h * 0.5), self.rect.h * 0.5),
+                               self.rect.h * 0.5)
         if self.parent.parent.mouse_left_press and self.isCollide():
             if not self.active:
                 self.active = True
         elif not self.parent.parent.mouse_left_press:
             if self.active:
+                self.func_deactivate(self)
                 self.active = False
         if self.active:
             if self.value != self.GetValue():
                 self.value = self.GetValue()
-                self.func(self, self.value)
+            self.func_activate(self)
 
     def GetValue(self):
-        rtn = round((pygame.mouse.get_pos()[0] - self.rect.x) / self.rect.w, 1)
+        rtn = round((pygame.mouse.get_pos()[0] - self.slide_rect.x) / self.slide_rect.w, 1)
         if 0 <= rtn <= 1:
             return rtn
         elif rtn < 0:
@@ -362,7 +363,7 @@ class Slide(pygame.sprite.Sprite):
             return 1
 
     def isCollide(self):
-        return self.slide_rect.collidepoint(pygame.mouse.get_pos())
+        return self.rect.collidepoint(pygame.mouse.get_pos())
 
     def RectEdit(self, x=0, y=0):
         self.rect.x += x
@@ -816,152 +817,148 @@ class Path(pygame.sprite.Sprite):
                     self.value = value
 
 
-class Settings_class:
-    def __init__(self, settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, game_language, size, surface):
-        settings = copy.deepcopy(settings)
-        self.all_settings = {}
-        self.default_font = settings['Graphic']['Font']
-        self.set_of_settings = set_of_settings
-        self.set_of_settings_type = set_of_settings
-        self.set_for_lists = set_of_settings_type
-        self.set_for_paths = set_for_paths
-        self.settings = settings
-        self.active_settings = list(self.settings.keys())[0]
-        self.active_element = None
-        self.upper = pad = buttons_pad = set_of_settings['up margin']
-        self.game_language = game_language
-        self.surface = surface
-        self.mouse = False
-        BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
-        SettingsButtons = []
-        for type_settings in settings:
-            pad = self.upper
-            temp_g = []
-            SettingsElements = []
-            Labels = []
-            SettingsButtons.append(
-                Button(self.default_font, (size[0] * 0.05, size[1] * buttons_pad, BaseRect.h * 5, BaseRect.h),
-                       game_language[type_settings],
-                       *set_of_settings[
-                           'buttons active' if type_settings == self.active_element else 'buttons'],
-                       1, ))
-            for element in settings[type_settings]:
-                BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92,
-                                       size[1] // 36)
-                if set_of_settings_type[type_settings][element] is Switch:
-                    SettingsElements.append(
-                        Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1,
-                                BaseRect.y + 1,
-                                BaseRect.h * 2 - BaseRect.h * 0.1,
-                                BaseRect.h - 2),
-                               *set_of_settings['switches'],
-                               name=f'{type_settings} {element}',
-                               power=settings[type_settings][element]))
-                elif set_of_settings_type[type_settings][element] is List:
-                    temp_g.append(
-                        List(self.default_font, (BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
-                                                 BaseRect.y + 1,
-                                                 BaseRect.h * 4 - BaseRect.h * 0.1,
-                                                 BaseRect.h - 2),
-                             set_for_lists[element][settings[type_settings][element]],
-                             settings[type_settings][element],
-                             [v for v in set_for_lists[element].values()],
-                             [v for v in set_for_lists[element].keys()],
-                             *set_of_settings['lists'],
-                             f'{type_settings} {element}'))
-                elif set_of_settings_type[type_settings][element] is Slide:
-                    SettingsElements.append(Slide(self.default_font,
-                                                  (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
-                                                   BaseRect.y + 1,
-                                                   (BaseRect.h - 2) * 10,
-                                                   BaseRect.h - 2),
-                                                  *set_of_settings['slides'],
-                                                  base_data=settings[type_settings][element],
-                                                  name=f'{type_settings} {element}'))
-                elif set_of_settings_type[type_settings][element] is Path:
-                    SettingsElements.append(Path(self.default_font,
-                                                 (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
-                                                  BaseRect.y + 1,
-                                                  (BaseRect.h - 2) * 10,
-                                                  BaseRect.h - 2),
-                                                 *set_of_settings['path'], value=settings[type_settings][element],
-                                                 display=set_for_paths[element]['name'],
-                                                 name=f'{type_settings} {element}',
-                                                 multiple=set_for_paths[element]['multiple'],
-                                                 types=set_for_paths[element]['types'],
-                                                 typ=set_for_paths[element]['values']))
-                else:
-                    print(type_settings, element, type(set_of_settings_type[type_settings][element]))
-                    raise SystemError
-                Labels.append(
-                    Label(self.default_font, BaseRect, game_language[f'{type_settings} {element}'], *set_of_settings['label'], False))
-                pad += BaseRect.h / size[1] * 1.1
-            buttons_pad += (BaseRect.h / size[1] * 1.1)
-            for el in reversed(temp_g):
-                SettingsElements.append(el)
-            self.all_settings[type_settings] = {}
-            self.all_settings[type_settings]['labels'] = Labels
-            self.all_settings[type_settings]['buttons'] = SettingsButtons
-            self.all_settings[type_settings]['elements'] = SettingsElements
-
-    def update(self, mouse, events):
-        self.mouse = mouse
-        for label in self.all_settings[self.active_settings]['labels']:
-            if self.active_element:
-                label.update(self.game_language[self.active_element])
-            else:
-                label.update()
-            self.surface.blit(label.image, label.rect)
-
-        sett = self.all_settings[self.active_settings]
-        for sprite in sett['buttons']:
-            sprite.update()
-            if sprite.isCollide() and self.mouse:
-                for n, i in enumerate(self.game_language.values()):
-                    if i == sprite.text:
-                        break
-                el = list(self.game_language.keys())[n]
-                self.active_settings = el
-                self.mouse = False
-            self.surface.blit(sprite.image, sprite.rect)
-
-        for n, sprite in enumerate(sett['elements']):
-            self.surface.blit(sprite.image, sprite.rect)
-            if not self.active_element:
-                name = sprite.name.split(' ')
-                if sprite.value != self.settings[name[0]][name[1]]:
-                    sprite.value = self.settings[name[0]][name[1]]
-                SpriteUpdate: dict = sprite.update(self.mouse)
-                if SpriteUpdate:
-                    if type(SpriteUpdate) is bool:
-                        self.active_element = sprite.name
-                    elif type(SpriteUpdate) is int:
-                        self.active_element = sprite.name
-                        self.mouse = False
-                    elif type(SpriteUpdate) is dict:
-                        temp = tuple(SpriteUpdate.keys())[0]
-                        if temp:
-                            temp2 = temp.split(' ')
-                            self.settings[temp2[0]][temp2[1]] = SpriteUpdate[temp]
-                            self.all_settings[self.active_settings]['elements'][n].value = SpriteUpdate[temp]
-                        self.mouse = False
-            else:
-                if sprite.name != self.active_element:
-                    sprite.update(False)
-                else:
-                    SpriteUpdate: dict = sprite.update(self.mouse)
-                    if SpriteUpdate:
-                        if type(SpriteUpdate) != bool:
-                            temp = tuple(SpriteUpdate.keys())[0]
-                            temp2 = temp.split(' ')
-                            self.settings[temp2[0]][temp2[1]] = SpriteUpdate[temp]
-                            self.all_settings[self.active_settings]['elements'][n].value = SpriteUpdate[temp]
-                            self.active_element = None
-                            self.mouse = False
-                        else:
-                            self.active_element = None
-                            self.mouse = False
-
-
-# class Gui:
-#     def __init__(self, screen, ):
+# class Settings_class:
+#     def __init__(self, settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, game_language, size, surface):
+#         settings = copy.deepcopy(settings)
+#         self.all_settings = {}
+#         self.default_font = settings['Graphic']['Font']
+#         self.set_of_settings = set_of_settings
+#         self.set_of_settings_type = set_of_settings
+#         self.set_for_lists = set_of_settings_type
+#         self.set_for_paths = set_for_paths
+#         self.settings = settings
+#         self.active_settings = list(self.settings.keys())[0]
+#         self.active_element = None
+#         self.upper = pad = buttons_pad = set_of_settings['up margin']
+#         self.game_language = game_language
+#         self.surface = surface
+#         self.mouse = False
+#         BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
+#         SettingsButtons = []
+#         for type_settings in settings:
+#             pad = self.upper
+#             temp_g = []
+#             SettingsElements = []
+#             Labels = []
+#             SettingsButtons.append(
+#                 Button(self.default_font, (size[0] * 0.05, size[1] * buttons_pad, BaseRect.h * 5, BaseRect.h),
+#                        game_language[type_settings],
+#                        *set_of_settings[
+#                            'buttons active' if type_settings == self.active_element else 'buttons'],
+#                        1, ))
+#             for element in settings[type_settings]:
+#                 BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92,
+#                                        size[1] // 36)
+#                 if set_of_settings_type[type_settings][element] is Switch:
+#                     SettingsElements.append(
+#                         Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1,
+#                                 BaseRect.y + 1,
+#                                 BaseRect.h * 2 - BaseRect.h * 0.1,
+#                                 BaseRect.h - 2),
+#                                *set_of_settings['switches'],
+#                                name=f'{type_settings} {element}',
+#                                power=settings[type_settings][element]))
+#                 elif set_of_settings_type[type_settings][element] is List:
+#                     temp_g.append(
+#                         List(self.default_font, (BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
+#                                                  BaseRect.y + 1,
+#                                                  BaseRect.h * 4 - BaseRect.h * 0.1,
+#                                                  BaseRect.h - 2),
+#                              set_for_lists[element][settings[type_settings][element]],
+#                              settings[type_settings][element],
+#                              [v for v in set_for_lists[element].values()],
+#                              [v for v in set_for_lists[element].keys()],
+#                              *set_of_settings['lists'],
+#                              f'{type_settings} {element}'))
+#                 elif set_of_settings_type[type_settings][element] is Slide:
+#                     SettingsElements.append(Slide(self.default_font,
+#                                                   (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
+#                                                    BaseRect.y + 1,
+#                                                    (BaseRect.h - 2) * 10,
+#                                                    BaseRect.h - 2),
+#                                                   *set_of_settings['slides'],
+#                                                   base_data=settings[type_settings][element],
+#                                                   name=f'{type_settings} {element}'))
+#                 elif set_of_settings_type[type_settings][element] is Path:
+#                     SettingsElements.append(Path(self.default_font,
+#                                                  (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
+#                                                   BaseRect.y + 1,
+#                                                   (BaseRect.h - 2) * 10,
+#                                                   BaseRect.h - 2),
+#                                                  *set_of_settings['path'], value=settings[type_settings][element],
+#                                                  display=set_for_paths[element]['name'],
+#                                                  name=f'{type_settings} {element}',
+#                                                  multiple=set_for_paths[element]['multiple'],
+#                                                  types=set_for_paths[element]['types'],
+#                                                  typ=set_for_paths[element]['values']))
+#                 else:
+#                     print(type_settings, element, type(set_of_settings_type[type_settings][element]))
+#                     raise SystemError
+#                 Labels.append(
+#                     Label(self.default_font, BaseRect, game_language[f'{type_settings} {element}'], *set_of_settings['label'], False))
+#                 pad += BaseRect.h / size[1] * 1.1
+#             buttons_pad += (BaseRect.h / size[1] * 1.1)
+#             for el in reversed(temp_g):
+#                 SettingsElements.append(el)
+#             self.all_settings[type_settings] = {}
+#             self.all_settings[type_settings]['labels'] = Labels
+#             self.all_settings[type_settings]['buttons'] = SettingsButtons
+#             self.all_settings[type_settings]['elements'] = SettingsElements
+#
+#     def update(self, mouse, events):
+#         self.mouse = mouse
+#         for label in self.all_settings[self.active_settings]['labels']:
+#             if self.active_element:
+#                 label.update(self.game_language[self.active_element])
+#             else:
+#                 label.update()
+#             self.surface.blit(label.image, label.rect)
+#
+#         sett = self.all_settings[self.active_settings]
+#         for sprite in sett['buttons']:
+#             sprite.update()
+#             if sprite.isCollide() and self.mouse:
+#                 for n, i in enumerate(self.game_language.values()):
+#                     if i == sprite.text:
+#                         break
+#                 el = list(self.game_language.keys())[n]
+#                 self.active_settings = el
+#                 self.mouse = False
+#             self.surface.blit(sprite.image, sprite.rect)
+#
+#         for n, sprite in enumerate(sett['elements']):
+#             self.surface.blit(sprite.image, sprite.rect)
+#             if not self.active_element:
+#                 name = sprite.name.split(' ')
+#                 if sprite.value != self.settings[name[0]][name[1]]:
+#                     sprite.value = self.settings[name[0]][name[1]]
+#                 SpriteUpdate: dict = sprite.update(self.mouse)
+#                 if SpriteUpdate:
+#                     if type(SpriteUpdate) is bool:
+#                         self.active_element = sprite.name
+#                     elif type(SpriteUpdate) is int:
+#                         self.active_element = sprite.name
+#                         self.mouse = False
+#                     elif type(SpriteUpdate) is dict:
+#                         temp = tuple(SpriteUpdate.keys())[0]
+#                         if temp:
+#                             temp2 = temp.split(' ')
+#                             self.settings[temp2[0]][temp2[1]] = SpriteUpdate[temp]
+#                             self.all_settings[self.active_settings]['elements'][n].value = SpriteUpdate[temp]
+#                         self.mouse = False
+#             else:
+#                 if sprite.name != self.active_element:
+#                     sprite.update(False)
+#                 else:
+#                     SpriteUpdate: dict = sprite.update(self.mouse)
+#                     if SpriteUpdate:
+#                         if type(SpriteUpdate) != bool:
+#                             temp = tuple(SpriteUpdate.keys())[0]
+#                             temp2 = temp.split(' ')
+#                             self.settings[temp2[0]][temp2[1]] = SpriteUpdate[temp]
+#                             self.all_settings[self.active_settings]['elements'][n].value = SpriteUpdate[temp]
+#                             self.active_element = None
+#                             self.mouse = False
+#                         else:
+#                             self.active_element = None
+#                             self.mouse = False

@@ -37,12 +37,12 @@ Settings = DATA({
     },
     'Sound': {
         'Notification': {'value': 1, 'type': Slide},
-        'Game': {'value': 1, 'type': Slide}
+        'Game': {'value': 0, 'type': Slide}
     },
     'Other': {
-        # 'Links': {'value': True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == MAIN_DIR and run_with_links else False,
-        #           'type': Switch},
-        # 'Console': {'value': debug, 'type': Switch}
+        'Links': {'value': True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == MAIN_DIR and run_with_links else False,
+                  'type': Switch},
+        'Console': {'value': debug, 'type': Switch}
     }
 })
 
@@ -88,8 +88,8 @@ elif theme == THEME_DARK:
         'Button': ((41, 42, 43), (255, 255, 255), (232, 234, 236), (0, 0, 0), False, (91, 92, 93), (91, 92, 93), False, (91, 92, 93)),
         'ButtonRed': ((255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
         'ButtonActive': ((255, 255, 255), (255, 255, 255), (91, 92, 93), (91, 92, 93), False, (100, 0, 200), (), False, (91, 92, 93)),
-        'Switch': ((0, 255, 0), (255, 255, 255), (64, 64, 64)),
-        'Slide': ((53, 86, 140), (53, 86, 140), (38, 80, 148), (138, 180, 248)),
+        'Switch': ((64, 64, 64), (64, 64, 64), (0, 255, 0), (255, 255, 255)),
+        'Slide': ((53, 86, 140, 100), (53, 86, 140, 100), (38, 80, 148), (138, 180, 248)),
         'List': ((232, 234, 236), (29, 29, 31), (41, 42, 45)),
         'Path': ((138, 180, 248), (53, 86, 140), (232, 234, 236)),
         'ProgressBar': ((255, 255, 255), (0, 255, 0)),
