@@ -22,6 +22,15 @@ def SwitchValue(self):
     self.parent.parent.EditSettings(self.type_settings, self.name, self.value)
 
 
+def ListActivate(self):
+    self.parent.selected = self.name
+
+
+def ListDeactivate(self):
+    self.parent.parent.EditSettings(self.type_settings, self.name, self.values[self.value])
+    self.parent.selected = None
+
+
 class Settings:
     def __init__(self, parent, input_scene, kwargs):
         self.type = SETTINGS
@@ -81,17 +90,18 @@ class Settings:
                                                         *self.parent.Colors['Switch'],
                                                         func=SwitchValue
                                                         )
-                # elif self.parent.Settings[type_settings][element]['type'] is List:
-                #         temp_g[element] = List(self.default_font, (BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
-                #                                      BaseRect.y + 1,
-                #                                      BaseRect.h * 4 - BaseRect.h * 0.1,
-                #                                      BaseRect.h - 2),
-                #                  set_for_lists[element][settings[type_settings][element]],
-                #                  settings[type_settings][element],
-                #                  [v for v in set_for_lists[element].values()],
-                #                  [v for v in set_for_lists[element].keys()],
-                #                  *set_of_settings['List'],
-                #                  f'{type_settings} {element}')
+                elif self.parent.Settings[type_settings][element]['type'] is List:
+                    settings_elements[element] = List(self, (BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1, BaseRect.y + 1, BaseRect.h * 4 - BaseRect.h * 0.1, BaseRect.h - 2),
+                                                      0.5,
+                                                      list(self.parent.Settings[type_settings][element]['values'].values()),
+                                                      list(self.parent.Settings[type_settings][element]['values'].keys()),
+                                                      type_settings,
+                                                      element,
+                                                      list(self.parent.Settings[type_settings][element]['values'].keys()).index(self.parent.Settings[type_settings][element]['value']),
+                                                      *self.parent.Colors['List'],
+                                                      func_activate=ListActivate,
+                                                      func_deactivate=ListDeactivate,
+                                                      border=1, radius=1, border_active=1, radius_active=1)
                 if self.parent.Settings[type_settings][element]['type'] is Slide:
                     settings_elements[element] = Slide(self, (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1, BaseRect.y + 1, (BaseRect.h - 2) * 10, BaseRect.h - 2),
                                                        0.5,
@@ -139,6 +149,8 @@ class Settings:
                 else:
                     self.elements[self.active_element].update()
                 self.elements[self.active_element].draw(self.image)
+                if self.selected:
+                    pygame.sprite.Group(self.settings_elements[self.active_element][self.selected]).draw(self.image)
             except KeyError:
                 pass
 
