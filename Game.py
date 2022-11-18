@@ -203,8 +203,9 @@ class Game:
 
         self.Settings = settings
         self.Colors = colors
-        self.Sounds = {SOUND_TYPE_NOTIFICATION:{},
-                       SOUND_TYPE_GAME:{}
+        self.Sounds = {
+            SOUND_TYPE_NOTIFICATION:{},
+            SOUND_TYPE_GAME:{}
                        }
         self.SOUND = False
 
@@ -400,9 +401,13 @@ class Game:
 
     def update(self):
         self.UpdateEvents()
-        if not self.ConvertSceneThread.is_alive():
-            self.ConvertSceneThread = threading.Thread(target=self.ConvertScene.update)
-            self.ConvertSceneThread.start()
+        # if not self.ConvertSceneThread.is_alive():
+        #     self.ConvertSceneThread = threading.Thread(target=self.ConvertScene.update)
+        #     self.ConvertSceneThread.start()
+        try:
+            self.ConvertScene.update()
+        except Exception as err:
+            print(err)
         self.Notifications.update(self.mouse_left_press)
         self.screen.blit(self.ConvertScene.image, (0, 0))
         pygame.mouse.set_cursor(self.cursor)
@@ -413,6 +418,9 @@ class Game:
     def EditSettings(self, setting_type, name, value):
         self.Settings[setting_type][name]['value'] = value
         self.Settings = DATA(self.Settings.__dict__)
+
+    def EditWindowSize(self, size):
+        pass
 
 
 class InitScene:

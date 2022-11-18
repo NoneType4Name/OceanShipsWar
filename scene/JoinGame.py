@@ -1,9 +1,9 @@
 from Gui import *
 
 
-def IO(self, ip, *args):
-    if ' ' not in ip:
-        print(ip)
+def IO(self):
+    if ' ' not in self.value:
+        print(self.value)
     else:
         self.Activate()
 
@@ -41,7 +41,7 @@ class JoinGame:
                                border_active=border,
                                radius=0.5,
                                radius_active=0.5,
-                               func=IO)
+                               func_deactivate=IO)
         self.Input.active = True
         self.Elements = pygame.sprite.Group(self.ButtonEsc)
 

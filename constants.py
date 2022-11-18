@@ -1,5 +1,5 @@
-LANG_RUS = 'rus'
-LANG_ENG = 'eng'
+LANG_RUS = 'русский'
+LANG_ENG = 'english'
 DEFAULT_LANGUAGE = LANG_RUS
 
 ALPHA = 0

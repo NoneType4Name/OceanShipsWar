@@ -543,7 +543,7 @@ class TextInput(pygame.sprite.Sprite):
                  color, color_active, text_color, text_color_active,
                  gradient=False, gradient_start=(), gradient_end=(),
                  gradient_active=False, gradient_start_active=(), gradient_end_active=(),
-                 border=0, radius=0.5, border_active=0, radius_active=0.5, func=None):
+                 border=0, radius=0.5, border_active=0, radius_active=0.5, func_activate=None, func_deactivate=None):
         pygame.sprite.Sprite.__init__(self)
         self.parent = parent
         self.rect = pygame.Rect(rect)
@@ -570,7 +570,8 @@ class TextInput(pygame.sprite.Sprite):
         self.radius = radius
         self.border_active = border_active
         self.radius_active = radius_active
-        self.func = func
+        self.func_activate = func_activate if func_activate else lambda s: s
+        self.func_deactivate = func_deactivate if func_deactivate else lambda s: s
 
         self.active = False
         self.collide = False
@@ -613,73 +614,73 @@ class TextInput(pygame.sprite.Sprite):
 
         if any(map(lambda e: e.type in (pygame.KEYDOWN, pygame.TEXTEDITING, pygame.TEXTINPUT), events)):
             for event in events:
-                    if self.active:
-                        if event.type == pygame.KEYDOWN:
-                            if event.key == pygame.K_BACKSPACE:
-                                if self.pos:
-                                    if pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                                        for n, sim in enumerate(self.text[self.pos::-1]):
-                                            if sim in PUNCTUATION:
-                                                self.text = self.text[:self.pos - (n if n != 0 else 1)] + self.text[self.pos:]
-                                                self.pos -= n if n != 0 else 1
-                                                break
-                                        else:
-                                            self.text = self.text[self.pos:]
-                                            self.pos = 0
-                                    else:
-                                        self.text = self.text[:self.pos - 1] + self.text[self.pos:]
-                                        self.pos -= 1
-                            elif event.key == pygame.K_LEFT:
+                if self.active:
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_BACKSPACE:
+                            if self.pos:
                                 if pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                                    for n, sim in enumerate(self.text[:self.pos][::-1]):
+                                    for n, sim in enumerate(self.text[self.pos::-1]):
                                         if sim in PUNCTUATION:
+                                            self.text = self.text[:self.pos - (n if n != 0 else 1)] + self.text[self.pos:]
                                             self.pos -= n if n != 0 else 1
                                             break
                                     else:
+                                        self.text = self.text[self.pos:]
                                         self.pos = 0
-                                elif self.pos - 1 >= 0:
+                                else:
+                                    self.text = self.text[:self.pos - 1] + self.text[self.pos:]
                                     self.pos -= 1
-                            elif event.key == pygame.K_RIGHT:
-                                if pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                                    for n, sim in enumerate(self.text[self.pos:]):
-                                        if sim in PUNCTUATION:
-                                            self.pos += n if n != 0 else 1
-                                            break
-                                    else:
-                                        self.pos = len(self.text)
-                                elif self.pos + 1 <= len(self.text):
-                                    self.pos += 1
-                            elif event.key == pygame.K_DELETE:
-                                if pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                                    for n, sim in enumerate(self.text[self.pos:]):
-                                        if sim in PUNCTUATION:
-                                            self.text = self.text[:self.pos] + self.text[self.pos + n if n != 0 else 1:]
-                                            break
-                                    else:
-                                        self.text = self.text[:self.pos]
+                        elif event.key == pygame.K_LEFT:
+                            if pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                                for n, sim in enumerate(self.text[:self.pos][::-1]):
+                                    if sim in PUNCTUATION:
+                                        self.pos -= n if n != 0 else 1
+                                        break
                                 else:
-                                    self.text = self.text[:self.pos] + self.text[self.pos + 1:]
-                            elif event.key == pygame.K_HOME:
-                                self.pos = 0
-                            elif event.key == pygame.K_END:
-                                self.pos = len(self.text)
-                            elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER or event.key == pygame.K_ESCAPE:
-                                if pygame.key.get_mods() & pygame.KMOD_LCTRL and not self.text:
-                                    self.text = self.default
+                                    self.pos = 0
+                            elif self.pos - 1 >= 0:
+                                self.pos -= 1
+                        elif event.key == pygame.K_RIGHT:
+                            if pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                                for n, sim in enumerate(self.text[self.pos:]):
+                                    if sim in PUNCTUATION:
+                                        self.pos += n if n != 0 else 1
+                                        break
+                                else:
                                     self.pos = len(self.text)
+                            elif self.pos + 1 <= len(self.text):
+                                self.pos += 1
+                        elif event.key == pygame.K_DELETE:
+                            if pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                                for n, sim in enumerate(self.text[self.pos:]):
+                                    if sim in PUNCTUATION:
+                                        self.text = self.text[:self.pos] + self.text[self.pos + n if n != 0 else 1:]
+                                        break
                                 else:
-                                    self.Deactivate()
-                            elif event.key == pygame.K_v and pygame.key.get_mods() & pygame.KMOD_LCTRL:
-                                pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
-                                paste_text = pygame.scrap.get(pygame.SCRAP_TEXT).decode().translate(ESCAPE_CHARS_TRANSLATER)
-                                if paste_text:
-                                    self.text = self.text = self.text[:self.pos] + paste_text + self.text[self.pos:]
-                                    self.pos += len(paste_text)
-                        elif event.type == pygame.TEXTINPUT:
-                            self.text = self.text[:self.pos] + event.text + self.text[self.pos:]
-                            self.pos += len(event.text)
-                        self.value = self.text if self.text else self.default
-                        self.NewFont()
+                                    self.text = self.text[:self.pos]
+                            else:
+                                self.text = self.text[:self.pos] + self.text[self.pos + 1:]
+                        elif event.key == pygame.K_HOME:
+                            self.pos = 0
+                        elif event.key == pygame.K_END:
+                            self.pos = len(self.text)
+                        elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER or event.key == pygame.K_ESCAPE:
+                            if pygame.key.get_mods() & pygame.KMOD_LCTRL and not self.text:
+                                self.text = self.default
+                                self.pos = len(self.text)
+                            else:
+                                self.Deactivate()
+                        elif event.key == pygame.K_v and pygame.key.get_mods() & pygame.KMOD_LCTRL:
+                            pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
+                            paste_text = pygame.scrap.get(pygame.SCRAP_TEXT).decode().translate(ESCAPE_CHARS_TRANSLATER)
+                            if paste_text:
+                                self.text = self.text = self.text[:self.pos] + paste_text + self.text[self.pos:]
+                                self.pos += len(paste_text)
+                    elif event.type == pygame.TEXTINPUT:
+                        self.text = self.text[:self.pos] + event.text + self.text[self.pos:]
+                        self.pos += len(event.text)
+                    self.value = self.text if self.text else self.default
+                    self.NewFont()
         return self.image
 
     def isCollide(self):
@@ -695,12 +696,13 @@ class TextInput(pygame.sprite.Sprite):
             pygame.key.start_text_input()
             pygame.key.set_repeat(500, 50)
         self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'active')
+        self.func_activate(self)
 
     def Deactivate(self):
         self.active = False
         self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select')
         pygame.key.set_repeat(0, 0)
-        self.func(self, self.value)
+        self.func_deactivate(self)
 
     def NewFont(self):
         self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.value, self.text_rect))
