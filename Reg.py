@@ -89,9 +89,9 @@ def createParser():
     parser.add_argument('-l', '--links', dest='links', action='store_false')
     parser.add_argument('-s', '--size', dest='size')
     parser.add_argument('-t', '--theme', dest='theme', action='store_true')
-    parser.add_argument('-L', '--lang', dest='lang', choices=['rus', 'eng'])
+    parser.add_argument('-L', '--lang', dest='lang', choices=['русский', 'english'])
     parser.add_argument('--DeepLinksApi', dest='DeepLinksApi')
-    parser.add_argument('--debug', '-d', dest='debug', action='store_true')
+    parser.add_argument('--debug', '-d', dest='debug', type=int)
     log.debug(f'arg parser is inited. to get supported args, restart exe with arg -h/--help')
     return parser
 

@@ -1,5 +1,4 @@
-import pygame.sprite
-
+from functions import *
 from Gui import *
 
 
@@ -60,7 +59,7 @@ class Settings:
     def LoadElements(self):
         self.selected = None
         pad = SETTINGS_UPPER_MARGIN
-        language = self.parent.Language.DefaultDict
+        language = self.parent.Language
         BaseRect = pygame.Rect(self.parent.size[0] * 0.24, self.parent.size[1] * pad, self.parent.size[0] * 0.52,
                                self.parent.size[1] * 0.027)
         for type_settings in self.parent.Settings:

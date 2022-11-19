@@ -1,14 +1,8 @@
-import os.path
 import string
-import threading
-import time
 import pygame
-import copy
-import win32ui
 import itertools
-
+import time
 from constants import *
-
 
 PUNCTUATION = string.punctuation+' '
 ESCAPE_CHARS = '\n\a\b\f\r\t\v\x00'
@@ -809,66 +803,66 @@ class ProgressBar(pygame.sprite.Sprite):
                         self.progress_color), (self.wh, self.wh))
 
 
-class Path(pygame.sprite.Sprite):
-    def __init__(self, default_font, rect, around, color, font_color, display, name, value, types, typ, multiple):
-        pygame.sprite.Sprite.__init__(self)
-        self.default_font = default_font
-        self.rect = pygame.Rect(rect)
-        wh = int(self.rect.w + self.rect.h) // 100
-        self.wh = wh if wh else 1
-        self.rect_inner = pygame.Rect(rect[0] + self.wh, rect[1] + self.wh, rect[2] - self.wh * 2,
-                                      rect[3] - self.wh * 2)
-        self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
-        self.around_color = pygame.Color(around)
-        self.color = pygame.Color(color)
-        self.font_color = pygame.Color(font_color)
-        self.types = types
-        self.typ = typ
-        self.name = name
-        self.display = display
-        self.value = value
-        self.multiple = multiple
-        for s in range(1000):
-            self.font = pygame.font.Font(default_font, s)
-            self.size = self.font.size(self.value)
-            if self.size[0] > self.rect_inner.w or self.size[1] > self.rect_inner.h:
-                self.font = pygame.font.Font(default_font, s - 1)
-                self.size = self.font.size(self.value)
-                break
-
-    def update(self, mouse):
-        if os.path.splitext(self.value)[1] in self.typ:
-            self.image.blit(RoundedRect(self.rect, self.around_color, 1, self.wh, self.color), (0, 0))
-        else:
-            self.image.blit(RoundedRect(self.rect, (255, 0, 0), 1, self.wh, self.color), (0, 0))
-        if '\\' in self.value:
-            sep = '\\'
-        elif '/' in self.value:
-            sep = '/'
-        val = f'.../{"/".join(self.value.split(sep)[-3:])}'
-        for s in range(1000):
-            self.font = pygame.font.Font(self.default_font, s)
-            self.size = self.font.size(val)
-            if self.size[0] >= self.rect_inner.w or self.size[1] >= self.rect_inner.h:
-                self.font = pygame.font.Font(self.default_font, s - 1)
-                self.size = self.font.size(val)
-                break
-
-        self.image.blit(self.font.render(val, True, self.font_color), (self.rect_inner.w / 2 - self.size[0] / 2,
-                                                                       self.rect_inner.h / 2 - self.size[1] / 2))
-        if mouse and self.rect.collidepoint(pygame.mouse.get_pos()):
-            # os.chdir()
-            window = win32ui.CreateFileDialog(1, "", "", 0, "*.ttf|*.ttf|")
-            # value = win32ui.CreateFileDialog(1, ".txt", "default.txt", 0, "Font files (*.ttf)|*.ttf|All Files (*.*)|*.*|")
-            window.DoModal()
-            value = window.GetPathName()
-            # value = easygui.fileopenbox(filetypes=self.types, multiple=self.multiple, title=self.display)
-            if value:
-                if os.path.splitext(value)[1] in self.typ:
-                    self.value = value
-                    return {self.name: self.value}
-                else:
-                    self.value = value
+# class Path(pygame.sprite.Sprite):
+#     def __init__(self, default_font, rect, around, color, font_color, display, name, value, types, typ, multiple):
+#         pygame.sprite.Sprite.__init__(self)
+#         self.default_font = default_font
+#         self.rect = pygame.Rect(rect)
+#         wh = int(self.rect.w + self.rect.h) // 100
+#         self.wh = wh if wh else 1
+#         self.rect_inner = pygame.Rect(rect[0] + self.wh, rect[1] + self.wh, rect[2] - self.wh * 2,
+#                                       rect[3] - self.wh * 2)
+#         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+#         self.around_color = pygame.Color(around)
+#         self.color = pygame.Color(color)
+#         self.font_color = pygame.Color(font_color)
+#         self.types = types
+#         self.typ = typ
+#         self.name = name
+#         self.display = display
+#         self.value = value
+#         self.multiple = multiple
+#         for s in range(1000):
+#             self.font = pygame.font.Font(default_font, s)
+#             self.size = self.font.size(self.value)
+#             if self.size[0] > self.rect_inner.w or self.size[1] > self.rect_inner.h:
+#                 self.font = pygame.font.Font(default_font, s - 1)
+#                 self.size = self.font.size(self.value)
+#                 break
+#
+#     def update(self, mouse):
+#         if os.path.splitext(self.value)[1] in self.typ:
+#             self.image.blit(RoundedRect(self.rect, self.around_color, 1, self.wh, self.color), (0, 0))
+#         else:
+#             self.image.blit(RoundedRect(self.rect, (255, 0, 0), 1, self.wh, self.color), (0, 0))
+#         if '\\' in self.value:
+#             sep = '\\'
+#         elif '/' in self.value:
+#             sep = '/'
+#         val = f'.../{"/".join(self.value.split(sep)[-3:])}'
+#         for s in range(1000):
+#             self.font = pygame.font.Font(self.default_font, s)
+#             self.size = self.font.size(val)
+#             if self.size[0] >= self.rect_inner.w or self.size[1] >= self.rect_inner.h:
+#                 self.font = pygame.font.Font(self.default_font, s - 1)
+#                 self.size = self.font.size(val)
+#                 break
+#
+#         self.image.blit(self.font.render(val, True, self.font_color), (self.rect_inner.w / 2 - self.size[0] / 2,
+#                                                                        self.rect_inner.h / 2 - self.size[1] / 2))
+#         if mouse and self.rect.collidepoint(pygame.mouse.get_pos()):
+#             # os.chdir()
+#             window = win32ui.CreateFileDialog(1, "", "", 0, "*.ttf|*.ttf|")
+#             # value = win32ui.CreateFileDialog(1, ".txt", "default.txt", 0, "Font files (*.ttf)|*.ttf|All Files (*.*)|*.*|")
+#             window.DoModal()
+#             value = window.GetPathName()
+#             # value = easygui.fileopenbox(filetypes=self.types, multiple=self.multiple, title=self.display)
+#             if value:
+#                 if os.path.splitext(value)[1] in self.typ:
+#                     self.value = value
+#                     return {self.name: self.value}
+#                 else:
+#                     self.value = value
 
 
 # class Settings_class:

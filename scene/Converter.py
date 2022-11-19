@@ -1,3 +1,4 @@
+from functions import *
 from Gui import *
 
 
@@ -23,6 +24,9 @@ class ConvertScene:
             self.new = new(self.parent, self.old.type, kwargs)
         self.old_alpha = 255
         self.new_alpha = 0
+
+    # def ReSize(self):
+
 
     def update(self, *args):
         if self.old_alpha - self.step > 0 and self.new_alpha + self.step < 255:

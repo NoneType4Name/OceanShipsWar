@@ -21,7 +21,7 @@ class MainScene:
                                    (-1, parent.size.h - parent.block_size * 0.5,
                                     rect_w, rect_h),
                                    text_rect, text_rect,
-                                   parent.Language.DefaultDict.Version, parent.Language.DefaultDict.Version, *parent.Colors.Scene.Main.Button, border=border, border_active=border_active)
+                                   parent.Language.Version, parent.Language.Version, *parent.Colors.Scene.Main.Button, border=border, border_active=border_active)
 
         rect_w, rect_h = parent.size.w * 0.16, parent.size.h * 0.1
         border = rect_h * BORDER_ATTITUDE
@@ -34,17 +34,17 @@ class MainScene:
             (parent.size.w * 0.42, parent.size.h * 0.2,
              rect_w, rect_h),
             text_rect, text_rect_active,
-            parent.Language.DefaultDict.StartGame, parent.Language.DefaultDict.StartGame, *parent.Colors.Scene.Main.Button, border=border, border_active=border_active)
+            parent.Language.StartGame, parent.Language.StartGame, *parent.Colors.Scene.Main.Button, border=border, border_active=border_active)
         self.ButtonJoinGame = Button(self,
             (parent.size.w * 0.42, parent.size.h * 0.4,
              rect_w, rect_h),
             text_rect, text_rect_active,
-            parent.Language.DefaultDict.JoinGame, parent.Language.DefaultDict.JoinGame,  *parent.Colors.Scene.Main.Button, border=border, border_active=border_active)
+            parent.Language.JoinGame, parent.Language.JoinGame,  *parent.Colors.Scene.Main.Button, border=border, border_active=border_active)
         self.ButtonSettings = Button(self,
                                      (parent.size.w * 0.42, parent.size.h * 0.6,
                                          rect_w, rect_h),
                                      text_rect, text_rect_active,
-                                     parent.Language.DefaultDict.Settings, parent.Language.DefaultDict.Settings, *parent.Colors.Scene.Main.Button, border=border, border_active=border_active)
+                                     parent.Language.Settings, parent.Language.Settings, *parent.Colors.Scene.Main.Button, border=border, border_active=border_active)
 
         rect_w, rect_h = parent.block_size, parent.block_size
         border = rect_h * BORDER_ATTITUDE
@@ -57,14 +57,14 @@ class MainScene:
             (parent.size.w - parent.block_size * 1.5, parent.size.h - parent.block_size * 1.5,
              rect_w, rect_h),
             text_rect, text_rect,
-            parent.Language.DefaultDict.ThemeLight if parent.Settings.Graphic.Theme is THEME_LIGHT else parent.Language.DefaultDict.ThemeDark,
-            parent.Language.DefaultDict.ThemeLight if parent.Settings.Graphic.Theme is THEME_LIGHT else parent.Language.DefaultDict.ThemeDark,
+            parent.Language.ThemeLight if parent.Settings.Graphic.Theme is THEME_LIGHT else parent.Language.ThemeDark,
+            parent.Language.ThemeLight if parent.Settings.Graphic.Theme is THEME_LIGHT else parent.Language.ThemeDark,
             *parent.Colors.Scene.Main.Button, border=border, border_active=border)
         self.ButtonQuit = Button(self,
             (parent.size.w - parent.block_size + 1, -1,
              rect_w, rect_h),
             text_rect, text_rect_active,
-            parent.Language.DefaultDict.Exit, parent.Language.DefaultDict.Exit,
+            parent.Language.Exit, parent.Language.Exit,
             *parent.Colors.Scene.Main.Button, border=border, border_active=border_active)
 
         self.Elements = pygame.sprite.Group(self.ButtonUpdate, self.ButtonCreateGame, self.ButtonJoinGame,

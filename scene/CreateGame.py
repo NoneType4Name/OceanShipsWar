@@ -1,3 +1,4 @@
+from functions import *
 from Gui import *
 
 
@@ -44,7 +45,7 @@ class CreateGame:
                                radius=0.5,
                                radius_active=0.5,
                                func_deactivate=IO)
-        self.Input.active = True
+        self.Input.Activate()
         self.Elements = pygame.sprite.Group(self.ButtonEsc)
 
     def update(self, active, args):

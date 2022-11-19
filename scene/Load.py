@@ -1,5 +1,5 @@
+from functions import *
 from Gui import *
-import threading
 
 
 class LoadScene:

@@ -32,7 +32,7 @@ Settings = DATA({
         'Language': {'value': lang, 'type': List, 'values': dict(zip(DEFAULT_LANGUAGES, Language.LanguageList))},
         # 'Font': {'value': f'{FONT_PATH}', 'type': Path, 'title': 'Select Font (ttf)...', 'multiple': 0,
         #          'types': ['*.ttf']},
-        'Theme': {'value': theme, 'type': List, 'values': dict(zip(THEMES, Language.DefaultDict.ThemeList))}
+        'Theme': {'value': theme, 'type': List, 'values': dict(zip(THEMES, Language.ThemeList))}
 
     },
     'Sound': {
@@ -90,7 +90,6 @@ elif theme == THEME_DARK:
         'ButtonActive': ((255, 255, 255), (255, 255, 255), (91, 92, 93), (91, 92, 93), False, (100, 0, 200), (), False, (91, 92, 93)),
         'Switch': ((64, 64, 64), (64, 64, 64), (0, 255, 0), (255, 255, 255)),
         'Slide': ((53, 86, 140, 100), (53, 86, 140, 100), (38, 80, 148), (138, 180, 248)),
-        # 'List': ((232, 234, 236), (29, 29, 31), (41, 42, 45)),
         'List': ((29, 29, 31), (29, 29, 31), (232, 234, 236), (255, 255, 255), (41, 42, 45), False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146), ()),
         'Path': ((138, 180, 248), (53, 86, 140), (232, 234, 236)),
         'ProgressBar': ((255, 255, 255), (0, 255, 0)),
