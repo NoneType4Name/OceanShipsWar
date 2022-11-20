@@ -229,7 +229,7 @@ class Label(pygame.sprite.Sprite):
         self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
         self.text_rect = pygame.Rect(text_rect)
         self.left_padding = left_padding
-        self.text = text
+        self.value = text
         self.color = pygame.Color(color)
         self.color_active = pygame.Color(color_active)
         self.color_active = pygame.Color(color_active)
@@ -254,15 +254,15 @@ class Label(pygame.sprite.Sprite):
         if self.isCollide():
             self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), self.color_active,self.radius_active,
                                         self.gradient_active, self.gradient_start_active, self.gradient_end_active, self.border_active), (0, 0))
-            self.image.blit(self.font.render(self.text, True, self.text_color_active),
+            self.image.blit(self.font.render(self.value, True, self.text_color_active),
                             (self.rect.w * self.left_padding - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
         else:
             self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), self.color, self.radius,
                                         self.gradient, self.gradient_start, self.gradient_end,
                                         self.border), (0, 0))
-            self.image.blit(self.font.render(self.text, True, self.text_color),
+            self.image.blit(self.font.render(self.value, True, self.text_color),
                             (self.rect.w * self.left_padding - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
-        if self.size != self.font.size(self.text):
+        if self.size != self.font.size(self.value):
             self.NewFont()
         return self.image
 
@@ -270,11 +270,11 @@ class Label(pygame.sprite.Sprite):
         return self.rect.collidepoint(pygame.mouse.get_pos())
 
     def NewFont(self):
-        self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.text, self.text_rect))
-        self.size = self.font.size(self.text)
+        self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.value, self.text_rect))
+        self.size = self.font.size(self.value)
 
     def Function(self):
-        pass
+        self.func(self)
 
 
 class Slide(pygame.sprite.Sprite):

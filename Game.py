@@ -98,7 +98,6 @@ class Game:
             SOUND_TYPE_GAME:{}
                        }
         self.SOUND = False
-        print(1)
         self.Notifications = pygame.sprite.Group()
         self.GameEvents = []
         self.Properties = reg.getFileProperties(sys.executable)
@@ -164,12 +163,12 @@ class Game:
         if pygame.mixer.get_init():
             Load = 0
             scene.PercentLabel.value = ''
-            scene.TextLabel.text = ''
+            scene.TextLabel.value = ''
             while self.RUN:
-                scene.TextLabel.text = 'Подключение...'
+                scene.TextLabel.value = 'Подключение...'
                 try:
                     requests.get(GITHUB_REPOS_URL + 'releases/latest')
-                    scene.TextLabel.text = ''
+                    scene.TextLabel.value = ''
                     break
                 except requests.exceptions.ConnectionError:
                     pass
@@ -177,7 +176,7 @@ class Game:
             MaxLoad = len(list(itertools.chain(*SoundsDict.values()))) * 2
             for sound_type in SoundsDict:
                 for sound_name in SoundsDict[sound_type]:
-                    scene.TextLabel.text = f'Search: {os.path.join(".", SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'
+                    scene.TextLabel.value = f'Search: {os.path.join(".", SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'
                     while self.RUN:
                         if os.path.exists(f'{os.path.join(".", DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'):
                             Load += 1
@@ -187,11 +186,11 @@ class Game:
                             Load += 1
                             break
                     scene.ProgressBar.value = Load / MaxLoad
-                    scene.PercentLabel.text = f'{round(Load / MaxLoad * 100)}%'
+                    scene.PercentLabel.value = f'{round(Load / MaxLoad * 100)}%'
 
             for sound_type in SoundsDict:
                 for sound_name in SoundsDict[sound_type]:
-                    scene.TextLabel.text = f'Load: ./{os.path.join(SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'
+                    scene.TextLabel.value = f'Load: ./{os.path.join(SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'
                     if SoundsDict[sound_type][sound_name]:
                         sound = pygame.mixer.Sound(f'{os.path.join(self.MAIN_DIR, DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}')
                     else:
@@ -199,7 +198,7 @@ class Game:
                     self.Sounds[sound_type][sound_name] = sound
                     Load += 1
                     scene.ProgressBar.value = Load / MaxLoad
-                    scene.PercentLabel.text = f'{round(Load / MaxLoad * 100)}%'
+                    scene.PercentLabel.value = f'{round(Load / MaxLoad * 100)}%'
             self.Sounds = DATA(self.Sounds)
             self.SOUND = True
             return
@@ -257,8 +256,6 @@ class Game:
         self.mouse_pos = pygame.mouse.get_pos()
         self.cursor = pygame.SYSTEM_CURSOR_ARROW
         self.events = pygame.event.get()
-        if self.events:
-            log.debug(self.events)
         for event in self.events:
             if event.type == pygame.QUIT:
                 self.RUN = False

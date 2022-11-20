@@ -83,7 +83,6 @@ try:
     pygame.display.set_caption(GAME_NAME)
 
     build_ship = False
-    build_y = False
     ship = 0
     doSelect = True
     create_ship = None
@@ -101,9 +100,6 @@ try:
     great_build = False
     NOTIFICATIONS = []
     LegitBuild = True
-    block_block_num = False
-    quadro_ship_rect = None
-    quadro_ship_env = None
     DrawCursor = True
     BUILD = True
     killed_enemy = False

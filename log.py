@@ -79,7 +79,4 @@ log.error('ERROR.')
 log.critical('CRITICAL.')
 log.info('--------\tLogging start.\t--------')
 
-
-def print(*text):
-    log.info(text)
-
+print = log.info
