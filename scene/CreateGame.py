@@ -57,7 +57,7 @@ class CreateGame:
                                 text_rect, text_rect_active,
                                 'ESC', 'ESC', *parent.Colors.Scene.Main.Button,
                                 border=border, border_active=border_active,
-                                func=[EscActivate, self])
+                                func=EscActivate)
 
         rect_w, rect_h = parent.size.w * 0.2, parent.size.h * 0.1
         border = parent.size.h * 0.01

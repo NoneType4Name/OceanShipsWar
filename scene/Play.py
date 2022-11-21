@@ -2,6 +2,7 @@ import threading
 import time
 
 import pygame
+import numpy
 
 from functions import *
 from Gui import *
@@ -21,10 +22,11 @@ class Blocks(DATA):
         super().__init__(self.blocks)
 
     def GetRect(self, cords: tuple) -> pygame.Rect:
-        if cords:
+        try:
             return pygame.Rect(self.blocks[cords[0]][cords[1]])
-        else:
-            return False
+        except Exception:
+            log.critical(f'{cords}.')
+            raise ValueError
 
     def GetShip(self, cords: tuple) -> pygame.Rect:
         """
@@ -33,7 +35,7 @@ class Blocks(DATA):
         cords     :    tuple of frozen ship coordinates:   tuple
         return    ->   real ship coordinates
         """
-        if cords:
+        try:
             cords0 = self.GetRect(cords[0])
             cords1 = self.GetRect(cords[1])
             if cords0[1] == cords1[1]:
@@ -41,9 +43,9 @@ class Blocks(DATA):
             else:
                 return pygame.Rect(*cords0.topleft, self.block_size, cords1.y - cords0.y + self.block_size)
 
-        else:
+        except Exception:
             log.critical(f'{cords}.')
-            return False
+            raise ValueError
 
     def GetShipEnv(self, cords: tuple) -> pygame.Rect:
         """
@@ -55,12 +57,12 @@ class Blocks(DATA):
         cords     :    tuple of real ship cords:   tuple
         return    ->   list of all ship blocks
         """
-        if cords:
+        try:
             return pygame.Rect(cords[0] - self.block_size, cords[1] - self.block_size,
                                cords[2] + self.block_size * 2, cords[3] + self.block_size * 2)
-        else:
+        except Exception:
             log.critical(f'{cords}.')
-            return False
+            raise ValueError
 
     def GetShipBlocks(self, cords: tuple) -> list:
         """
@@ -72,7 +74,7 @@ class Blocks(DATA):
         cords     :    tuple of real ship cords:   tuple
         return    ->   list of all ship blocks
         """
-        if cords:
+        try:
             cord = []
             if cords[0][0] == cords[1][0]:
                 for pos in range(cords[0][1], cords[1][1] + 1):
@@ -81,7 +83,7 @@ class Blocks(DATA):
                 for pos in range(cords[0][0], cords[1][0] + 1):
                     cord.append((pos, cords[0][1]))
             return cord
-        else:
+        except Exception:
             log.critical(f'{cords}')
             return False
 
@@ -89,7 +91,7 @@ class Blocks(DATA):
         for letter in self.blocks:
             for num, block in enumerate(self.blocks[letter]):
                 if block.collidepoint(pygame.mouse.get_pos()):
-                    return letter, num
+                    return [letter, num]
 
 
 class Ships:
@@ -101,7 +103,11 @@ class Ships:
         self.ship_color = ship_color
         self.ships_width = ships_width
         self.SumShipsMaxCount = sum(self.counts.values())
-        self._selected = None
+        self._start_cord = None
+        self._end_cord = None
+        self._imaginary_ship = None
+        self._imaginary_ship_len = 1
+        self._imaginary_ship_direction_is_horizontal = None
 
     def AddShip(self, type_ship, ship):
         if self.counts[type_ship]:
@@ -115,6 +121,8 @@ class Ships:
         for _ in self.ships.values():
             for ship in _.values():
                 pygame.draw.rect(image, self.ship_color, self.blocks.GetShip(ship['ship']), self.ships_width)
+        if self._imaginary_ship:
+            pygame.draw.rect(image, self.ship_color, self.blocks.GetShip(self._merge_start_end_pos()), self.ships_width)
 
     def DrawShip(self, cords: tuple, image, custom_color=None):
         if custom_color:
@@ -125,35 +133,118 @@ class Ships:
     def DelShip(self, type_ship, number):
         del self.ships[type_ship][number]
 
+    def Clear(self):
+        self.ships = dict.fromkeys([1,2,3,4], {})
+        self.ships_count = dict.fromkeys([1,2,3,4], 0)
+
+    def RandomPlacing(self):
+        threading.Thread(target=lambda a:self).start()  # dummy
+
     def HasShip(self, cords):
         return any(map(lambda cord: True if cord == cords else False, GetDeepData(self.ships)))
 
-    def HasCollide(self, cords):
-        for _ in self.ships:
-            for ship_cords in self.ships[_].values():
-                if self.blocks.GetShipEnv(self.blocks.GetShip(ship_cords['ship'])).colliderect(self.blocks.GetShip(cords)):
-                    return True
-
-    def CanBuild_DrawCursor(self, cords) -> tuple:
-        if not cords:
-            return False, False
-        cords_rect = self.blocks.GetShip((cords, cords))
-        return_data = [True, True]
+    def CollideShip(self, ship_cord):
         for _ in self.ships:
             for rc in self.ships[_].values():
-                rect = self.blocks.GetShip(rc['ship'])
-                if self.blocks.GetShipEnv(rect).colliderect(cords_rect):
-                    return_data[0] = False
-                    if rect.colliderect(cords_rect):
-                        return_data[1] = False
-                    return return_data
-        return return_data
+                if self.blocks.GetShip(rc['ship']).colliderect(self.blocks.GetShip(ship_cord)):
+                    return True
+        return False
+
+    def CollideShipEnv(self, ship_cord):
+        for _ in self.ships:
+            for rc in self.ships[_].values():
+                if self.blocks.GetShipEnv(self.blocks.GetShip(rc['ship'])).colliderect(self.blocks.GetShip(ship_cord)):
+                    return True
+        return False
 
     def SumShipsCount(self):
         return sum(self.ships_count.values())
 
-    def StartBuildShip(self, selected):
-        self._selected = selected
+    def _update_imaginary_ship(self):
+        self._imaginary_ship = self._start_cord, self._end_cord
+        self._imaginary_ship_len = max(abs(numpy.array(self._start_cord) - numpy.array(self._end_cord))) + 1
+
+    def _end_build_ship(self):
+        self.AddShip(self._imaginary_ship_len, self._imaginary_ship)
+        self._clear_imaginary_ship()
+
+    def _clear_imaginary_ship(self):
+        self._start_cord = None
+        self._end_cord = None
+        self._imaginary_ship_len = 1
+        self._imaginary_ship = None
+
+    def SetStartPos(self, start, end=None):
+        self._start_cord = list(start)
+        self._end_cord = list(end if end else start)
+        self._imaginary_ship_len = 1
+        self._update_imaginary_ship()
+
+    def PassBuildShip(self):
+        self._clear_imaginary_ship()
+
+    def EndBuildShip(self):
+        self._imaginary_ship = self._merge_start_end_pos()
+        if not self.CollideShipEnv(self._imaginary_ship):
+            if len(self.counts) >= self._imaginary_ship_len:
+                if self.ships_count[self._imaginary_ship_len] < self.counts[self._imaginary_ship_len]:
+                    self._end_build_ship()
+                    self._clear_imaginary_ship()
+                    return None
+                else:
+                    return_data = self._imaginary_ship_len
+                    self._clear_imaginary_ship()
+                    return DATA({'type':'len', 'value':return_data})
+            else:
+                return_data = self._imaginary_ship_len
+                self._clear_imaginary_ship()
+                return DATA({'type':'len', 'value':return_data})
+
+        else:
+            self._clear_imaginary_ship()
+            return DATA({'type':'rule', 'value':None})
+
+    def SetDirection(self, is_horizontal: bool):
+        self._imaginary_ship_direction_is_horizontal = is_horizontal
+
+    def MoveEndPointTo(self, difference):
+        if not self._imaginary_ship_direction_is_horizontal:
+            self._end_cord[0] += difference[0]
+        else:
+            self._end_cord[1] += difference[1]
+        self._update_imaginary_ship()
+
+    def CanMergeDirection(self, actual_pos):
+        if not self._imaginary_ship_direction_is_horizontal:
+            if not self._start_cord[0] - actual_pos[0]:
+                return True
+        else:
+            if not self._start_cord[1] - actual_pos[1]:
+                return True
+        return False
+
+    def GetImaginaryShipLen(self):
+        return self._imaginary_ship_len
+
+    def GetImaginaryShipCords(self):
+        return self._merge_start_end_pos()
+
+    def GetImaginaryShipDirection(self):
+        return self._imaginary_ship_direction_is_horizontal
+
+    def GetImaginaryShipStartCord(self):
+        return self._start_cord
+
+    def GetImaginaryShipEndCord(self):
+        return self._end_cord
+
+    def _merge_start_end_pos(self):
+        if not all(numpy.array(self._start_cord) <= numpy.array(self._end_cord)):
+            return self._end_cord, self._start_cord
+        return self._start_cord, self._end_cord
+
+    def _random_placing(self):
+        pass # dummy
 
 
 sz = (920, 540)
@@ -230,8 +321,21 @@ class Exemplar:
         # GetIP(self)
         # Synchronize(self, 'start')
 
+    def PlaySound(self, *args):
+        pass
+
     def update(self, events):
-        for event in events:
+        self.mouse_left_release = False
+        self.mouse_right_release = False
+        self.mouse_middle_release = False
+
+        self.mouse_wheel_x = 0
+        self.mouse_wheel_y = 0
+
+        self.mouse_pos = pygame.mouse.get_pos()
+        self.cursor = pygame.SYSTEM_CURSOR_ARROW
+        self.events = events
+        for event in self.events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == pygame.BUTTON_LEFT:
                     self.mouse_left_press = True
@@ -285,14 +389,26 @@ class PlayGame:
         self.socket.bind((self.parent.source_ip, self.parent.source_port))
         self.condition = GAME_CONDITION_WAIT
         self.selected = None
-        self._in_build = False
-        self._build = False
-        self._start_build = None
-        self._horizontal_build = False
-        self._select_to_build = False
-        self._mediocre_ship = None
-        self._ship_direction = 0
-        self._ship_len = 0
+        self._activate_press = False
+        self._keyboard_input = False
+        rect_w, rect_h = self.size.w * 0.1, self.size.h * 0.05
+        border = rect_h * BORDER_ATTITUDE
+        text_rect = (border, border, rect_w - border * 2, rect_h - border * 2)
+        self.ClearMap = Button(self,
+                               (self.size.w * 0.1, self.size.h * 0.7 - rect_h, rect_w, rect_h),
+                               text_rect,
+                               text_rect,
+                               self.parent.Language.GameClearMap,
+                               self.parent.Language.GameClearMap,
+                               (10, 10, 10),(10, 10, 10), (255,255,255), (255,255,255),False, (100, 100, 200), (255,255,255), False, (200, 100, 255), (), border=border,func=lambda s:s.parent.Ships.Clear())
+        self.RandomPlacing = Button(self,
+                                    (self.size.w * 0.1, self.size.h * 0.7, rect_w, rect_h),
+                                    text_rect,
+                                    text_rect,
+                                    self.parent.Language.GameRandomBuild,
+                                    self.parent.Language.GameRandomBuild,
+                                    (100, 100, 100),(100, 100, 100), (255,255,255), (255,255,255),False, (100, 100, 200), (255,255,255), False, (200, 100, 255), (), border=border,func=lambda s:s.parent.Ships.Clear())
+        self.Elements = pygame.sprite.Group(self.ClearMap, self.RandomPlacing)
 
     def DrawLines(self):
         if not self.Lines:
@@ -318,160 +434,74 @@ class PlayGame:
         pass
 
     def inBuild(self):
-        CanBuild, DrawCursorRect = self.Ships.CanBuild_DrawCursor(self.selected)
-        if self.Ships.SumShipsCount() == self.Ships.SumShipsMaxCount:
-            self.condition += 1
-        elif self.parent.mouse_left_press and self.selected and CanBuild:
-            DrawCursorRect = False
-            self._in_build = True
-            if not self._build:
-                self._start_build = self.selected
-                self._horizontal_build = True
-                self._build = True
-                self._select_to_build = True
-            else:
-                if self._start_build == self.selected:
-                    self._mediocre_ship = self._start_build, self.selected
+        if self.parent.mouse_left_press or self._activate_press:
+            if self.selected:
+                if self.Ships.GetImaginaryShipStartCord():
+                    as_array_end_pos = numpy.array(self.Ships.GetImaginaryShipEndCord())
+                    as_array_selected = numpy.array(self.selected)
+                    distance = as_array_selected - as_array_end_pos
+                    if any(distance):
+                        self.Ships.MoveEndPointTo(distance)
+                    if self.Ships.GetImaginaryShipDirection() is None or self.Ships.CanMergeDirection(self.selected):
+                        self.Ships.SetDirection(True if not distance[0] else False)
                 else:
-                    if self._select_to_build:
-                        if self.Blocks.GetRect(self._start_build).x < self.Blocks.GetRect(self.selected).x:
-                            self._select_to_build = False
-                            self._ship_direction = 0
-
-                        elif self.Blocks.GetRect(self._start_build).x > self.Blocks.GetRect(self.selected).x:
-                            self._select_to_build = False
-                            self._ship_direction = 1
-
-                        elif self.Blocks.GetRect(self._start_build).y < self.Blocks.GetRect(self.selected).y:
-                            self._select_to_build = False
-                            self._ship_direction = 2
-
-                        elif self.Blocks.GetRect(self._start_build).y > self.Blocks.GetRect(self.selected).y:
-                            self._select_to_build = False
-                            self._ship_direction = 3
-                    else:
-                        if not self._ship_direction:
-                            if self.Blocks.GetRect(self.selected).x - self.Blocks.GetRect(self._start_build).x > 0:
-                                self._ship_len = self.selected[0] - self._start_build[0] + 1
-                                self._mediocre_ship = (self._start_build, (self.selected[0], self._start_build[1]))
-                                self._horizontal_build = True
-                            else:
-                                self._select_to_build = True
-
-                        elif self._ship_direction == 1:
-                            if self.Blocks.GetRect(self._start_build).x - self.Blocks.GetRect(self.selected).x > 0:
-                                self._ship_len = self._start_build[0] - self.selected[0] + 1
-                                self._mediocre_ship = ((self.selected[0], self._start_build[1]), self._start_build)
-                                self._horizontal_build = True
-                            else:
-                                self._select_to_build = True
-
-                        elif self._ship_direction == 2:
-                            if self.Blocks.GetRect(self.selected).y - self.Blocks.GetRect(self._start_build).y > 0:
-                                self._ship_len = self.selected[1] - self._start_build[1] + 1
-                                self._mediocre_ship = (self._start_build, (self._start_build[0], self.selected[1]))
-                                self._horizontal_build = False
-                            else:
-                                self._select_to_build = True
-
-                        elif self._ship_direction == 3:
-                            if self.Blocks.GetRect(self._start_build).y - self.Blocks.GetRect(self.selected).y > 0:
-                                self._ship_len = self._start_build[1] - self.selected[1] + 1
-                                self._mediocre_ship = ((self._start_build[0], self.selected[1]), self._start_build)
-                                self._horizontal_build = False
-                            else:
-                                self._select_to_build = True
-                if self._mediocre_ship:
-                    pygame.draw.rect(self.image, self.Ships.ship_color, self.Blocks.GetShip(self._mediocre_ship), self.Ships.ships_width)
-
+                    self.Ships.SetStartPos(self.selected)
         else:
-            if self._build and self._mediocre_ship:
-                if self.Ships.HasCollide(self._mediocre_ship):
-                    self._build = False
-                    self._select_to_build = True
-                    DrawCursorRect = True
-                    self._start_build = None
-                    self._ship_direction = 0
-                    print('ne po pravilam.')
-                    # self.parent.AddNotification('NE PO PRAVILAM!.')
-                else:
-                    if self._ship_len > 4:
-                        print('Максимальная длина корабля 4 клетки!.')
-                        self._mediocre_ship = None
-                        self._build = False
-                        self._select_to_build = True
-                        DrawCursorRect = True
-                        self._start_build = None
-                        self._ship_direction = 0
-                    elif self._ship_len == 4:
-                        if self.Ships.ships_count[4] < self.Ships.counts[4]:
-                            self.Ships.ships_count[4] += 1
-                            self.Ships.AddShip(4, self._mediocre_ship)
-                            self._in_build = True
-                        else:
-                            print('4-х палубные корабли закончились!.')
-                            self._mediocre_ship = None
-                            self._build = False
-                            self._select_to_build = True
-                            DrawCursorRect = True
-                            self._start_build = None
-                            self._ship_direction = 0
-                    elif self._ship_len == 3:
-                        if self.Ships.ships_count[3] < self.Ships.counts[3]:
-                            self.Ships.ships_count[3] += 1
-                            self.Ships.AddShip(3, self._mediocre_ship)
-                            self._in_build = True
-                        else:
-                            print('3-х палубные корабли закончились!.')
-                            self._mediocre_ship = None
-                            self._build = False
-                            self._select_to_build = True
-                            DrawCursorRect = True
-                            self._start_build = None
-                            self._ship_direction = 0
-                    elif self._ship_len == 2:
-                        if self.Ships.ships_count[2] < self.Ships.counts[2]:
-                            self.Ships.ships_count[2] += 1
-                            self.Ships.AddShip(2, self._mediocre_ship)
-                            self._in_build = True
-                        else:
-                            print('2-х палубные корабли закончились!.')
-                            self._mediocre_ship = None
-                            self._build = False
-                            self._select_to_build = True
-                            DrawCursorRect = True
-                            self._start_build = None
-                            self._ship_direction = 0
-                    elif self._ship_len == 1:
-                        if self.Ships.ships_count[1] < self.Ships.counts[1]:
-                            self.Ships.ships_count[1] += 1
-                            self.Ships.AddShip(1, self._mediocre_ship)
-                            self._in_build = True
-                        else:
-                            print('1-о палубные корабли закончились!.')
-                            self._mediocre_ship = None
-                            self._build = False
-                            self._select_to_build = True
-                            DrawCursorRect = True
-                            self._start_build = None
-                            self._ship_direction = 0
-                if self._in_build:
-                    self._in_build = False
-                    self._build = False
-                    self._select_to_build = True
-                    DrawCursorRect = True
-                    self._start_build = None
-                    self._ship_direction = 0
-                    self._mediocre_ship = None
-                    self._horizontal_build = True
-
-        # for event in self.parent.events:
+            if self.Ships.GetImaginaryShipStartCord() and self.Ships.GetImaginaryShipCords():
+                error = self.Ships.EndBuildShip()
+                if error:
+                    if error.type == 'rule':
+                        print('Ne Po Pravilam.')
+                    elif error.type == 'count':
+                        print(f'{error.value}-h kletochniye corabli zakonchilis')
+                    elif error.type == 'len':
+                        print('max len ship: 4')
+                elif self.Ships.SumShipsMaxCount == self.Ships.SumShipsCount():
+                    self.condition += 1
 
     def update(self, active, args):
+        for event in self.parent.events:
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_SPACE):
+                    self._activate_press = True
+                elif event.key == pygame.K_TAB:
+                    self._keyboard_input = [0, 0]
+                    pygame.key.set_repeat(200, 100)
+                if self._keyboard_input:
+                    if event.key == pygame.K_LEFT:
+                        self._keyboard_input[0] -= 1 if self._keyboard_input[0] else 0
+                    elif event.key == pygame.K_RIGHT:
+                        self._keyboard_input[0] += 1 if self._keyboard_input[0] + 1 < len(self.Blocks.blocks.keys()) else 0
+                    elif event.key == pygame.K_UP:
+                        self._keyboard_input[1] -= 1 if self._keyboard_input[1] else 0
+                    elif event.key == pygame.K_DOWN:
+                        self._keyboard_input[1] += 1 if self._keyboard_input[1] + 1 < len(self.Blocks.blocks.values()) else 0
+
+            elif event.type == pygame.KEYUP:
+                if event.key in (pygame.K_LSHIFT, pygame.K_RSHIFT):
+                    self._activate_press = False
+        if self._keyboard_input and self.parent.mouse_left_press:
+            self._keyboard_input = False
         self.image.fill(self.parent.Colors.Background)
+        self.Elements.update()
+        self.Elements.draw(self.image)
         self.DrawLines()
         self.Ships.draw(self.image)
         self.selected = self.Blocks.GetCollide()
+        if self.ClearMap.isCollide() and self.parent.mouse_left_release:
+            self.ClearMap.Function()
+        elif self.RandomPlacing.isCollide() and self.parent.mouse_left_release:
+            self.RandomPlacing.Function()
+
+        if self._keyboard_input:
+            self.selected = self._keyboard_input
+        if self.selected:
+            if self.Ships.GetImaginaryShipStartCord():
+                if not self.Blocks.GetRect(self.selected).colliderect(self.Blocks.GetShip(self.Ships.GetImaginaryShipCords())):
+                    self.Ships.DrawShip((self.selected,self.selected), self.image, (0, 255, 0))
+            else:
+                self.Ships.DrawShip((self.selected,self.selected), self.image, (0, 255, 0))
+
         if self.condition == GAME_CONDITION_WAIT:
             self.condition = GAME_CONDITION_BUILD
         elif self.condition == GAME_CONDITION_BUILD:

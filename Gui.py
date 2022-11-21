@@ -12,8 +12,8 @@ pygame.font.init()
 
 
 def EscActivate(self, **kwargs):
-    self.parent.SetScene(self.InputScene, *kwargs)
-    self.parent.PlaySound(SOUND_TYPE_GAME, 'select')
+    self.parent.parent.SetScene(self.parent.InputScene, *kwargs)
+    self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select')
 
 
 def GetDeepData(data):
@@ -130,12 +130,7 @@ class Button(pygame.sprite.Sprite):
         self.radius = radius
         self.border = border_active
         self.radius_active = radius_active
-        if func:
-            self.func = func[0]
-            self.args = func[1:]
-        else:
-            self.func = lambda _: False
-            self.args = [False]
+        self.func = func if func else lambda _: False
 
         font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text, self.text_rect))
         size = font.size(text)
@@ -173,8 +168,8 @@ class Button(pygame.sprite.Sprite):
         self.rect.x += x
         self.rect.y += y
 
-    def Function(self, *args):
-        self.func(*list(itertools.chain(self.args, args)))
+    def Function(self):
+        self.func(self)
 
 
 class Switch(pygame.sprite.Sprite):
@@ -583,16 +578,17 @@ class TextInput(pygame.sprite.Sprite):
             if self.isCollide():
                 self.parent.parent.cursor = pygame.SYSTEM_CURSOR_IBEAM
             self.image.blit(RoundedRect(self.rect, self.color_active, self.radius, self.gradient_active, self.gradient_start_active, self.gradient_end_active, self.border_active), (0, 0))
-            width = int(self.font.size(self.text[:self.pos])[1] * 0.1)
-            pygame.draw.line(self.image,
-                             (self.color_active.r - 100 if self.color_active.r - 100 > 0 else 100,
-                              self.color_active.g - 100 if self.color_active.g - 100 > 0 else 100,
-                              self.color_active.b - 100 if self.color_active.b - 100 > 0 else 100),
-                             ((self.text_rect.w * self.left_padding - self.size[0] * 0.5) - width + self.font.size(self.text[:self.pos])[0] + self.text_rect.x,
-                              self.text_rect.h * 0.5 - self.size[1] * 0.5 + self.text_rect.y),
-                             ((self.text_rect.w * self.left_padding - self.size[0] * 0.5) - width + self.font.size(self.text[:self.pos])[0] + self.text_rect.x,
-                              self.text_rect.h * 0.5 + self.size[1] * 0.5 + self.text_rect.y),
-                             int(self.font.size(self.text[:self.pos])[1] * 0.1))
+            if time.time() % 1 > 0.5:
+                width = int(self.font.size(self.text[:self.pos])[1] * 0.1)
+                pygame.draw.line(self.image,
+                                 (self.color_active.r - 100 if self.color_active.r - 100 > 0 else 100,
+                                  self.color_active.g - 100 if self.color_active.g - 100 > 0 else 100,
+                                  self.color_active.b - 100 if self.color_active.b - 100 > 0 else 100),
+                                 ((self.text_rect.w * self.left_padding - self.size[0] * 0.5) - width + self.font.size(self.text[:self.pos])[0] + self.text_rect.x,
+                                  self.text_rect.h * 0.5 - self.size[1] * 0.5 + self.text_rect.y),
+                                 ((self.text_rect.w * self.left_padding - self.size[0] * 0.5) - width + self.font.size(self.text[:self.pos])[0] + self.text_rect.x,
+                                  self.text_rect.h * 0.5 + self.size[1] * 0.5 + self.text_rect.y),
+                                 int(self.font.size(self.text[:self.pos])[1] * 0.1))
         else:
             if self.isCollide():
                 self.parent.parent.cursor = pygame.SYSTEM_CURSOR_HAND
