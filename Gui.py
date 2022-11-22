@@ -107,7 +107,7 @@ class Button(pygame.sprite.Sprite):
                  color, color_active, text_color, text_color_active,
                  gradient=False, gradient_start=(), gradient_end=(),
                  gradient_active=False, gradient_start_active=(), gradient_end_active=(),
-                 border=0, radius=0.5, border_active=0, radius_active=0.5, func=None):
+                 border=0, radius=0.5, border_active=0, radius_active=0.5, func=None, args=()):
         pygame.sprite.Sprite.__init__(self)
         self.parent = parent
         self.rect = pygame.Rect(rect)
@@ -130,7 +130,8 @@ class Button(pygame.sprite.Sprite):
         self.radius = radius
         self.border = border_active
         self.radius_active = radius_active
-        self.func = func if func else lambda _: False
+        self.func = func if func else lambda s, a=(): s
+        self.args = args
 
         font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text, self.text_rect))
         size = font.size(text)
@@ -169,7 +170,10 @@ class Button(pygame.sprite.Sprite):
         self.rect.y += y
 
     def Function(self):
-        self.func(self)
+        if self.args:
+            self.func(self, *self.args)
+        else:
+            self.func(self)
 
 
 class Switch(pygame.sprite.Sprite):
@@ -185,7 +189,7 @@ class Switch(pygame.sprite.Sprite):
         self.type_settings = type_settings
         self.name = name
         self.value = value
-        self.func = func
+        self.func = func if func else lambda s: s
 
     def isCollide(self):
         return self.rect.collidepoint(pygame.mouse.get_pos())
@@ -240,7 +244,7 @@ class Label(pygame.sprite.Sprite):
         self.border_active = border_active
         self.radius = radius
         self.radius_active = radius_active
-        self.func = func
+        self.func = func if func else lambda s: s
         self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text, self.text_rect))
         self.size = self.font.size(text)
 

@@ -1,9 +1,12 @@
+import random
+import sys
 import threading
 import time
 
 import pygame
 import numpy
 
+import log
 from functions import *
 from Gui import *
 
@@ -137,8 +140,8 @@ class Ships:
         self.ships = dict.fromkeys([1,2,3,4], {})
         self.ships_count = dict.fromkeys([1,2,3,4], 0)
 
-    def RandomPlacing(self):
-        threading.Thread(target=lambda a:self).start()  # dummy
+    def RandomPlacing(self, image):
+        threading.Thread(target=self._random_placing, args=[image]).start()
 
     def HasShip(self, cords):
         return any(map(lambda cord: True if cord == cords else False, GetDeepData(self.ships)))
@@ -207,11 +210,11 @@ class Ships:
     def SetDirection(self, is_horizontal: bool):
         self._imaginary_ship_direction_is_horizontal = is_horizontal
 
-    def MoveEndPointTo(self, difference):
+    def MoveEndPointTo(self, difference=(), value=0):
         if not self._imaginary_ship_direction_is_horizontal:
-            self._end_cord[0] += difference[0]
+            self._end_cord[0] += difference[0] if difference is not () else value
         else:
-            self._end_cord[1] += difference[1]
+            self._end_cord[1] += difference[1] if difference is not () else value
         self._update_imaginary_ship()
 
     def CanMergeDirection(self, actual_pos):
@@ -243,8 +246,35 @@ class Ships:
             return self._end_cord, self._start_cord
         return self._start_cord, self._end_cord
 
-    def _random_placing(self):
-        pass # dummy
+    def _random_placing(self, image):
+        while self.SumShipsMaxCount > self.SumShipsCount() and run:
+            self.Clear()
+            cord_not_used = dict.fromkeys([x for x in range(len(self.blocks.blocks.keys()) - 1)], dict.fromkeys([y for y in range(len(self.blocks.blocks.values()) - 1)], True))
+            errors = 0
+            for type_ship, count_ships in enumerate(self.counts.values()):
+                for _ in range(count_ships):
+                    while errors < 50:
+                        errors += 1
+                        while True:
+                            start_x = random.choice(list(cord_not_used.keys()))
+                            start_y = random.choice(list(cord_not_used[start_x]))
+                            direct = random.randint(0, 1)
+                            if not direct:
+                                if not (start_x + type_ship >= len(self.blocks.blocks.keys()) - 1):
+                                    break
+                            else:
+                                if not (start_y + type_ship >= len(self.blocks.blocks.values()) - 1):
+                                    break
+                        self.SetStartPos((start_x, start_y))
+                        self.SetDirection(direct)
+                        self.MoveEndPointTo(value=type_ship)
+                        self.DrawShip(self.GetImaginaryShipCords(), image, (0, 200, 255))
+                        time.sleep(0.01)
+                        error = self.EndBuildShip()
+                        if not error:
+                            break
+                        else:
+                            cord_not_used[start_x][start_y] = False
 
 
 sz = (920, 540)
@@ -367,6 +397,10 @@ class Exemplar:
                     self.mouse_wheel_y = event.rel[1]
 
 
+def RndFunc(self):
+    self.parent.Ships.RandomPlacing(self.parent.image)
+
+
 class PlayGame:
     def __init__(self, parent:Exemplar, enemy:(str, int), **kwargs):
         self.type = PLAY
@@ -407,8 +441,9 @@ class PlayGame:
                                     text_rect,
                                     self.parent.Language.GameRandomBuild,
                                     self.parent.Language.GameRandomBuild,
-                                    (100, 100, 100),(100, 100, 100), (255,255,255), (255,255,255),False, (100, 100, 200), (255,255,255), False, (200, 100, 255), (), border=border,func=lambda s:s.parent.Ships.Clear())
+                                    (100, 100, 100),(100, 100, 100), (255,255,255), (255,255,255),False, (100, 100, 200), (255,255,255), False, (200, 100, 255), (), border=border,func=RndFunc)
         self.Elements = pygame.sprite.Group(self.ClearMap, self.RandomPlacing)
+        self._random_place = False
 
     def DrawLines(self):
         if not self.Lines:
@@ -434,7 +469,18 @@ class PlayGame:
         pass
 
     def inBuild(self):
-        if self.parent.mouse_left_press or self._activate_press:
+        self.ClearMap.update()
+        self.RandomPlacing.update()
+        if self.ClearMap.isCollide() and self.parent.mouse_left_release:
+            self.ClearMap.Function()
+        elif self.RandomPlacing.isCollide() and self.parent.mouse_left_release:
+            self.RandomPlacing.Function()
+            self._random_place = True
+        if self._random_place:
+            if self.Ships.SumShipsMaxCount == self.Ships.SumShipsCount():
+                self.condition += 1
+                self._activate_press = False
+        elif self.parent.mouse_left_press or self._activate_press:
             if self.selected:
                 if self.Ships.GetImaginaryShipStartCord():
                     as_array_end_pos = numpy.array(self.Ships.GetImaginaryShipEndCord())
@@ -483,15 +529,10 @@ class PlayGame:
         if self._keyboard_input and self.parent.mouse_left_press:
             self._keyboard_input = False
         self.image.fill(self.parent.Colors.Background)
-        self.Elements.update()
         self.Elements.draw(self.image)
         self.DrawLines()
         self.Ships.draw(self.image)
         self.selected = self.Blocks.GetCollide()
-        if self.ClearMap.isCollide() and self.parent.mouse_left_release:
-            self.ClearMap.Function()
-        elif self.RandomPlacing.isCollide() and self.parent.mouse_left_release:
-            self.RandomPlacing.Function()
 
         if self._keyboard_input:
             self.selected = self._keyboard_input

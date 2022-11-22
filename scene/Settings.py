@@ -2,10 +2,10 @@ from functions import *
 from Gui import *
 
 
-def ButtonActivate(self, name, *args):
-    if self.active_element == name:
+def ButtonActivate(self, name):
+    if self.parent.active_element == name:
         return
-    self.active_element = name
+    self.parent.active_element = name
 
 
 def SlideValue(self):
@@ -75,7 +75,7 @@ class Settings:
                     (2, 2, BaseRect.h * 5 - 4, BaseRect.h - 4),
                     language[_type_settings],
                     language[_type_settings],
-                    *self.parent.Colors['ButtonActive' if type_settings == _type_settings else 'Button'], border=2, border_active=2, func=[ButtonActivate, self, _type_settings]))
+                    *self.parent.Colors['ButtonActive' if type_settings == _type_settings else 'Button'], border=2, border_active=2, func=ButtonActivate, args=[_type_settings]))
                 buttons_pad += BaseRect.h / self.parent.size[1] * 1.1
             for element in self.parent.Settings[type_settings]:
                 BaseRect = pygame.Rect(self.parent.size[0] * 0.24, self.parent.size[1] * pad,
@@ -88,7 +88,7 @@ class Settings:
                                                         element,
                                                         self.parent.Settings[type_settings][element]['value'],
                                                         *self.parent.Colors['Switch'],
-                                                        func=SwitchValue
+                                                        func=SwitchValue,
                                                         )
                 elif self.parent.Settings[type_settings][element]['type'] is List:
                     settings_elements[element] = List(self, (BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1, BaseRect.y + 1, BaseRect.h * 4 - BaseRect.h * 0.1, BaseRect.h - 2),
