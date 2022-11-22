@@ -78,14 +78,18 @@ class Blocks(DATA):
         return    ->   list of all ship blocks
         """
         try:
-            cord = []
-            if cords[0][0] == cords[1][0]:
-                for pos in range(cords[0][1], cords[1][1] + 1):
-                    cord.append((cords[0][0], pos))
-            else:
-                for pos in range(cords[0][0], cords[1][0] + 1):
-                    cord.append((pos, cords[0][1]))
-            return cord
+            blocks = []
+            for x in range(cords[0][0], cords[1][0] + 1):
+                for y in range(cords[0][1], cords[1][1] + 1):
+                    blocks.append((x, y))
+
+            # if cords[0][0] == cords[1][0]:
+            #     for pos in range(cords[0][1], cords[1][1] + 1):
+            #         blocks.append((cords[0][0], pos))
+            # else:
+            #     for pos in range(cords[0][0], cords[1][0] + 1):
+            #         blocks.append((pos, cords[0][1]))
+            return blocks
         except Exception:
             log.critical(f'{cords}')
             return False
@@ -98,10 +102,11 @@ class Blocks(DATA):
 
 
 class Ships:
-    def __init__(self, blocks:Blocks, ship_color, ships_width, solo_count=4, duo_count=3, trio_count=2, quadro_count=1):
+    def __init__(self, blocks: Blocks, ship_color, ships_width, solo_count=4, duo_count=3, trio_count=2,
+                 quadro_count=1):
         self.counts = {1: solo_count, 2: duo_count, 3: trio_count, 4: quadro_count}
-        self.ships = dict.fromkeys([1,2,3,4], {})
-        self.ships_count = dict.fromkeys([1,2,3,4], 0)
+        self.ships = dict.fromkeys([1, 2, 3, 4], {})
+        self.ships_count = dict.fromkeys([1, 2, 3, 4], 0)
         self.blocks = blocks
         self.ship_color = ship_color
         self.ships_width = ships_width
@@ -137,8 +142,8 @@ class Ships:
         del self.ships[type_ship][number]
 
     def Clear(self):
-        self.ships = dict.fromkeys([1,2,3,4], {})
-        self.ships_count = dict.fromkeys([1,2,3,4], 0)
+        self.ships = dict.fromkeys([1, 2, 3, 4], {})
+        self.ships_count = dict.fromkeys([1, 2, 3, 4], 0)
 
     def RandomPlacing(self, image):
         threading.Thread(target=self._random_placing, args=[image]).start()
@@ -197,24 +202,24 @@ class Ships:
                 else:
                     return_data = self._imaginary_ship_len
                     self._clear_imaginary_ship()
-                    return DATA({'type':'len', 'value':return_data})
+                    return DATA({'type': 'len', 'value': return_data})
             else:
                 return_data = self._imaginary_ship_len
                 self._clear_imaginary_ship()
-                return DATA({'type':'len', 'value':return_data})
+                return DATA({'type': 'len', 'value': return_data})
 
         else:
             self._clear_imaginary_ship()
-            return DATA({'type':'rule', 'value':None})
+            return DATA({'type': 'rule', 'value': None})
 
     def SetDirection(self, is_horizontal: bool):
         self._imaginary_ship_direction_is_horizontal = is_horizontal
 
     def MoveEndPointTo(self, difference=(), value=0):
         if not self._imaginary_ship_direction_is_horizontal:
-            self._end_cord[0] += difference[0] if difference is not () else value
+            self._end_cord[0] += difference[0] if difference != () else value
         else:
-            self._end_cord[1] += difference[1] if difference is not () else value
+            self._end_cord[1] += difference[1] if difference != () else value
         self._update_imaginary_ship()
 
     def CanMergeDirection(self, actual_pos):
@@ -249,36 +254,56 @@ class Ships:
     def _random_placing(self, image):
         while self.SumShipsMaxCount > self.SumShipsCount() and run:
             self.Clear()
-            cord_not_used = dict.fromkeys([x for x in range(len(self.blocks.blocks.keys()) - 1)], dict.fromkeys([y for y in range(len(self.blocks.blocks.values()) - 1)], True))
+            cord_not_used = dict.fromkeys([x for x in range(len(self.blocks.blocks.keys()) - 1)],
+                                          dict.fromkeys([y for y in range(len(self.blocks.blocks.values()) - 1)], True))
+            cords_used = []
             errors = 0
             for type_ship, count_ships in enumerate(self.counts.values()):
+                if errors > 100:
+                    break
+                errors = 0
                 for _ in range(count_ships):
-                    while errors < 50:
-                        errors += 1
-                        while True:
+                    while errors < 100:
+                        while errors < 100:
+                            errors += 1
                             start_x = random.choice(list(cord_not_used.keys()))
                             start_y = random.choice(list(cord_not_used[start_x]))
                             direct = random.randint(0, 1)
                             if not direct:
                                 if not (start_x + type_ship >= len(self.blocks.blocks.keys()) - 1):
-                                    break
+                                    if not set(self.blocks.GetShipBlocks(((start_x, start_y), (start_x + type_ship, start_y)))) & set(cords_used):
+                                        break
                             else:
                                 if not (start_y + type_ship >= len(self.blocks.blocks.values()) - 1):
-                                    break
+                                    if not set(self.blocks.GetShipBlocks(((start_x, start_y), (start_x, start_y + type_ship)))) & set(cords_used):
+                                        break
+                        else:
+                            break
                         self.SetStartPos((start_x, start_y))
                         self.SetDirection(direct)
                         self.MoveEndPointTo(value=type_ship)
-                        self.DrawShip(self.GetImaginaryShipCords(), image, (0, 200, 255))
+                        ship = self.GetImaginaryShipCords()
+                        self.DrawShip(ship, image, (0, 200, 255))
                         time.sleep(0.01)
                         error = self.EndBuildShip()
                         if not error:
                             break
                         else:
-                            cord_not_used[start_x][start_y] = False
+                            ship[0][0] -= 1 if ship[0][0] - 1 >= 0 else 0
+                            ship[0][1] -= 1 if ship[0][1] - 1 >= 0 else 0
+                            ship[1][0] += 1 if ship[1][0] + 1 < len(self.blocks.blocks.keys()) - 1 else 0
+                            ship[1][1] += 1 if ship[1][1] + 1 < len(self.blocks.blocks.values()) - 1 else 0
+                            for block in G.Ships.blocks.GetShipBlocks(ship):
+                                cord_not_used[block[0]][block[1]] = False
+                                cords_used.append(block)
+                    else:
+                        break
 
 
 sz = (920, 540)
 bl = int(sz[0] // BLOCK_ATTITUDE)
+
+
 # blocs = Blocks(10, (sz[0] * 0.5 - bl * 5), (sz[1] * 0.5 - bl * 5), bl)
 
 
@@ -305,31 +330,43 @@ class Exemplar:
         self.size = SIZE(sz)
         self.block_size = int(self.size.w // BLOCK_ATTITUDE)
         self.Colors = DATA({
-        'KilledShip': (60, 60, 60),
-        'Lines': (255, 255, 255),
-        'Background': (24, 24, 24),
-        'Label': ((41, 42, 43), (91, 92, 93), (232, 234, 236), (232, 234, 236), False, (91, 92, 93), (), False, (255, 255, 255), ()),
-        'Button': ((41, 42, 43), (255, 255, 255), (232, 234, 236), (0, 0, 0), False, (91, 92, 93), (91, 92, 93), False, (91, 92, 93)),
-        'ButtonRed': ((255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
-        'ButtonActive': ((255, 255, 255), (255, 255, 255), (91, 92, 93), (91, 92, 93), False, (100, 0, 200), (), False, (91, 92, 93)),
-        'Switch': ((64, 64, 64), (64, 64, 64), (0, 255, 0), (255, 255, 255)),
-        'Slide': ((53, 86, 140, 100), (53, 86, 140, 100), (38, 80, 148), (138, 180, 248)),
-        'List': ((29, 29, 31), (29, 29, 31), (232, 234, 236), (255, 255, 255), (41, 42, 45), False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146), ()),
-        'Path': ((138, 180, 248), (53, 86, 140), (232, 234, 236)),
-        'ProgressBar': ((255, 255, 255), (0, 255, 0)),
-        'TextInput': ((24, 24, 24), (24, 24, 24), (155, 155, 155), (255, 255, 255), False, (100, 0, 255, 100), (), False, (100, 0, 255), ()),
-        'Red': (255, 0, 0),
-        'Green': (0, 255, 0),
-        'Blue': (0, 0, 255),
-        'White': (0, 0, 255),
-        'Scene':{
-            'Load':{
-                'Label': ((0, 0, 0, 0), (0, 0, 0, 0), (0, 255, 0), (0, 255, 0)),
-                'ProgressBar': ((24, 24, 24), (0, 255, 0))},
-            'Main':{
-                'Button':((0, 0, 0), (0, 0, 0), (255, 255, 255), (100, 0, 200), True, (24, 24, 24), (0, 0, 0), True, (24, 24, 24), (0, 0, 0)),
+            'KilledShip': (60, 60, 60),
+            'Lines': (255, 255, 255),
+            'Background': (24, 24, 24),
+            'Label': ((41, 42, 43), (91, 92, 93), (232, 234, 236), (232, 234, 236), False, (91, 92, 93), (), False,
+                      (255, 255, 255), ()),
+            'Button': (
+            (41, 42, 43), (255, 255, 255), (232, 234, 236), (0, 0, 0), False, (91, 92, 93), (91, 92, 93), False,
+            (91, 92, 93)),
+            'ButtonRed': (
+            (255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
+            'ButtonActive': (
+            (255, 255, 255), (255, 255, 255), (91, 92, 93), (91, 92, 93), False, (100, 0, 200), (), False,
+            (91, 92, 93)),
+            'Switch': ((64, 64, 64), (64, 64, 64), (0, 255, 0), (255, 255, 255)),
+            'Slide': ((53, 86, 140, 100), (53, 86, 140, 100), (38, 80, 148), (138, 180, 248)),
+            'List': (
+            (29, 29, 31), (29, 29, 31), (232, 234, 236), (255, 255, 255), (41, 42, 45), False, (89, 111, 146), (),
+            False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146), ()),
+            'Path': ((138, 180, 248), (53, 86, 140), (232, 234, 236)),
+            'ProgressBar': ((255, 255, 255), (0, 255, 0)),
+            'TextInput': (
+            (24, 24, 24), (24, 24, 24), (155, 155, 155), (255, 255, 255), False, (100, 0, 255, 100), (), False,
+            (100, 0, 255), ()),
+            'Red': (255, 0, 0),
+            'Green': (0, 255, 0),
+            'Blue': (0, 0, 255),
+            'White': (0, 0, 255),
+            'Scene': {
+                'Load': {
+                    'Label': ((0, 0, 0, 0), (0, 0, 0, 0), (0, 255, 0), (0, 255, 0)),
+                    'ProgressBar': ((24, 24, 24), (0, 255, 0))},
+                'Main': {
+                    'Button': (
+                    (0, 0, 0), (0, 0, 0), (255, 255, 255), (100, 0, 200), True, (24, 24, 24), (0, 0, 0), True,
+                    (24, 24, 24), (0, 0, 0)),
+                }
             }
-        }
         })
         self.VERSION = '0'
         self.Language = DATA(replace_str_var(Language(DEFAULT_LANGUAGES, DEFAULT_LANGUAGE, False).__dict__, self))
@@ -402,7 +439,7 @@ def RndFunc(self):
 
 
 class PlayGame:
-    def __init__(self, parent:Exemplar, enemy:(str, int), **kwargs):
+    def __init__(self, parent: Exemplar, enemy: (str, int), **kwargs):
         self.type = PLAY
         self.parent = parent
         if kwargs.get('demo'):
@@ -415,9 +452,10 @@ class PlayGame:
         self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
         self.image.fill(self.parent.Colors.Background)
         self.Lines = None
-        self.Blocks = Blocks(10, (self.parent.size.w * 0.5 - self.parent.block_size * 5), (self.parent.size.h * 0.5 - self.parent.block_size * 5), self.parent.block_size)
-        self.Ships = Ships(self.Blocks, self.parent.Colors.Lines, self.Blocks.block_size//7)
-        self.KilledShips = Ships(self.Blocks, self.parent.Colors.Lines, self.Blocks.block_size//7)
+        self.Blocks = Blocks(10, (self.parent.size.w * 0.5 - self.parent.block_size * 5),
+                             (self.parent.size.h * 0.5 - self.parent.block_size * 5), self.parent.block_size)
+        self.Ships = Ships(self.Blocks, self.parent.Colors.Lines, self.Blocks.block_size // 7)
+        self.KilledShips = Ships(self.Blocks, self.parent.Colors.Lines, self.Blocks.block_size // 7)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.parent.source_ip, self.parent.source_port))
@@ -434,35 +472,52 @@ class PlayGame:
                                text_rect,
                                self.parent.Language.GameClearMap,
                                self.parent.Language.GameClearMap,
-                               (10, 10, 10),(10, 10, 10), (255,255,255), (255,255,255),False, (100, 100, 200), (255,255,255), False, (200, 100, 255), (), border=border,func=lambda s:s.parent.Ships.Clear())
+                               (10, 10, 10), (10, 10, 10), (255, 255, 255), (255, 255, 255), False, (100, 100, 200),
+                               (255, 255, 255), False, (200, 100, 255), (), border=border,
+                               func=lambda s: s.parent.Ships.Clear())
         self.RandomPlacing = Button(self,
                                     (self.size.w * 0.1, self.size.h * 0.7, rect_w, rect_h),
                                     text_rect,
                                     text_rect,
                                     self.parent.Language.GameRandomBuild,
                                     self.parent.Language.GameRandomBuild,
-                                    (100, 100, 100),(100, 100, 100), (255,255,255), (255,255,255),False, (100, 100, 200), (255,255,255), False, (200, 100, 255), (), border=border,func=RndFunc)
+                                    (100, 100, 100), (100, 100, 100), (255, 255, 255), (255, 255, 255), False,
+                                    (100, 100, 200), (255, 255, 255), False, (200, 100, 255), (), border=border,
+                                    func=RndFunc)
         self.Elements = pygame.sprite.Group(self.ClearMap, self.RandomPlacing)
         self._random_place = False
 
     def DrawLines(self):
         if not self.Lines:
             self.Lines = pygame.Surface(self.parent.size, pygame.SRCALPHA)
-            left_margin, upper_margin = (self.parent.size.w * 0.5 - self.parent.block_size * 5), (self.parent.size.h * 0.5 - self.parent.block_size * 5)
+            left_margin, upper_margin = (self.parent.size.w * 0.5 - self.parent.block_size * 5), (
+                        self.parent.size.h * 0.5 - self.parent.block_size * 5)
             for it in range(11):
-                pygame.draw.line(self.Lines, self.parent.Colors.Lines, (left_margin, upper_margin + it * self.parent.block_size),
-                                 (left_margin + 10 * self.parent.block_size, upper_margin + it * self.parent.block_size), 1)
-                pygame.draw.line(self.Lines, self.parent.Colors.Lines, (left_margin + it * self.parent.block_size, upper_margin),
-                                 (left_margin + it * self.parent.block_size, upper_margin + 10 * self.parent.block_size), 1)
+                pygame.draw.line(self.Lines, self.parent.Colors.Lines,
+                                 (left_margin, upper_margin + it * self.parent.block_size),
+                                 (
+                                 left_margin + 10 * self.parent.block_size, upper_margin + it * self.parent.block_size),
+                                 1)
+                pygame.draw.line(self.Lines, self.parent.Colors.Lines,
+                                 (left_margin + it * self.parent.block_size, upper_margin),
+                                 (
+                                 left_margin + it * self.parent.block_size, upper_margin + 10 * self.parent.block_size),
+                                 1)
                 if it < 10:
-                    font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.parent.Language.Letters[0], pygame.Rect(0, 0, self.parent.block_size, self.parent.block_size)))
+                    font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.parent.Language.Letters[0],
+                                                                   pygame.Rect(0, 0, self.parent.block_size,
+                                                                               self.parent.block_size)))
                     num = font.render(str(it + 1), True, self.parent.Colors.Lines)
                     letter = font.render(self.parent.Language.Letters[it], True, self.parent.Colors.Lines)
                     num_ver_width = num.get_width()
                     num_ver_height = num.get_height()
                     letters_hor_width = letter.get_width()
-                    self.Lines.blit(num, (left_margin - (self.parent.block_size * 0.5 + num_ver_width * 0.5), upper_margin + it * self.parent.block_size + (self.parent.block_size * 0.5 - num_ver_height * 0.5)))
-                    self.Lines.blit(letter, (left_margin + it * self.parent.block_size + (self.parent.block_size * 0.5 - letters_hor_width * 0.5), upper_margin - font.size(self.parent.Language.Letters[it])[1] * 1.2))
+                    self.Lines.blit(num, (left_margin - (self.parent.block_size * 0.5 + num_ver_width * 0.5),
+                                          upper_margin + it * self.parent.block_size + (
+                                                      self.parent.block_size * 0.5 - num_ver_height * 0.5)))
+                    self.Lines.blit(letter, (left_margin + it * self.parent.block_size + (
+                                self.parent.block_size * 0.5 - letters_hor_width * 0.5),
+                                             upper_margin - font.size(self.parent.Language.Letters[it])[1] * 1.2))
         self.image.blit(self.Lines, (0, 0))
 
     def GetData(self):
@@ -517,11 +572,13 @@ class PlayGame:
                     if event.key == pygame.K_LEFT:
                         self._keyboard_input[0] -= 1 if self._keyboard_input[0] else 0
                     elif event.key == pygame.K_RIGHT:
-                        self._keyboard_input[0] += 1 if self._keyboard_input[0] + 1 < len(self.Blocks.blocks.keys()) else 0
+                        self._keyboard_input[0] += 1 if self._keyboard_input[0] + 1 < len(
+                            self.Blocks.blocks.keys()) else 0
                     elif event.key == pygame.K_UP:
                         self._keyboard_input[1] -= 1 if self._keyboard_input[1] else 0
                     elif event.key == pygame.K_DOWN:
-                        self._keyboard_input[1] += 1 if self._keyboard_input[1] + 1 < len(self.Blocks.blocks.values()) else 0
+                        self._keyboard_input[1] += 1 if self._keyboard_input[1] + 1 < len(
+                            self.Blocks.blocks.values()) else 0
 
             elif event.type == pygame.KEYUP:
                 if event.key in (pygame.K_LSHIFT, pygame.K_RSHIFT):
@@ -538,10 +595,11 @@ class PlayGame:
             self.selected = self._keyboard_input
         if self.selected:
             if self.Ships.GetImaginaryShipStartCord():
-                if not self.Blocks.GetRect(self.selected).colliderect(self.Blocks.GetShip(self.Ships.GetImaginaryShipCords())):
-                    self.Ships.DrawShip((self.selected,self.selected), self.image, (0, 255, 0))
+                if not self.Blocks.GetRect(self.selected).colliderect(
+                        self.Blocks.GetShip(self.Ships.GetImaginaryShipCords())):
+                    self.Ships.DrawShip((self.selected, self.selected), self.image, (0, 255, 0))
             else:
-                self.Ships.DrawShip((self.selected,self.selected), self.image, (0, 255, 0))
+                self.Ships.DrawShip((self.selected, self.selected), self.image, (0, 255, 0))
 
         if self.condition == GAME_CONDITION_WAIT:
             self.condition = GAME_CONDITION_BUILD
@@ -561,10 +619,16 @@ while run:
     ev = pygame.event.get()
     E.update(ev)
     screen.blit(G.update(True, ''), (0, 0))
+    pygame.key.set_repeat(1, 1)
     for e in ev:
         if e.type == pygame.QUIT:
             run = False
         elif e.type == pygame.KEYDOWN:
+            s = numpy.array(((2,5),(8,8)))
+            for cord in G.Ships.blocks.GetShipBlocks((s[0]-1, s[1]+1)):
+                G.Ships.DrawShip((cord, cord), screen)
+            for cord in G.Ships.blocks.GetShipBlocks(s):
+                G.Ships.DrawShip((cord,cord),screen, (255,0,0))
             if e.key == pygame.K_ESCAPE:
                 run = False
     pygame.display.flip()
