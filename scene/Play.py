@@ -100,6 +100,8 @@ class Blocks(DATA):
             for num, block in enumerate(self.blocks[letter]):
                 if block.collidepoint(pygame.mouse.get_pos()):
                     return [letter, num]
+    def GetShipLen(self, cords):
+        return max(abs(numpy.array(cords[0]) - numpy.array(cords[1]))) + 1
 
 
 class Ships:
@@ -327,27 +329,6 @@ sz = (920, 540)
 bl = int(sz[0] // BLOCK_ATTITUDE)
 
 
-# blocs = Blocks(10, (sz[0] * 0.5 - bl * 5), (sz[1] * 0.5 - bl * 5), bl)
-
-
-# def Synchronize(self, *text):
-#     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#     sock.bind((self.source_ip, self.source_port))
-#     while True:
-#         sock.sendto(' '.join(text).encode(), self.enemy_addr)
-#         data, addr = sock.recvfrom(1024)
-#         try:
-#             if data.decode() == 'start':
-#                 sock.sendto(' '.join(text).encode(), addr)
-#                 self.enemy_addr = addr
-#                 print(('enemy', addr))
-#                 break
-#         except UnicodeError:
-#             pass
-#     sock.close()
-
-
 class Exemplar:
     def __init__(self):
         self.size = SIZE(sz)
@@ -407,9 +388,6 @@ class Exemplar:
         self.mouse_wheel_y = 0
         self.cursor = pygame.SYSTEM_CURSOR_ARROW
         self.events = []
-        # self.enemy_addr = ('109.252.70.249', 1359)
-        # GetIP(self)
-        # Synchronize(self, 'start')
 
     def PlaySound(self, *args):
         pass
@@ -462,15 +440,12 @@ def RndFunc(self):
 
 
 class PlayGame:
-    def __init__(self, parent: Exemplar, enemy: (str, int), **kwargs):
+    def __init__(self, parent: Exemplar, game: (str, int), enemy: (str, int)):
         self.type = PLAY
         self.parent = parent
-        if kwargs.get('demo'):
-            self.host = ''
-            self.port = 0
-        else:
-            self.host = enemy[0]
-            self.port = enemy[1]
+        self.enemy_host, self.enemy_port = enemy
+        self.host = game[0]
+        self.port = game[1]
         self.size = self.parent.size
         self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
         self.image.fill(self.parent.Colors.Background)
@@ -479,13 +454,36 @@ class PlayGame:
                              (self.parent.size.h * 0.5 - self.parent.block_size * 5), self.parent.block_size)
         self.Ships = Ships(self.Blocks, self.parent.Colors.Lines, (100, 100, 100), self.Blocks.block_size // 7)
         self.KilledShips = Ships(self.Blocks, self.parent.Colors.Lines, (100, 100, 100), self.Blocks.block_size // 7)
+
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind((self.parent.source_ip, self.parent.source_port))
+        self.socket.bind((self.host, self.port))
+        self.socket_activated = False
+        self.recv_thread = threading.Thread(target=lambda a: a, args=[None])
+        self.recv_thread.start()
         self.condition = GAME_CONDITION_WAIT
         self.selected = None
         self._activate_press = False
         self._keyboard_input = False
+        self._activate = 0
+        self._send_dict = {
+            'ships': self.Ships.ships,
+            'counts': self.Ships.counts,
+            'selects': [],
+            'killed': {'blocks': [], 'ships': []},
+            'die': {'blocks': [], 'ships': []},
+            'condition': self.condition,
+            'events': []
+        }
+        self._recv_dict = {
+            'ships': {},
+            'counts': {},
+            'selects': [],
+            'killed': {'blocks': [], 'ships': []},
+            'die': {'blocks': [], 'ships': []},
+            'condition': self.condition,
+            'events': []
+        }
         rect_w, rect_h = self.size.w * 0.1, self.size.h * 0.05
         border = rect_h * BORDER_ATTITUDE
         text_rect = (border, border, rect_w - border * 2, rect_h - border * 2)
@@ -543,8 +541,41 @@ class PlayGame:
                                              upper_margin - font.size(self.parent.Language.Letters[it])[1] * 1.2))
         self.image.blit(self.Lines, (0, 0))
 
+    def ActivateSocket(self):
+        threading.Thread(target=self._activate_socket).start()
+
+    def _activate_socket(self):
+        self._activate = time.time()
+        while True:
+            self.socket.sendto(f'OSW{self._activate}'.encode(), (self.enemy_host, self.enemy_port))
+            data, adr = self.socket.recvfrom(1024)
+            try:
+                data = data.decode()
+                if 'OSW' in data and adr == (self.enemy_host, self.enemy_port):
+                    self.socket.sendto(f'OSW{self._activate}'.encode(), adr)
+                    log.info(adr)
+                    self.socket_activated = True
+                    self.recv_thread = threading.Thread(target=self._socket_recv)
+                    self.recv_thread.start()
+                    if self._activate < float(data[3:]):
+                        self.condition = GAME_CONDITION_ATTACK
+                    else:
+                        self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
+                    break
+            except UnicodeError:
+                log.info(f'why did you launch another one of the same?, data:{data}.')
+
+    def _socket_recv(self):
+        while self.socket_activated:
+            self.GetData()
+
+    def SendData(self):
+        self.socket.sendto(str(self._send_dict).encode(), (self.enemy_host, self.enemy_port))
+
     def GetData(self):
-        pass
+        data = self.socket.recv(2048)
+        if data:
+            self._recv_dict = literal_eval(data.decode())
 
     def inBuild(self):
         self.ClearMap.update()
@@ -628,14 +659,39 @@ class PlayGame:
                 self.Ships.DrawShip((self.selected, self.selected), self.image, (0, 255, 0))
 
         if self.condition == GAME_CONDITION_WAIT:
-            self.condition = GAME_CONDITION_BUILD
+            if not self._activate:
+                self.ActivateSocket()
         elif self.condition == GAME_CONDITION_BUILD:
             self.inBuild()
         return self.image
+adr_loc = ('0.0.0.0', 9997)
 
+
+def GetIP(loc):
+    ip, port = loc
+    while True:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind((ip, port))
+        sock.settimeout(0.1)
+
+        nat_type, nat = stun.get_nat_type(sock, ip, port, stun_host='stun.l.google.com', stun_port=19302)
+        if nat['ExternalIP']:
+            ex_ip = nat['ExternalIP']
+            ex_port = nat['ExternalPort']
+            sock.settimeout(None)
+            return (ip, port), (ex_ip, ex_port)
+        else:
+            port += 1
+
+
+adr_loc, extern = GetIP(adr_loc)
+print((adr_loc, extern))
+enemy = input('>>>>').split(':')
+enemy = enemy[0], int(enemy[1])
 
 E = Exemplar()
-G = PlayGame(E, (), demo=True)
+G = PlayGame(E, adr_loc, enemy)
 
 pygame.init()
 screen = pygame.display.set_mode(sz, pygame.SRCALPHA)
