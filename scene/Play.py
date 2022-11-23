@@ -12,7 +12,7 @@ from Gui import *
 
 
 class Blocks(DATA):
-    def __init__(self, w_h: int, left_margin, upper_margin, block_size):
+    def __init__(self, display_size: SIZE, w_h: int, left_margin, upper_margin, block_size):
         blocks = {}
         for num_let in range(w_h):
             blocks[num_let] = []
@@ -20,6 +20,7 @@ class Blocks(DATA):
                 blocks[num_let].append(
                     pygame.Rect(left_margin + num_let * block_size, upper_margin + num * block_size, block_size,
                                 block_size))
+        self.size = display_size
         self.blocks = blocks
         self.block_size = block_size
         super().__init__(self.blocks)
@@ -102,13 +103,14 @@ class Blocks(DATA):
 
 
 class Ships:
-    def __init__(self, blocks: Blocks, ship_color, ships_width, solo_count=4, duo_count=3, trio_count=2,
+    def __init__(self, blocks: Blocks, alive_ship_color, not_alive_ship_color, ships_width, solo_count=4, duo_count=3, trio_count=2,
                  quadro_count=1):
         self.counts = {1: solo_count, 2: duo_count, 3: trio_count, 4: quadro_count}
         self.ships = dict.fromkeys([1, 2, 3, 4], {})
         self.ships_count = dict.fromkeys([1, 2, 3, 4], 0)
         self.blocks = blocks
-        self.ship_color = ship_color
+        self.alive_ship_color = alive_ship_color
+        self.not_alive_ship_color = not_alive_ship_color
         self.ships_width = ships_width
         self.SumShipsMaxCount = sum(self.counts.values())
         self._start_cord = None
@@ -128,15 +130,37 @@ class Ships:
     def draw(self, image):
         for _ in self.ships.values():
             for ship in _.values():
-                pygame.draw.rect(image, self.ship_color, self.blocks.GetShip(ship['ship']), self.ships_width)
+                pygame.draw.rect(image, self.alive_ship_color, self.blocks.GetShip(ship['ship']), self.ships_width)
         if self._imaginary_ship:
-            pygame.draw.rect(image, self.ship_color, self.blocks.GetShip(self._merge_start_end_pos()), self.ships_width)
+            pygame.draw.rect(image, self.alive_ship_color, self.blocks.GetShip(self._merge_start_end_pos()), self.ships_width)
+        self.DrawShipCount(image)
+
+    def DrawShipCount(self, image):
+        mid = [self.blocks.size.w // 2 + self.blocks.size.w // 2 // 2, self.blocks.size.h // 2 - self.blocks.size.h // 2 // 1.5]
+        ships_count = copy.deepcopy(self.ships_count)
+        for type_ship in self.counts.keys():
+            counter_block_num = 0
+            for num_block in range((self.counts[type_ship] * type_ship) + self.counts[type_ship]):
+                if counter_block_num < type_ship:
+                    if ships_count[type_ship] < self.counts[type_ship]:
+                        color = self.alive_ship_color
+                    else:
+                        color = self.not_alive_ship_color
+                    counter_block_num += 1
+                else:
+                    color = False
+                    counter_block_num = 0
+                    ships_count[type_ship] += 1 if ships_count[type_ship] < self.counts[type_ship] else 0
+                if color:
+                    pygame.draw.rect(image, color, (
+                        mid[0] + num_block * (self.blocks.block_size // 2), mid[1] + self.blocks.block_size * type_ship, self.blocks.block_size // 2, self.blocks.block_size // 2),
+                                     self.ships_width // 2)
 
     def DrawShip(self, cords: tuple, image, custom_color=None):
         if custom_color:
             pygame.draw.rect(image, custom_color, self.blocks.GetShip(cords), self.ships_width)
         else:
-            pygame.draw.rect(image, self.ship_color, self.blocks.GetShip(cords), self.ships_width)
+            pygame.draw.rect(image, self.alive_ship_color, self.blocks.GetShip(cords), self.ships_width)
 
     def DelShip(self, type_ship, number):
         del self.ships[type_ship][number]
@@ -217,9 +241,9 @@ class Ships:
 
     def MoveEndPointTo(self, difference=(), value=0):
         if not self._imaginary_ship_direction_is_horizontal:
-            self._end_cord[0] += difference[0] if difference != () else value
+            self._end_cord[0] += difference[0] if len(difference) else value
         else:
-            self._end_cord[1] += difference[1] if difference != () else value
+            self._end_cord[1] += difference[1] if len(difference) else value
         self._update_imaginary_ship()
 
     def CanMergeDirection(self, actual_pos):
@@ -284,7 +308,6 @@ class Ships:
                         self.MoveEndPointTo(value=type_ship)
                         ship = self.GetImaginaryShipCords()
                         self.DrawShip(ship, image, (0, 200, 255))
-                        time.sleep(0.01)
                         error = self.EndBuildShip()
                         if not error:
                             break
@@ -452,10 +475,10 @@ class PlayGame:
         self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
         self.image.fill(self.parent.Colors.Background)
         self.Lines = None
-        self.Blocks = Blocks(10, (self.parent.size.w * 0.5 - self.parent.block_size * 5),
+        self.Blocks = Blocks(self.size, 10, (self.parent.size.w * 0.5 - self.parent.block_size * 5),
                              (self.parent.size.h * 0.5 - self.parent.block_size * 5), self.parent.block_size)
-        self.Ships = Ships(self.Blocks, self.parent.Colors.Lines, self.Blocks.block_size // 7)
-        self.KilledShips = Ships(self.Blocks, self.parent.Colors.Lines, self.Blocks.block_size // 7)
+        self.Ships = Ships(self.Blocks, self.parent.Colors.Lines, (100, 100, 100), self.Blocks.block_size // 7)
+        self.KilledShips = Ships(self.Blocks, self.parent.Colors.Lines, (100, 100, 100), self.Blocks.block_size // 7)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.parent.source_ip, self.parent.source_port))
@@ -560,6 +583,9 @@ class PlayGame:
                 elif self.Ships.SumShipsMaxCount == self.Ships.SumShipsCount():
                     self.condition += 1
 
+    def inGame(self):  # issue
+        pass
+
     def update(self, active, args):
         for event in self.parent.events:
             if event.type == pygame.KEYDOWN:
@@ -624,11 +650,6 @@ while run:
         if e.type == pygame.QUIT:
             run = False
         elif e.type == pygame.KEYDOWN:
-            s = numpy.array(((2,5),(8,8)))
-            for cord in G.Ships.blocks.GetShipBlocks((s[0]-1, s[1]+1)):
-                G.Ships.DrawShip((cord, cord), screen)
-            for cord in G.Ships.blocks.GetShipBlocks(s):
-                G.Ships.DrawShip((cord,cord),screen, (255,0,0))
             if e.key == pygame.K_ESCAPE:
                 run = False
     pygame.display.flip()
