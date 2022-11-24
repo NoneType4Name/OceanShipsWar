@@ -1,3 +1,5 @@
+import ast
+
 from functions import *
 # from scene.Play import PlayGame
 from scene.Menu import MainScene
@@ -203,9 +205,9 @@ class Game:
             self.SOUND = True
             return
 
-    def GameEvent(self, **kwargs):
-        event = DATA(kwargs)
-        self.GameEvents.append(event)
+    # def GameEvent(self, **kwargs):
+    #     event = DATA(kwargs)
+    #     self.GameEvents.append(event)
 
     def AddNotification(self, notification_text):
         self.Notifications.add(Notification(FONT_PATH, (self.size[0] * 0.3, self.size[1] * 0.07,
@@ -269,7 +271,6 @@ class Game:
                 elif event.button == pygame.BUTTON_MIDDLE:
                     self.mouse_middle_press = True
                     self.mouse_middle_release = False
-
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == pygame.BUTTON_LEFT:
                     self.mouse_left_press = False
