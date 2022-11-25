@@ -179,7 +179,6 @@ class Ships:
     def KillBlock(self, block):
         if block in GetDeepData(self.ships):
             type_ship, number = self.CollideShip((block, block))
-            print((self.ships[type_ship][number], block))
             self.ships[type_ship][number]['blocks'].remove(block)
             self.die_blocks.append(block)
             if not self.ships[type_ship][number]['blocks']:
@@ -190,7 +189,7 @@ class Ships:
             self.die_blocks.append(block)
             return None
 
-    def KillShip(self, ship, type_ship):
+    def KillShip(self, ship, type_ship, number=False):
         if type_ship is None:
             type_ship = max(abs(numpy.array(ship[0]) - numpy.array(ship[1]))) + 1
 
@@ -200,7 +199,13 @@ class Ships:
         self.die_ships[type_ship][ship_num]['blocks'] = self.blocks.GetShipBlocks(ship)
         self.die_ships_count[type_ship] += 1
         if self.HasShip(ship):
-            self.DelShip(*self.CollideShip(ship))
+            print(ship)
+            if type(number) is int:
+                self.DelShip(type_ship, number)
+                print((type_ship, number))
+            else:
+                print(1)
+                self.DelShip(*self.CollideShip(ship))
 
     def Clear(self):
         self.ships = dict.fromkeys([1, 2, 3, 4], {})
@@ -210,7 +215,7 @@ class Ships:
         self.die_blocks = []
 
     def HasShip(self, ship):
-        return any(map(lambda cord: True if cord == ship else False, GetDeepData(self.ships)))
+        return tuple(set(map(tuple, ship)) & set(map(tuple, GetDeepData(self.ships)))) == ship
 
     def CollideShip(self, ship_cord):
         for type_ship in self.ships:
@@ -629,7 +634,7 @@ class PlayGame:
 
     def _socket_recv(self):
         while run:
-            data = self.socket.recv(2**12).decode()
+            data = self.socket.recv(2**16).decode()
             if 'OSW' not in data:
                 self._recv_dict = literal_eval(data)
             else:
@@ -641,6 +646,7 @@ class PlayGame:
             self.EnemyShips.die_ships_count = self._recv_dict['die_ships_count']
             self.EnemyShips.die_blocks = self._recv_dict['die_blocks']
             print(self._recv_dict['events'])
+            print(self.EnemyShips.SumShipsCount())
             for event in self._recv_dict['events']:
                 event = DATA(event)
                 if event.type == GAME_EVENT_ATTACK:
@@ -659,6 +665,8 @@ class PlayGame:
                     log.info('exit by enemy!.')
                     sys.exit(0)
                 elif event.type == GAME_EVENT_END:
+                    self.Event(GAME_EVENT_END, {})
+                    self.Send()
                     if self.Ships.SumShipsCount():
                         log.info('you win!.')
                         sys.exit(-1)
@@ -735,10 +743,12 @@ class PlayGame:
                     self.Event(GAME_EVENT_ATTACK, {'block': self.selected})
                     if result is None:
                         self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
+                    elif result:
+                        if self.EnemyShips.SumShipsCount() == self.EnemyShips.SumDieShipCount():
+                            self.Event(GAME_EVENT_END, {})
                     print(result)
                     print(self.events)
                     self.Send()
-                    print(self.events)
         elif self.condition == GAME_CONDITION_WAIT_AFTER_ATTACK:
             self.MoveLabel.value = 'Сейчас атакует Ваш противник.'
             self.MoveLabel.text_color = (100, 50, 200)
