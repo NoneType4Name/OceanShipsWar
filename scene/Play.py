@@ -198,8 +198,8 @@ class Ships:
         self.die_ships[type_ship][ship_num]['ship'] = ship
         self.die_ships[type_ship][ship_num]['blocks'] = self.blocks.GetShipBlocks(ship)
         self.die_ships_count[type_ship] += 1
+        print(self.HasShip(ship))
         if self.HasShip(ship):
-            print(ship)
             if type(number) is int:
                 self.DelShip(type_ship, number)
                 print((type_ship, number))
@@ -215,7 +215,7 @@ class Ships:
         self.die_blocks = []
 
     def HasShip(self, ship):
-        return tuple(set(map(tuple, ship)) & set(map(tuple, GetDeepData(self.ships)))) == ship
+        return ship in GetDeepData([[list(self.ships[type_sh][s].values())[0] for s in self.ships[type_sh]] for type_sh in self.ships])
 
     def CollideShip(self, ship_cord):
         for type_ship in self.ships:
@@ -645,8 +645,6 @@ class PlayGame:
             self.EnemyShips.die_ships = self._recv_dict['die_ships']
             self.EnemyShips.die_ships_count = self._recv_dict['die_ships_count']
             self.EnemyShips.die_blocks = self._recv_dict['die_blocks']
-            print(self._recv_dict['events'])
-            print(self.EnemyShips.SumShipsCount())
             for event in self._recv_dict['events']:
                 event = DATA(event)
                 if event.type == GAME_EVENT_ATTACK:
@@ -673,6 +671,8 @@ class PlayGame:
                     else:
                         log.info('enemy win!.')
                         sys.exit(1)
+            if not any(self.EnemyShips.ships.values()):
+                self.Send()
 
     def Send(self):
         self._send_dict = {
@@ -688,6 +688,7 @@ class PlayGame:
         }
         self.socket.sendto(str(self._send_dict).encode(), (self.enemy_host, self.enemy_port))
         self.events = []
+        print(self.Ships.ships)
 
     def Event(self, event_type, dict_for_events: dict):
         event = {'type': event_type}
