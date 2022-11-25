@@ -18,18 +18,29 @@ def EscActivate(self, **kwargs):
 
 def GetDeepData(data):
     rtn = []
-    for val in data.values():
-        if isinstance(val, dict):
-            v = GetDeepData(val)
-            for x in v:
-                rtn.append(x)
-        elif isinstance(val, (list, set, frozenset)):
-            rtn += val
-        elif isinstance(val, pygame.sprite.Group):
-            for x in val:
-                rtn.append(x)
-        else:
-            rtn.append(val)
+    if type(data) is dict:
+        for val in data.values():
+            if isinstance(val, dict):
+                v = GetDeepData(val)
+                for x in v:
+                    rtn.append(x)
+            elif isinstance(val, (list, set, tuple, frozenset)):
+                rtn += val
+            elif isinstance(val, pygame.sprite.Group):
+                for x in val:
+                    rtn.append(x)
+            else:
+                rtn.append(val)
+    elif type(data) is list:
+        for val in data:
+            if isinstance(val, (list, set, tuple, frozenset)):
+                rtn += val
+            elif isinstance(val, dict):
+                v = GetDeepData(val)
+                for x in v:
+                    rtn.append(x)
+            else:
+                rtn.append(val)
     return rtn
 
 

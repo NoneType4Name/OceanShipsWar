@@ -83,7 +83,7 @@ class Blocks(DATA):
             blocks = []
             for x in range(cords[0][0], cords[1][0] + 1):
                 for y in range(cords[0][1], cords[1][1] + 1):
-                    blocks.append((x, y))
+                    blocks.append([x, y])
 
             # if cords[0][0] == cords[1][0]:
             #     for pos in range(cords[0][1], cords[1][1] + 1):
@@ -114,7 +114,7 @@ class Ships:
         self.ships_count = dict.fromkeys([1, 2, 3, 4], 0)
         self.die_ships = dict.fromkeys([1, 2, 3, 4], {})
         self.die_ships_count = dict.fromkeys([1, 2, 3, 4], 0)
-        self.die_ships_blocks = []
+        self.die_blocks = []
 
         self.blocks = blocks
         self.alive_ship_color = alive_ship_color
@@ -179,14 +179,15 @@ class Ships:
     def KillBlock(self, block):
         if block in GetDeepData(self.ships):
             type_ship, number = self.CollideShip((block, block))
-            self.ships[type_ship][number].remove(block)
-            self.die_ships_blocks.append(block)
+            print((self.ships[type_ship][number], block))
+            self.ships[type_ship][number]['blocks'].remove(block)
+            self.die_blocks.append(block)
             if not self.ships[type_ship][number]['blocks']:
                 self.KillShip(self.ships[type_ship][number]['ship'], type_ship)
                 return True
             return False
         else:
-            self.die_ships_blocks.append(block)
+            self.die_blocks.append(block)
             return None
 
     def KillShip(self, ship, type_ship):
@@ -206,7 +207,7 @@ class Ships:
         self.ships_count = dict.fromkeys([1, 2, 3, 4], 0)
         self.die_ships = dict.fromkeys([1, 2, 3, 4], {})
         self.die_ships_count = dict.fromkeys([1, 2, 3, 4], 0)
-        self.die_ships_blocks = []
+        self.die_blocks = []
 
     def HasShip(self, ship):
         return any(map(lambda cord: True if cord == ship else False, GetDeepData(self.ships)))
@@ -323,11 +324,11 @@ class Ships:
                             direct = random.randint(0, 1)
                             if not direct:
                                 if not (start_x + type_ship >= len(self.blocks.blocks.keys()) - 1):
-                                    if not {tuple(self.blocks.GetShipBlocks(((start_x, start_y), (start_x + type_ship, start_y))))} & set(tuple(cords_used)):
+                                    if not {tuple(map(tuple, self.blocks.GetShipBlocks(((start_x, start_y), (start_x + type_ship, start_y)))))} & set(map(tuple, cords_used)):
                                         break
                             else:
                                 if not (start_y + type_ship >= len(self.blocks.blocks.values()) - 1):
-                                    if not {tuple(self.blocks.GetShipBlocks(((start_x, start_y), (start_x, start_y + type_ship))))} & set(tuple(cords_used)):
+                                    if not {tuple(map(tuple, self.blocks.GetShipBlocks(((start_x, start_y), (start_x, start_y + type_ship)))))} & set(map(tuple, cords_used)):
                                         break
                         else:
                             break
@@ -491,7 +492,7 @@ class PlayGame:
         self.Blocks = Blocks(self.size, 10, (self.parent.size.w * 0.5 - self.parent.block_size * 5),
                              (self.parent.size.h * 0.5 - self.parent.block_size * 5), self.parent.block_size)
         self.Ships = Ships(self.Blocks, self.parent.Colors.Lines, (100, 100, 100), self.Blocks.block_size // 7)
-        self.EnemyShips = Ships(self.Blocks, self.parent.Colors.Lines, (100, 100, 100), self.Blocks.block_size // 7)
+        self.EnemyShips = Ships(self.Blocks, (255, 0, 0), (0, 0, 255), self.Blocks.block_size // 7)
 
         self.socket = socket
         self.socket_activated = False
@@ -511,20 +512,22 @@ class PlayGame:
             'ships_count': self.Ships.counts,
             'die_ships': self.Ships.die_ships,
             'die_ships_count': self.Ships.die_ships_count,
-            'die_blocks': self.Ships.die_ships_blocks,
+            'die_blocks': self.Ships.die_blocks,
             'attacked_blocks': self.attacked_blocks,
             'condition': self.condition,
-            'events': self.events
+            'events': self.events,
+            'time': 0
         }
         self._recv_dict = {
-            'ships': {},
-            'ships_count': {},
-            'die_ships': {},
-            'die_ships_count': {},
-            'die_blocks': [],
+            'ships': self.EnemyShips.ships,
+            'ships_count': self.EnemyShips.counts,
+            'die_ships': self.EnemyShips.die_ships,
+            'die_ships_count': self.EnemyShips.die_ships_count,
+            'die_blocks': self.EnemyShips.die_blocks,
             'attacked_blocks': [],
-            'condition': GAME_CONDITION_WAIT,
-            'events': []
+            'condition': self.condition,
+            'events': [],
+            'time': 0
         }
         rect_w, rect_h = self.size.w * 0.1, self.size.h * 0.05
         border = rect_h * BORDER_ATTITUDE
@@ -547,7 +550,13 @@ class PlayGame:
                                     (100, 100, 100), (100, 100, 100), (255, 255, 255), (255, 255, 255), False,
                                     (100, 100, 200), (255, 255, 255), False, (200, 100, 255), (), border=border,
                                     func=RndFunc)
-        self.Elements = pygame.sprite.Group(self.ClearMap, self.RandomPlacing)
+        self.MoveLabel = Label(self, (parent.size.w * 0.5 - rect_w * 0.5, parent.size.h * 0.9, rect_w, rect_h * 0.5),
+                               (parent.size.w * 0.5 - rect_w * 0.5, parent.size.h * 0.9, rect_w, rect_h * 0.5),
+                               0.5,
+                               '',
+                               *parent.Colors.Scene.Load.Label
+                               )
+        self.Elements = pygame.sprite.Group(self.ClearMap, self.RandomPlacing, self.MoveLabel)
         self._random_place = False
 
     def DrawLines(self):
@@ -588,127 +597,90 @@ class PlayGame:
 
     def _read_thread(self):
         while not self._activate_enemy:
-            data = self.socket.recv(1024)
+            data = self.socket.recv(2**12)
             try:
                 data = data.decode()
                 if 'OSW' in data:
-                    log.info(data)
                     self._activate_enemy = float(data[3:])
+                    log.debug(self._activate_enemy)
                     break
             except UnicodeError:
-                log.info(f'why did you launch another one of the same?, data:{data}.', stack_info=True, exc_info=True)
+                log.warning(f'data:{data}.')
 
     def _activate_socket(self):
         self._activate = time.time()
         threading.Thread(target=self._read_thread).start()
-
         while True:
             try:
                 self.socket.sendto(f'OSW{self._activate}'.encode(), (self.enemy_host, self.enemy_port))
                 if self._activate_enemy:
                     self.socket_activated = True
-                    self.socket.settimeout(1)
+                    # self.socket.settimeout(1)
                     self.recv_thread = threading.Thread(target=self._socket_recv)
                     self.recv_thread.start()
                     if self._activate < self._activate_enemy:
                         self.condition = GAME_CONDITION_ATTACK
                     else:
                         self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
+                    self.Send()
                     break
             except Exception:
                 log.error('', stack_info=True, exc_info=True)
 
     def _socket_recv(self):
         while run:
-            try:
-                data = self.socket.recv(2**12).decode()
-                if 'OSW' not in data:
-                    self._recv_dict = literal_eval(data)
-                for event in self._recv_dict['events']:
-                    if event.type == GAME_EVENT_ATTACK and self.condition == GAME_CONDITION_WAIT_AFTER_ATTACK:
-                        block = event.block
-                        result = self.EnemyShips.KillBlock(block)
-                        if result is None:
-                            self.condition = GAME_CONDITION_ATTACK
-                        elif result is False:
-                            self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
-                            self.parent.PlaySound(SOUND_TYPE_GAME, 'wound')
-                        elif result is True:
-                            self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
-                            self.parent.PlaySound(SOUND_TYPE_GAME, 'kill')
-                    elif event.type == GAME_EVENT_LEAVE_GAME:
-                        log.info('exit by enemy!.')
-                        sys.exit(0)
-                    elif event.type == GAME_EVENT_END:
-                        if self.Ships.SumShipsCount():
-                            log.info('you win!.')
-                            sys.exit(-1)
-                        else:
-                            log.info('enemy win!.')
-                            sys.exit(1)
-                self._send_dict = {
-                    'ships': self.Ships.ships,
-                    'ships_count': self.Ships.counts,
-                    'die_ships': self.Ships.die_ships,
-                    'die_ships_count': self.Ships.die_ships_count,
-                    'die_blocks': self.Ships.die_ships_blocks,
-                    'attacked_blocks': self.attacked_blocks,
-                    'condition': self.condition,
-                    'events': self.events
-                }
-                self.events = []
-                self.socket.sendto(str(self._send_dict).encode(), (self.enemy_host, self.enemy_port))
-            except socket.timeout:
-                self.socket.sendto(str(self._send_dict).encode(), (self.enemy_host, self.enemy_port))
-                log.warning('timeout.')
-    # def _socket_recv(self):
-    #     while self.socket_activated:
-    #         data = self.socket.recv(2048).decode()
-    #         if data and 'OSW' not in data:
-    #             log.info(data)
-    #             self._recv_dict = literal_eval(data)
-    #         for event in self._recv_dict['events']:
-    #             if event.type == GAME_EVENT_ATTACK and self.condition == GAME_CONDITION_WAIT_AFTER_ATTACK:
-    #                 block = event.block
-    #                 result = self.EnemyShips.KillBlock(block)
-    #                 if result is None:
-    #                     self.condition = GAME_CONDITION_ATTACK
-    #                 elif result is False:
-    #                     self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
-    #                     self.parent.PlaySound(SOUND_TYPE_GAME, 'wound')
-    #                 elif result is True:
-    #                     self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
-    #                     self.parent.PlaySound(SOUND_TYPE_GAME, 'kill')
-    #             elif event.type == GAME_EVENT_LEAVE_GAME:
-    #                 log.info('exit by enemy!.')
-    #                 sys.exit(0)
-    #             elif event.type == GAME_EVENT_END:
-    #                 if self.Ships.SumShipsCount():
-    #                     log.info('you win!.')
-    #                     sys.exit(-1)
-    #                 else:
-    #                     log.info('enemy win!.')
-    #                     sys.exit(1)
-    #         self._send_dict = {
-    #         'ships': self.Ships.ships,
-    #         'ships_count': self.Ships.counts,
-    #         'die_ships': self.Ships.die_ships,
-    #         'die_ships_count': self.Ships.die_ships_count,
-    #         'die_blocks': self.Ships.die_ships_blocks,
-    #         'attacked_blocks': self.attacked_blocks,
-    #         'condition': self.condition,
-    #         'events': self.events
-    #     }
-    #         self.events = []
-    #         self.socket.sendto(str(self._send_dict).encode(), (self.enemy_host, self.enemy_port))
+            data = self.socket.recv(2**12).decode()
+            if 'OSW' not in data:
+                self._recv_dict = literal_eval(data)
+            else:
+                self.socket.sendto(f'OSW{self._activate}'.encode(), (self.enemy_host, self.enemy_port))
+                continue
+            self.EnemyShips.ships = self._recv_dict['ships']
+            self.EnemyShips.ships_count = self._recv_dict['ships_count']
+            self.EnemyShips.die_ships = self._recv_dict['die_ships']
+            self.EnemyShips.die_ships_count = self._recv_dict['die_ships_count']
+            self.EnemyShips.die_blocks = self._recv_dict['die_blocks']
+            print(self._recv_dict['events'])
+            for event in self._recv_dict['events']:
+                event = DATA(event)
+                if event.type == GAME_EVENT_ATTACK:
+                    block = event.block
+                    result = self.Ships.KillBlock(block)
+                    print(result)
+                    if result is None:
+                        self.condition = GAME_CONDITION_ATTACK
+                    elif result is False:
+                        self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
+                        self.parent.PlaySound(SOUND_TYPE_GAME, 'wound')
+                    elif result is True:
+                        self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
+                        self.parent.PlaySound(SOUND_TYPE_GAME, 'kill')
+                elif event.type == GAME_EVENT_LEAVE_GAME:
+                    log.info('exit by enemy!.')
+                    sys.exit(0)
+                elif event.type == GAME_EVENT_END:
+                    if self.Ships.SumShipsCount():
+                        log.info('you win!.')
+                        sys.exit(-1)
+                    else:
+                        log.info('enemy win!.')
+                        sys.exit(1)
 
-    # def SendData(self):
-    #     self.socket.sendto(str(self._send_dict).encode(), (self.enemy_host, self.enemy_port))
-    #
-    # def GetData(self):
-    #     data = self.socket.recv(2048)
-    #     if data:
-    #         self._recv_dict = literal_eval(data.decode())
+    def Send(self):
+        self._send_dict = {
+            'ships': self.Ships.ships,
+            'ships_count': self.Ships.ships_count,
+            'die_ships': self.Ships.die_ships,
+            'die_ships_count': self.Ships.die_ships_count,
+            'die_blocks': self.Ships.die_blocks,
+            'attacked_blocks': self.attacked_blocks,
+            'condition': self.condition,
+            'events': self.events,
+            'time': time.time()
+        }
+        self.socket.sendto(str(self._send_dict).encode(), (self.enemy_host, self.enemy_port))
+        self.events = []
+
     def Event(self, event_type, dict_for_events: dict):
         event = {'type': event_type}
         event.update(zip(dict_for_events.keys(), dict_for_events.values()))
@@ -752,12 +724,25 @@ class PlayGame:
                     self.condition = GAME_CONDITION_WAIT_AFTER_BUILD
 
     def inGame(self):
-        if self._activate_press:
-            if self.selected not in self.attacked_blocks:
-                result = self.EnemyShips.KillBlock(self.selected)
-                self.Event(GAME_EVENT_ATTACK, {'block': self.selected})
-                if result is None:
-                    self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
+        if self.condition == GAME_CONDITION_ATTACK:
+            self.MoveLabel.value = 'Сейчас атакуете Вы.'
+            self.MoveLabel.text_color = (200, 50, 100)
+            self.MoveLabel.text_color_active = (200, 50, 100)
+            if self._activate_press:
+                if self.selected and self.selected not in self.attacked_blocks:
+                    self.attacked_blocks.append(self.selected)
+                    result = self.EnemyShips.KillBlock(self.selected)
+                    self.Event(GAME_EVENT_ATTACK, {'block': self.selected})
+                    if result is None:
+                        self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
+                    print(result)
+                    print(self.events)
+                    self.Send()
+                    print(self.events)
+        elif self.condition == GAME_CONDITION_WAIT_AFTER_ATTACK:
+            self.MoveLabel.value = 'Сейчас атакует Ваш противник.'
+            self.MoveLabel.text_color = (100, 50, 200)
+            self.MoveLabel.text_color_active = (100, 50, 200)
 
     def update(self, active, args):
         if not active:
@@ -809,6 +794,8 @@ class PlayGame:
             if not self._activate:
                 self.ActivateSocket()
         elif self.condition >= GAME_CONDITION_WAIT_AFTER_ATTACK:
+            self.MoveLabel.update()
+            self.image.blit(self.MoveLabel.image, self.MoveLabel.rect)
             if self.EnemyShips.SumShipsMaxCount:
                 self.inGame()
             if not self.recv_thread.is_alive():
@@ -865,5 +852,7 @@ while run:
         elif e.type == pygame.KEYDOWN:
             if e.key == pygame.K_ESCAPE:
                 run = False
+            elif e.key == pygame.K_q:
+                G.EnemyShips.draw(screen)
     pygame.display.flip()
     c.tick(60)
