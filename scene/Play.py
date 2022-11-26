@@ -1,3 +1,4 @@
+import copy
 import random
 import socket
 import sys
@@ -110,9 +111,9 @@ class Ships:
     def __init__(self, blocks: Blocks, alive_ship_color, not_alive_ship_color, ships_width, solo_count=4, duo_count=3, trio_count=2,
                  quadro_count=1):
         self.counts = {1: solo_count, 2: duo_count, 3: trio_count, 4: quadro_count}
-        self.ships = dict.fromkeys([1, 2, 3, 4], {})
+        self.ships = dict(map(lambda key: (key, {}), [1, 2, 3, 4]))
         self.ships_count = dict.fromkeys([1, 2, 3, 4], 0)
-        self.die_ships = dict.fromkeys([1, 2, 3, 4], {})
+        self.die_ships = dict(map(lambda key: (key, {}), [1, 2, 3, 4]))
         self.die_ships_count = dict.fromkeys([1, 2, 3, 4], 0)
         self.die_blocks = []
 
@@ -128,9 +129,13 @@ class Ships:
         self._imaginary_ship_direction_is_horizontal = None
 
     def draw(self, image):
-        for _ in self.ships.values():
-            for ship in _.values():
-                pygame.draw.rect(image, self.alive_ship_color, self.blocks.GetShip(ship['ship']), self.ships_width)
+        # for _ in self.ships.values():
+        #     for ship in _.values():
+        #         pygame.draw.rect(image, self.alive_ship_color, self.blocks.GetShip(ship['ship']), self.ships_width)
+        data = GetDeepData([[list(self.ships[type_sh][s].values())[0] for s in self.ships[type_sh]] for type_sh in self.ships])
+        if data:
+            # print((data, self.ships))
+            [self.DrawShip(ship,image) for ship in data]
         if self._imaginary_ship:
             pygame.draw.rect(image, self.alive_ship_color, self.blocks.GetShip(self._merge_start_end_pos()), self.ships_width)
         self.DrawShipCount(image)
@@ -165,12 +170,14 @@ class Ships:
     def AddShip(self, ship, type_ship=None):
         if type_ship is None:
             type_ship = max(abs(numpy.array(ship[0]) - numpy.array(ship[1]))) + 1
-        if self.counts[type_ship]:
-            ship_num = len(self.ships[type_ship]) + 1
-            self.ships[type_ship][ship_num] = {}
-            self.ships[type_ship][ship_num]['ship'] = ship
-            self.ships[type_ship][ship_num]['blocks'] = self.blocks.GetShipBlocks(ship)
+        if self.counts[type_ship] > self.ships_count[type_ship]:
+            print(self.ships)
             self.ships_count[type_ship] += 1
+            ship_num = self.ships_count[type_ship]
+            self.ships[type_ship][ship_num] = {
+                'ship': ship,
+                'blocks': self.blocks.GetShipBlocks(ship)
+            }
 
     def DelShip(self, type_ship, number):
         del self.ships[type_ship][number]
@@ -198,19 +205,16 @@ class Ships:
         self.die_ships[type_ship][ship_num]['ship'] = ship
         self.die_ships[type_ship][ship_num]['blocks'] = self.blocks.GetShipBlocks(ship)
         self.die_ships_count[type_ship] += 1
-        print(self.HasShip(ship))
         if self.HasShip(ship):
             if type(number) is int:
                 self.DelShip(type_ship, number)
-                print((type_ship, number))
             else:
-                print(1)
                 self.DelShip(*self.CollideShip(ship))
 
     def Clear(self):
-        self.ships = dict.fromkeys([1, 2, 3, 4], {})
+        self.ships = dict(map(lambda key: (key, {}), [1, 2, 3, 4]))
         self.ships_count = dict.fromkeys([1, 2, 3, 4], 0)
-        self.die_ships = dict.fromkeys([1, 2, 3, 4], {})
+        self.die_ships = dict(map(lambda key: (key, {}), [1, 2, 3, 4]))
         self.die_ships_count = dict.fromkeys([1, 2, 3, 4], 0)
         self.die_blocks = []
 
@@ -688,7 +692,6 @@ class PlayGame:
         }
         self.socket.sendto(str(self._send_dict).encode(), (self.enemy_host, self.enemy_port))
         self.events = []
-        print(self.Ships.ships)
 
     def Event(self, event_type, dict_for_events: dict):
         event = {'type': event_type}

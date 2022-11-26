@@ -41,6 +41,10 @@ class DATA(dict):
     def __getattr__(self, item):
         return self.get(str(item))
 
+    def __setitem__(self, key, value):
+        log.info((key, value),stack_info=True)
+        super().__setitem__(key, value)
+
     def _wrap(self, value):
         if isinstance(value, (tuple, list, set, frozenset)):
             return type(value)([self._wrap(v) for v in value])
