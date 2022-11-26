@@ -138,8 +138,12 @@ def DieBlocks(self, image, rect):
 
 
 def MyDieBlocks(self, image, rect):
-    pygame.draw.line(image, self.not_alive_ship_color, rect.topright, rect.midbottom)
-    pygame.draw.line(screen, self.not_alive_ship_color, rect.midtop, rect.bottomleft)
+    pygame.draw.line(image, self.not_alive_ship_color,
+                     numpy.array(rect.topright) - numpy.array((self.ships_width, -self.ships_width)),
+                     numpy.array(rect.midbottom) - numpy.array((0, self.ships_width)))
+    pygame.draw.line(image, self.not_alive_ship_color,
+                     numpy.array(rect.midtop) + numpy.array((0, self.ships_width)),
+                     numpy.array(rect.bottomleft) - numpy.array((-self.ships_width, self.ships_width)))
 
 
 class Ships:
@@ -699,64 +703,71 @@ class PlayGame:
                         self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
                     while not self.EnemyShips.SumShipsCount():
                         self.Send('SYNC.')
+                        self.socket.settimeout(30)
                     break
-            except Exception:
-                log.error('', stack_info=True, exc_info=True)
+            except Exception as err:
+                log.error(err, stack_info=True, exc_info=True)
 
     def _socket_recv(self):
         while self.socket_activated:
-            data = self.socket.recv(2**16).decode()
-            print(data)
-            if 'OSW' in data:
-                data = data.split(',')
-                if not float(data[2]):
-                    self.socket.sendto(f'OSW,{self._activate},{self._activate_enemy}'.encode(), (self.enemy_host, self.enemy_port))
-                continue
-            elif 'SYNC' in data:
-                self.Send()
-                continue
-            elif 'PING' in data:
-                self.Send('PONG!.')
-            elif 'PONG' in data:
-                continue
-            else:
-                self._recv_dict = literal_eval(data)
-            self.EnemyShips.ships = self._recv_dict['ships']
-            self.EnemyShips.ships_count = self._recv_dict['ships_count']
-            self.EnemyShips.die_ships = self._recv_dict['die_ships']
-            self.EnemyShips.die_ships_count = self._recv_dict['die_ships_count']
-            self.EnemyShips.die_blocks = self._recv_dict['die_blocks']
-            for event in self._recv_dict['events']:
-                event = DATA(event)
-                if event.type == GAME_EVENT_ATTACK:
-                    block = event.block
-                    result = self.Ships.KillBlock(block)
-                    print(result)
-                    if result is None:
-                        self.condition = GAME_CONDITION_ATTACK
-                    elif result is False:
-                        self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
-                        self.parent.PlaySound(SOUND_TYPE_GAME, 'wound')
-                    elif result is True:
-                        self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
-                        self.parent.PlaySound(SOUND_TYPE_GAME, 'kill')
-                elif event.type == GAME_EVENT_LEAVE_GAME:
-                    log.info('exit by enemy!.')
-                    sys.exit(0)
-                elif event.type == GAME_EVENT_END:
-                    self.Event(GAME_EVENT_END, {})
+            try:
+                data = self.socket.recv(2**16).decode()
+                print(data)
+                if 'OSW' in data:
+                    data = data.split(',')
+                    if not float(data[2]):
+                        self.socket.sendto(f'OSW,{self._activate},{self._activate_enemy}'.encode(), (self.enemy_host, self.enemy_port))
+                    continue
+                elif 'SYNC' in data:
                     self.Send()
-                    self.socket_activated = False
-                    if self.Ships.SumShipsCount():
-                        log.info('you win!.')
-                        sys.exit(-1)
-                    else:
-                        log.info('enemy win!.')
-                        sys.exit(1)
+                    continue
+                elif 'PING' in data:
+                    self.Send('PONG!.')
+                elif 'PONG' in data:
+                    self.socket.settimeout(30)
+                    continue
+                else:
+                    self._recv_dict = literal_eval(data)
+                self.EnemyShips.ships = self._recv_dict['ships']
+                self.EnemyShips.ships_count = self._recv_dict['ships_count']
+                self.EnemyShips.die_ships = self._recv_dict['die_ships']
+                self.EnemyShips.die_ships_count = self._recv_dict['die_ships_count']
+                self.EnemyShips.die_blocks = self._recv_dict['die_blocks']
+                for event in self._recv_dict['events']:
+                    event = DATA(event)
+                    if event.type == GAME_EVENT_ATTACK:
+                        block = event.block
+                        result = self.Ships.KillBlock(block)
+                        print(result)
+                        if result is None:
+                            self.condition = GAME_CONDITION_ATTACK
+                        elif result is False:
+                            self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
+                            self.parent.PlaySound(SOUND_TYPE_GAME, 'wound')
+                        elif result is True:
+                            self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
+                            self.parent.PlaySound(SOUND_TYPE_GAME, 'kill')
+                    elif event.type == GAME_EVENT_LEAVE_GAME:
+                        log.info('exit by enemy!.')
+                        sys.exit(0)
+                    elif event.type == GAME_EVENT_END:
+                        self.Event(GAME_EVENT_END, {})
+                        self.Send()
+                        self.socket_activated = False
+                        if self.Ships.SumShipsCount():
+                            log.info('you win!.')
+                            sys.exit(-1)
+                        else:
+                            log.info('enemy win!.')
+                            sys.exit(1)
+            except socket.timeout:
+                self.Send('PING!.')
+                self.socket.settimeout(1)
             if not any(self.EnemyShips.ships.values()):
-                self.Send()
+                self.Send('SYNC.')
 
     def Send(self, text=''):
+        print(text)
         if text:
             self.socket.sendto(str(text).encode(), (self.enemy_host, self.enemy_port))
             return
