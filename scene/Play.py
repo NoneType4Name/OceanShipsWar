@@ -107,8 +107,47 @@ class Blocks(DATA):
         return max(abs(numpy.array(cords[0]) - numpy.array(cords[1]))) + 1
 
 
+def AliveCount(self, image, rect):
+    pygame.draw.rect(image, self.alive_ship_color, rect, self.ships_width // 2)
+
+
+def NotAliveCount(self, image, rect):
+    pygame.draw.rect(image, self.not_alive_ship_color, rect, self.ships_width // 2)
+
+
+def AliveShip(self, image, rect):
+    pygame.draw.rect(image, self.alive_ship_color, rect, self.ships_width)
+
+
+def NotAliveShip(self, image, rect):
+    pygame.draw.rect(image, self.not_alive_ship_color, rect, self.ships_width)
+
+
+def MyAliveShip(self, image, rect):
+    pygame.draw.rect(image, self.alive_ship_color, rect, self.ships_width)
+
+
+def MyNotAliveShip(self, image, rect):
+    pygame.draw.rect(image, self.not_alive_ship_color, rect, self.ships_width)
+
+
+def DieBlocks(self, image, rect):
+    pygame.draw.line(image, self.not_alive_ship_color, numpy.array(rect.topleft) + self.ships_width, numpy.array(rect.bottomright) - self.ships_width, self.ships_width)
+    pygame.draw.line(image, self.not_alive_ship_color, numpy.array(rect.topright) - numpy.array((self.ships_width, -self.ships_width)),
+                     numpy.array(rect.bottomleft) + numpy.array((self.ships_width, -self.ships_width)), self.ships_width)
+
+
+def MyDieBlocks(self, image, rect):
+    pygame.draw.line(image, self.not_alive_ship_color, rect.topright, rect.midbottom)
+    pygame.draw.line(screen, self.not_alive_ship_color, rect.midtop, rect.bottomleft)
+
+
 class Ships:
-    def __init__(self, blocks: Blocks, alive_ship_color, not_alive_ship_color, ships_width, solo_count=4, duo_count=3, trio_count=2,
+    def __init__(self, blocks: Blocks, alive_ship_color, not_alive_ship_color, ships_width,
+                 func_to_draw_alive_count, func_to_draw_not_alive_count,
+                 func_to_draw_alive_ship, func_to_draw_not_alive_ship,
+                 func_to_draw_die_blocks,
+                 solo_count=4, duo_count=3, trio_count=2,
                  quadro_count=1):
         self.counts = {1: solo_count, 2: duo_count, 3: trio_count, 4: quadro_count}
         self.ships = dict(map(lambda key: (key, {}), [1, 2, 3, 4]))
@@ -121,6 +160,11 @@ class Ships:
         self.alive_ship_color = alive_ship_color
         self.not_alive_ship_color = not_alive_ship_color
         self.ships_width = ships_width
+        self.func_to_draw_alive_count = func_to_draw_alive_count
+        self.func_to_draw_not_alive_count = func_to_draw_not_alive_count
+        self.func_to_draw_alive_ship = func_to_draw_alive_ship
+        self.func_to_draw_not_alive_ship = func_to_draw_not_alive_ship
+        self.func_to_draw_die_blocks = func_to_draw_die_blocks
         self.SumShipsMaxCount = sum(self.counts.values())
         self._start_cord = None
         self._end_cord = None
@@ -128,16 +172,19 @@ class Ships:
         self._imaginary_ship_len = 1
         self._imaginary_ship_direction_is_horizontal = None
 
-    def draw(self, image):
-        # for _ in self.ships.values():
-        #     for ship in _.values():
-        #         pygame.draw.rect(image, self.alive_ship_color, self.blocks.GetShip(ship['ship']), self.ships_width)
-        data = GetDeepData([[list(self.ships[type_sh][s].values())[0] for s in self.ships[type_sh]] for type_sh in self.ships])
-        if data:
-            # print((data, self.ships))
-            [self.DrawShip(ship,image) for ship in data]
-        if self._imaginary_ship:
-            pygame.draw.rect(image, self.alive_ship_color, self.blocks.GetShip(self._merge_start_end_pos()), self.ships_width)
+    def draw(self, image, alive=True, not_alive=True, die_blocks=True, imaginary=True):
+        if alive:
+            data = GetDeepData([[list(self.ships[type_sh][s].values())[0] for s in self.ships[type_sh]] for type_sh in self.ships])
+            if data:
+                [self.func_to_draw_alive_ship(self, image, self.blocks.GetShip(ship)) for ship in data]
+        if not_alive:
+            data = GetDeepData([[list(self.die_ships[type_sh][s].values())[0] for s in self.die_ships[type_sh]] for type_sh in self.die_ships])
+            if data:
+                [self.func_to_draw_not_alive_ship(self, image, self.blocks.GetShip(ship)) for ship in data]
+        if die_blocks:
+            [self.func_to_draw_die_blocks(self, image, self.blocks.GetRect(block)) for block in self.die_blocks]
+        if self._imaginary_ship and imaginary:
+            self.func_to_draw_alive_ship(self, image, self.blocks.GetShip(self._merge_start_end_pos()))
         self.DrawShipCount(image)
 
     def DrawShipCount(self, image):
@@ -148,18 +195,28 @@ class Ships:
             for num_block in range((self.counts[type_ship] * type_ship) + self.counts[type_ship]):
                 if counter_block_num < type_ship:
                     if ships_count[type_ship] < self.counts[type_ship]:
-                        color = self.alive_ship_color
+                        color = True
                     else:
-                        color = self.not_alive_ship_color
+                        color = False
                     counter_block_num += 1
                 else:
-                    color = False
+                    color = None
                     counter_block_num = 0
                     ships_count[type_ship] += 1 if ships_count[type_ship] < self.counts[type_ship] else 0
-                if color:
-                    pygame.draw.rect(image, color, (
-                        mid[0] + num_block * (self.blocks.block_size // 2), mid[1] + self.blocks.block_size * type_ship, self.blocks.block_size // 2, self.blocks.block_size // 2),
-                                     self.ships_width // 2)
+                if color is not None:
+                    if color:
+                        self.func_to_draw_alive_count(
+                            self,
+                            image,
+                            (mid[0] + num_block * (self.blocks.block_size // 2), mid[1] + self.blocks.block_size * type_ship, self.blocks.block_size // 2, self.blocks.block_size // 2))
+                    else:
+                        self.func_to_draw_not_alive_count(
+                            self,
+                            image,
+                            (mid[0] + num_block * (self.blocks.block_size // 2), mid[1] + self.blocks.block_size * type_ship, self.blocks.block_size // 2, self.blocks.block_size // 2))
+                    # pygame.draw.rect(image, color, (
+                    #     mid[0] + num_block * (self.blocks.block_size // 2), mid[1] + self.blocks.block_size * type_ship, self.blocks.block_size // 2, self.blocks.block_size // 2),
+                    #                  self.ships_width // 2)
 
     def DrawShip(self, cords: tuple, image, custom_color=None):
         if custom_color:
@@ -171,10 +228,8 @@ class Ships:
         if type_ship is None:
             type_ship = max(abs(numpy.array(ship[0]) - numpy.array(ship[1]))) + 1
         if self.counts[type_ship] > self.ships_count[type_ship]:
-            print(self.ships)
             self.ships_count[type_ship] += 1
-            ship_num = self.ships_count[type_ship]
-            self.ships[type_ship][ship_num] = {
+            self.ships[type_ship][self.ships_count[type_ship]] = {
                 'ship': ship,
                 'blocks': self.blocks.GetShipBlocks(ship)
             }
@@ -193,7 +248,6 @@ class Ships:
                 return True
             return False
         else:
-            self.die_blocks.append(block)
             return None
 
     def KillShip(self, ship, type_ship, number=False):
@@ -261,7 +315,7 @@ class Ships:
                 else:
                     return_data = self._imaginary_ship_len
                     self._clear_imaginary_ship()
-                    return DATA({'type': 'len', 'value': return_data})
+                    return DATA({'type': 'count', 'value': return_data})
             else:
                 return_data = self._imaginary_ship_len
                 self._clear_imaginary_ship()
@@ -346,6 +400,7 @@ class Ships:
                         self.MoveEndPointTo(value=type_ship)
                         ship = self.GetImaginaryShipCords()
                         self.DrawShip(ship, image, (0, 200, 255))
+                        time.sleep(0.005)
                         error = self.EndBuildShip()
                         if not error:
                             break
@@ -437,12 +492,22 @@ class Exemplar:
         self.mouse_wheel_x = 0
         self.mouse_wheel_y = 0
         self.cursor = pygame.SYSTEM_CURSOR_ARROW
+        self.io = threading.Thread(target=self._IO, args=[])
+        self.io.start()
         self.events = []
 
     def PlaySound(self, sound_type: str, sound_name: str, loops=0, maxtime=0, fade_ms=0):
         print((sound_type, sound_name))
 
+    def _IO(self):
+        while run:
+            data = input('>')
+            print(data)
+
     def update(self, events):
+        if not self.io.is_alive():
+            self.io = threading.Thread(target=self._IO, args=[])
+            self.io.start()
         self.mouse_left_release = False
         self.mouse_right_release = False
         self.mouse_middle_release = False
@@ -500,8 +565,10 @@ class PlayGame:
         self.Lines = None
         self.Blocks = Blocks(self.size, 10, (self.parent.size.w * 0.5 - self.parent.block_size * 5),
                              (self.parent.size.h * 0.5 - self.parent.block_size * 5), self.parent.block_size)
-        self.Ships = Ships(self.Blocks, self.parent.Colors.Lines, (100, 100, 100), self.Blocks.block_size // 7)
-        self.EnemyShips = Ships(self.Blocks, (255, 0, 0), (0, 0, 255), self.Blocks.block_size // 7)
+        self.Ships = Ships(self.Blocks, self.parent.Colors.Lines, (100, 100, 100), self.Blocks.block_size // 7,
+                           AliveCount, NotAliveCount, MyAliveShip, MyNotAliveShip, MyDieBlocks)
+        self.EnemyShips = Ships(self.Blocks, (255, 0, 0), (0, 0, 255), self.Blocks.block_size // 7,
+                                AliveCount, NotAliveCount, AliveShip, NotAliveShip, DieBlocks)
 
         self.socket = socket
         self.socket_activated = False
@@ -608,9 +675,9 @@ class PlayGame:
         while not self._activate_enemy:
             data = self.socket.recv(2**12)
             try:
-                data = data.decode()
+                data = data.decode().split(',')
                 if 'OSW' in data:
-                    self._activate_enemy = float(data[3:])
+                    self._activate_enemy = float(data[1])
                     log.debug(self._activate_enemy)
                     break
             except UnicodeError:
@@ -619,31 +686,41 @@ class PlayGame:
     def _activate_socket(self):
         self._activate = time.time()
         threading.Thread(target=self._read_thread).start()
-        while True:
+        while not self.socket_activated:
             try:
-                self.socket.sendto(f'OSW{self._activate}'.encode(), (self.enemy_host, self.enemy_port))
+                self.socket.sendto(f'OSW,{self._activate},{self._activate_enemy}'.encode(), (self.enemy_host, self.enemy_port))
                 if self._activate_enemy:
                     self.socket_activated = True
-                    # self.socket.settimeout(1)
                     self.recv_thread = threading.Thread(target=self._socket_recv)
                     self.recv_thread.start()
                     if self._activate < self._activate_enemy:
                         self.condition = GAME_CONDITION_ATTACK
                     else:
                         self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
-                    self.Send()
+                    while not self.EnemyShips.SumShipsCount():
+                        self.Send('SYNC.')
                     break
             except Exception:
                 log.error('', stack_info=True, exc_info=True)
 
     def _socket_recv(self):
-        while run:
+        while self.socket_activated:
             data = self.socket.recv(2**16).decode()
-            if 'OSW' not in data:
-                self._recv_dict = literal_eval(data)
-            else:
-                self.socket.sendto(f'OSW{self._activate}'.encode(), (self.enemy_host, self.enemy_port))
+            print(data)
+            if 'OSW' in data:
+                data = data.split(',')
+                if not float(data[2]):
+                    self.socket.sendto(f'OSW,{self._activate},{self._activate_enemy}'.encode(), (self.enemy_host, self.enemy_port))
                 continue
+            elif 'SYNC' in data:
+                self.Send()
+                continue
+            elif 'PING' in data:
+                self.Send('PONG!.')
+            elif 'PONG' in data:
+                continue
+            else:
+                self._recv_dict = literal_eval(data)
             self.EnemyShips.ships = self._recv_dict['ships']
             self.EnemyShips.ships_count = self._recv_dict['ships_count']
             self.EnemyShips.die_ships = self._recv_dict['die_ships']
@@ -669,6 +746,7 @@ class PlayGame:
                 elif event.type == GAME_EVENT_END:
                     self.Event(GAME_EVENT_END, {})
                     self.Send()
+                    self.socket_activated = False
                     if self.Ships.SumShipsCount():
                         log.info('you win!.')
                         sys.exit(-1)
@@ -678,7 +756,10 @@ class PlayGame:
             if not any(self.EnemyShips.ships.values()):
                 self.Send()
 
-    def Send(self):
+    def Send(self, text=''):
+        if text:
+            self.socket.sendto(str(text).encode(), (self.enemy_host, self.enemy_port))
+            return
         self._send_dict = {
             'ships': self.Ships.ships,
             'ships_count': self.Ships.ships_count,
@@ -701,6 +782,7 @@ class PlayGame:
     def inBuild(self):
         self.Elements.update()
         self.Elements.draw(self.image)
+        self.Ships.draw(self.image)
         if self.ClearMap.isCollide() and self.parent.mouse_left_release:
             self.ClearMap.Function()
         elif self.RandomPlacing.isCollide() and self.parent.mouse_left_release:
@@ -740,6 +822,10 @@ class PlayGame:
             self.MoveLabel.value = 'Сейчас атакуете Вы.'
             self.MoveLabel.text_color = (200, 50, 100)
             self.MoveLabel.text_color_active = (200, 50, 100)
+            self.EnemyShips.draw(self.image, alive=False)
+            for point in self.attacked_blocks:
+                if point not in self.EnemyShips.die_blocks:
+                    pygame.draw.circle(self.image, (100, 100, 100), self.Ships.blocks.GetRect(point).center, self.Ships.blocks.block_size * 0.1)
             if self._activate_press:
                 if self.selected and self.selected not in self.attacked_blocks:
                     self.attacked_blocks.append(self.selected)
@@ -748,15 +834,17 @@ class PlayGame:
                     if result is None:
                         self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
                     elif result:
-                        if self.EnemyShips.SumShipsCount() == self.EnemyShips.SumDieShipCount():
+                        if self.EnemyShips.SumShipsMaxCount == self.EnemyShips.SumDieShipCount():
                             self.Event(GAME_EVENT_END, {})
-                    print(result)
-                    print(self.events)
                     self.Send()
         elif self.condition == GAME_CONDITION_WAIT_AFTER_ATTACK:
             self.MoveLabel.value = 'Сейчас атакует Ваш противник.'
             self.MoveLabel.text_color = (100, 50, 200)
             self.MoveLabel.text_color_active = (100, 50, 200)
+            for point in self._recv_dict['attacked_blocks']:
+                if point not in self.Ships.die_blocks:
+                    pygame.draw.circle(self.image, (255, 0, 0), self.Ships.blocks.GetRect(point).center, self.Ships.blocks.block_size * 0.1)
+            self.Ships.draw(self.image)
 
     def update(self, active, args):
         if not active:
@@ -788,7 +876,6 @@ class PlayGame:
             self._keyboard_input = False
         self.image.fill(self.parent.Colors.Background)
         self.DrawLines()
-        self.Ships.draw(self.image)
         self.selected = self.Blocks.GetCollide()
 
         if self._keyboard_input:
@@ -847,13 +934,13 @@ adr_loc, extern = GetIP(adr_loc)
 enemy = input('>>>>').split(':')
 enemy = enemy[0], int(enemy[1])
 
+run = True
 E = Exemplar()
 G = PlayGame(E, sock, enemy)
 
 pygame.init()
 screen = pygame.display.set_mode(sz, pygame.SRCALPHA)
 c = pygame.time.Clock()
-run = True
 while run:
     ev = pygame.event.get()
     E.update(ev)
