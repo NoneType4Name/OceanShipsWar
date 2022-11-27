@@ -63,7 +63,7 @@ fileHandler = FileHandler(f'{main_dir}\\logs\\{os.getpid()}log.txt', 'w')
 fileHandler.setFormatter(Formatter(fmt='[%(levelname)s]  [%(asctime)s.%(msecs)03d]  [%(filename)s:%(lineno)d:%(funcName)s]  %(message)s', datefmt='%H:%M:%S'))
 fileHandler.setLevel(NOTSET)
 
-consoleHandler = StreamHandler()
+consoleHandler = StreamHandler(stream=sys.stdout)
 consoleHandler.setFormatter(ColorFormatter(fmt='[$COLOR%(levelname)s$RESET]  [%(filename)s:%(lineno)d]  [%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S'))
 consoleHandler.setLevel(NOTSET)
 
@@ -76,5 +76,7 @@ log.debug('DEBUG.')
 log.info('INFO.')
 log.warning('WARNING.')
 log.error('ERROR.')
-log.critical('CRITICAL')
+log.critical('CRITICAL.')
 log.info('--------\tLogging start.\t--------')
+
+print = log.info

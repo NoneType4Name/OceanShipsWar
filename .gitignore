@@ -11,6 +11,12 @@ env.bak/
 venv.bak/
 prod/
 .idea
+.vs
 logs
 report.py
 settings.json
+tesst.py
+test2.py
+.vscode
+build/
+dist/
