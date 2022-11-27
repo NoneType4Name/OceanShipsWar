@@ -14,10 +14,49 @@ VERSIONS = {
 }
 
 RUS_DICT = {'StartGame': 'Создать игру',
-            'JoinGame': 'Присоеденится к игре',
             'Settings': 'Настройки',
             'ThemeLight': 'Яркая',
             'ThemeDark': 'Тёмная',
+            'LoadVersionPercent': '{percent}%',
+            'LoadVersionTextConnect': 'Подключение...',
+            'LoadVersionTextLoad': 'Загрузка...',
+            'LoadVersionLaunchNotification': 'Запустить обновленную версию?',
+            'LoadVersionLaunchYNMessageBoxText': 'Запустить обновленную версию OceanShipsWar {version}.exe?',
+            'LoadVersionLaunchYNMessageBoxTitle': 'Запуск',
+            'InitTextLabelDefault': '',
+            'InitPercentLabelDefault': '',
+            'InitTextLabelConnect': 'Подключение...',
+            'InitTextLabelSuccessConnect': 'Подключение...',
+            'InitTextLabelSearch': 'Поиск файла {file}',
+            'InitTextLabelLoad': 'Инициализация файла {file}',
+            'InitPercentLabel': '{percent}%',
+            'UpdateNotificationFine': 'Доступна новая версия {version}, загрузить её?.',
+            'UpdateNotificationNotFine': 'Обновлений нет.',
+            'UpdateNotificationYNMessageBoxText': 'Доступна версия {version}, загрузить её?.',
+            'UpdateNotificationYNMessageBoxTitle': 'Обновление до версии {version}.',
+            'CreateGameWrongIP': 'Неверный адрес.',
+            'CreateGameConnect': 'Подключение...',
+            'CreateGameYouIP': 'Ваш IP адрес: {ip}:{port}',
+            'CreateGameYouLink': 'Нажмите для копирования приглашения.',
+            'CreateGameYouIPDefault': 'Секунду...',
+            'CreateGameYouLinkDefault': 'Секунду...',
+            'CreateGameYouIPCopied': 'IP адрес скопирован в буфер обмена.',
+            'CreateGameYouLinkCopied': 'Ссылка приглашение скопирована в буфер обмена.',
+            'CreateGameConditionDefault': '',
+            'CreateGameInputDefault': 'Введите IP в формате IP:PORT.',
+            'CreateGameConnectionError': 'Неверный адрес приглашения',
+            'PlayGameQuit': 'Главное меню.',
+            'PlayGameRule': 'Это действие запрещено правилами.',
+            'PlayGameCount': '{value} клеточные корабли уже установлены.',
+            'PlayGameLen': 'Максимальноя длина корбля: 4 клетки.',
+            'PlayGameAttackBySelf': 'Сейчас атакуете Вы.',
+            'PlayGameAttackByNotSelf': 'Сейчас атакует Ваш противник.',
+            'PlayGameLose': 'Вы проиграли :(.',
+            'PlayGameWin': 'Вы выиграли :).',
+            'PlayGameWait': 'Ждем готовности противника.',
+            'PlayGameWaitEnemy': 'Ждем подключения противника.',
+            'PlayGameBuild': 'Разместите корабли на поверхности',
+            'Esc':'ESC',
             'Sound': 'Звук',
             'SoundGame': 'Звуки игры',
             'SoundNotification': 'Звуки уведомлений',
@@ -26,7 +65,7 @@ RUS_DICT = {'StartGame': 'Создать игру',
             'LanguageList': ['русский', 'english'],
             'GraphicWindowSize': 'Размер окна',
             'Exit': 'Выход',
-            'Version': 'Версия $VERSION%',
+            'Version': 'Версия {version}',
             'GameRandomBuild': 'Случайная расстановка',
             'GameClearMap': 'Очистить карту',
             'GraphicFont': 'Шрифт',
@@ -36,13 +75,54 @@ RUS_DICT = {'StartGame': 'Создать игру',
             'OtherConsole': 'Консоль отладки',
             'OtherLinks': 'Глубокие ссылки',
             'Letters': 'АБВГДЕЁЖЗИ',
+            'Demo': 'Данный файл является демонстрационным вариантом и возможно лишен некоторых возможностей.',
+            'Sudo': 'Запустите игру с правами администратора.'
             }
 
 ENG_DICT = {'StartGame': 'Create game',
-            'JoinGame': 'Join to game',
             'Settings': 'Settings',
             'ThemeLight': 'Light',
             'ThemeDark': 'Dark',
+            'LoadVersionPercent': '{percent}%',
+            'LoadVersionTextConnect': 'Connecting...',
+            'LoadVersionTextLoad': 'Loading...',
+            'LoadVersionLaunchNotification': 'Load new version?',
+            'LoadVersionLaunchYNMessageBoxText': 'Launch new OceanShipsWar {version}.exe?',
+            'LoadVersionLaunchYNMessageBoxTitle': 'Launch',
+            'InitTextLabelDefault': '',
+            'InitPercentLabelDefault': '',
+            'InitTextLabelConnect': 'Connecting...',
+            'InitTextLabelSuccessConnect': 'Connecting...',
+            'InitTextLabelSearch': 'Find {file}',
+            'InitTextLabelLoad': 'Init {file}',
+            'InitPercentLabel': '{percent}%',
+            'UpdateNotificationFine': 'New version {version} is available, load it?.',
+            'UpdateNotificationNotFine': 'New version is not available.',
+            'UpdateNotificationYNMessageBoxText': 'Version {version} is available, load it?.',
+            'UpdateNotificationYNMessageBoxTitle': 'Upgrade to version {version}.',
+            'CreateGameWrongIP': 'Incorrect IP address.',
+            'CreateGameConnect': 'Connecting...',
+            'CreateGameYouIP': 'You IP address: {ip}:{port}',
+            'CreateGameYouLink': 'Click to copy invitation link.',
+            'CreateGameYouIPDefault': 'Moment...',
+            'CreateGameYouLinkDefault': 'Moment...',
+            'CreateGameYouIPCopied': 'You IP address was copied to clipboard.',
+            'CreateGameYouLinkCopied': 'Invitation link copied to clipboard.',
+            'CreateGameConditionDefault': '',
+            'CreateGameInputDefault': 'You IP with format: IP:PORT.',
+            'CreateGameConnectionError': 'Invalid invitation address',
+            'PlayGameQuit': 'Main menu.',
+            'PlayGameRule': 'This action is prohibited by the rules.',
+            'PlayGameCount': '{value} cell ships have already been installed.',
+            'PlayGameLen': 'Maximum ship length: 4 cells.',
+            'PlayGameAttackBySelf': 'Now you are attacking.',
+            'PlayGameAttackByNotSelf': 'Now your opponent is attacking.',
+            'PlayGameLose': 'You lost :(.',
+            'PlayGameWin': 'You won :).',
+            'PlayGameWait': 'Waiting for the enemy to be ready.',
+            'PlayGameWaitEnemy': 'Waiting for the connection of opponent.',
+            'PlayGameBuild': 'Place ships on surface.',
+            'Esc': 'ESC',
             'Sound': 'Sound',
             'SoundGame': 'Game Sound',
             'SoundNotification': 'Notifications Sound',
@@ -60,7 +140,9 @@ ENG_DICT = {'StartGame': 'Create game',
             'Other': 'Other',
             'OtherConsole': 'Debug Console',
             'OtherLinks': 'Deep links',
-            'Letters': 'ABCDEFGHIJ'
+            'Letters': 'ABCDEFGHIJ',
+            'Demo': 'This file is a demo and may lack some features.',
+            'Sudo': 'Run the game with super user.'
             }
 
 DEFAULT_LANGUAGES = {LANG_RUS:RUS_DICT, LANG_ENG:ENG_DICT}
@@ -78,7 +160,6 @@ INIT = -1
 MAIN = 0
 LOAD = 1
 CREATE = 2
-JOIN = 3
 SETTINGS = 4
 PLAY = 5
 
@@ -106,7 +187,7 @@ SOUNDS_TYPE = 'ogg'
 
 
 SoundsDict = {
-    SOUND_TYPE_NOTIFICATION:{'in': 0},
+    SOUND_TYPE_NOTIFICATION:{'in': 0, 'out': 0},
     SOUND_TYPE_GAME:{'active': 0, 'select': 0, 'denied': 0, 'kill': 0, 'miss': 0, 'wound': 0}
 }
 
@@ -119,6 +200,12 @@ LANGUAGE_FILE_MASK = '_language.json'
 API_HOST = 'localhost'
 API_PORT = 9996
 API_METHOD_CONNECT = 'connect'
+
+GAME_HOST = '0.0.0.0'
+GAME_PORT = 9997
+GAME_PING_DELAY = 10
+GAME_EXTRA_PING_DELAY = 1
+GAME_DATA_LEN = 2**16
 
 BLOCK_ATTITUDE = 27.428571428571427
 SHIP_ATTITUDE = 7
@@ -135,3 +222,5 @@ GAME_CONDITION_BUILD = 1
 GAME_CONDITION_WAIT_AFTER_BUILD = 2
 GAME_CONDITION_WAIT_AFTER_ATTACK = 3
 GAME_CONDITION_ATTACK = 4
+GAME_CONDITION_LOSE = 5
+GAME_CONDITION_WIN = 6

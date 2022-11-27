@@ -51,7 +51,9 @@ class Settings:
                                 (-1, -1,
                                  rect_w, rect_h),
                                 text_rect, text_rect_active,
-                                'ESC', 'ESC', *parent.Colors.Scene.Main.Button, border=border, border_active=border_active,
+                                self.parent.Language.Esc,
+                                self.parent.Language.Esc,
+                                *parent.Colors.Scene.Main.Button, border=border, border_active=border_active,
                                 func=EscActivate)
         self.elements = {'default':{None: pygame.sprite.Group(self.ButtonEsc)}}
         threading.Thread(target=self.LoadElements).start()

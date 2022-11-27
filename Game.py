@@ -1,12 +1,9 @@
-import ast
-
 from functions import *
-# from scene.Play import PlayGame
 from scene.Menu import MainScene
 from scene.Load import LoadScene
-from scene.JoinGame import JoinGame
 from scene.Converter import ConvertScene
 from scene.CreateGame import CreateGame
+from scene.Play import PlayGame
 from scene.Notification import Notifications
 
 
@@ -14,13 +11,11 @@ def LoadNewVersion(parent, version):
     scene = parent.ConverScene.new
     b = 0
     scene.ProgressBar = 0
-    scene.PercentLabel = '0%'
-    scene.TextLabel = 'Connecting...'
+    scene.PercentLabel = parent.Language.LoadVersionPercent.format(percent=0)
+    scene.TextLabel = parent.Language.LoadVersionTextConnect
     while True:
-        file = requests.get(
-            f'https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe',
-            stream=True)
-        scene.TextLabel = 'Load content...'
+        file = requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe', stream=True)
+        scene.TextLabel = parent.Language.LoadVersionTextLoad
         break
     with open(fr'{parent.MAIN_DIR}\OceanShipsWar {version}.exe', 'wb') as f:
         for chunk in file.iter_content(8):
@@ -28,10 +23,10 @@ def LoadNewVersion(parent, version):
             b += 8
             scene.PercentLabel = f'{b / file.headers["Content-Length"]}%'
             scene.PercentLabel = b / file.headers['Content-Length']
-    parent.AddNotification('Launch update?.')
+    parent.AddNotification(parent.Language.LoadVersionLaunchNotification)
     if (windll.user32.MessageBoxW(parent.GAME_HWND,
-                                  f"Запустить файл OceanShipsWar {version}.exe?",
-                                  f"Запустить", 36)) == 6:
+                                  parent.Language.LoadVersionLaunchYNMessageBoxText.format(version=version),
+                                  parent.Language.LoadVersionLaunchYNMessageBoxTitle, 36)) == 6:
         subprocess.Popen(fr'{parent.MAIN_DIR}\OceanShipsWar {version}.exe')
         parent.RUN = False
 
@@ -60,7 +55,7 @@ class Version:
 
 
 class Game:
-    def __init__(self, settings: DATA, language: Language, colors: DATA, main_dir: str, exe: bool, debug=0):
+    def __init__(self, run_from, settings: DATA, language: Language, colors: DATA, main_dir: str, exe: bool, debug=0):
         pygame.font.init()
         self.mouse_pos = (0, 0)
         self.mouse_right_press = False
@@ -91,8 +86,9 @@ class Game:
         self.clock = pygame.time.Clock()
         self.block_size = None
         self.debug = debug
-        consoleHandler.setLevel(self.debug)
+        consoleHandler.setLevel(debug)
 
+        self.parent_path = run_from
         self.Settings = settings
         self.Colors = colors
         self.Sounds = {
@@ -100,23 +96,22 @@ class Game:
             SOUND_TYPE_GAME:{}
                        }
         self.SOUND = False
-        self.Notifications = pygame.sprite.Group()
+        self.Notifications = Notifications(self)
         self.GameEvents = []
         self.Properties = reg.getFileProperties(sys.executable)
         self.version = Version(str(self.Properties.FileVersion))
         self.VERSION = self.version.string_version
         self.MAIN_DIR = main_dir
         self.EXE = exe
-        self.Language = DATA(replace_str_var(language.__dict__, self))
+        self.Language = language
         self.Scene = DATA(
             {
                 INIT: InitScene,
                 MAIN: MainScene,
                 LOAD: LoadScene,
                 CREATE: CreateGame,
-                JOIN: JoinGame,
                 SETTINGS: Settings,
-                # PLAY: PlayGame
+                PLAY: PlayGame
             })
         self.ConvertScene = ConvertScene(self, self.Scene[INIT])
         self.ConvertSceneThread = threading.Thread(target=lambda _:True)
@@ -167,10 +162,10 @@ class Game:
             scene.PercentLabel.value = ''
             scene.TextLabel.value = ''
             while self.RUN:
-                scene.TextLabel.value = 'Подключение...'
+                scene.TextLabel.value = self.Language.InitTextLabelConnect
                 try:
                     requests.get(GITHUB_REPOS_URL + 'releases/latest')
-                    scene.TextLabel.value = ''
+                    scene.TextLabel.value = self.Language.InitTextLabelSuccessConnect
                     break
                 except requests.exceptions.ConnectionError:
                     pass
@@ -178,7 +173,7 @@ class Game:
             MaxLoad = len(list(itertools.chain(*SoundsDict.values()))) * 2
             for sound_type in SoundsDict:
                 for sound_name in SoundsDict[sound_type]:
-                    scene.TextLabel.value = f'Search: {os.path.join(".", SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'
+                    scene.TextLabel.value = self.Language.InitTextLabelSearch.format(file=os.path.join(".", SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE))
                     while self.RUN:
                         if os.path.exists(f'{os.path.join(".", DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'):
                             Load += 1
@@ -188,11 +183,11 @@ class Game:
                             Load += 1
                             break
                     scene.ProgressBar.value = Load / MaxLoad
-                    scene.PercentLabel.value = f'{round(Load / MaxLoad * 100)}%'
+                    scene.PercentLabel.value = self.Language.InitPercentLabel.format(percent=round(Load / MaxLoad * 100))
 
             for sound_type in SoundsDict:
                 for sound_name in SoundsDict[sound_type]:
-                    scene.TextLabel.value = f'Load: ./{os.path.join(SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'
+                    scene.TextLabel.value = self.Language.InitTextLabelLoad.format(file=os.path.join(SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE))
                     if SoundsDict[sound_type][sound_name]:
                         sound = pygame.mixer.Sound(f'{os.path.join(self.MAIN_DIR, DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}')
                     else:
@@ -200,18 +195,14 @@ class Game:
                     self.Sounds[sound_type][sound_name] = sound
                     Load += 1
                     scene.ProgressBar.value = Load / MaxLoad
-                    scene.PercentLabel.value = f'{round(Load / MaxLoad * 100)}%'
+                    scene.PercentLabel.value = self.Language.InitPercentLabel.format(percent=round(Load / MaxLoad * 100))
             self.Sounds = DATA(self.Sounds)
             self.SOUND = True
             return
 
-    # def GameEvent(self, **kwargs):
-    #     event = DATA(kwargs)
-    #     self.GameEvents.append(event)
-
     def AddNotification(self, notification_text):
-        self.Notifications.add(Notification(FONT_PATH, (self.size[0] * 0.3, self.size[1] * 0.07,
-                                                        self.size[0] * 0.4, self.size[1] * 0.1),
+        self.Notifications.add(Notification(self, (self.size[0] * 0.3, self.size[1] * 0.07,
+                                                   self.size[0] * 0.4, self.size[1] * 0.1),
                                             notification_text, (86, 86, 86), (0, 0, 0), (255, 255, 255)))
         self.PlaySound(SOUND_TYPE_NOTIFICATION, 'in')
 
@@ -229,18 +220,18 @@ class Game:
         # possible_version = Version(json.loads(requests.get('https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name'])
         if self.version < possible_version:
             possible_version = json.loads(
-                requests.get('https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)[
-                'tag_name']
-            self.AddNotification('New version is available, load it?')
+                requests.get('https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name']
+            self.AddNotification(self.Language.UpdateNotificationFine)
             if (windll.user32.MessageBoxW(self.GAME_HWND,
-                                          f"Доступна версия {possible_version}, продолжить обновление?",
-                                          f"Обновление до версии {possible_version}", 36)) == 6:
+                                          self.Language.UpdateNotificationYNMessageBoxText.format(version=possible_version),
+                                          self.Language.UpdateNotificationYNMessageBoxTitle.format(version=possible_version), 36)) == 6:
                 self.SetScene(LOAD, func=LoadNewVersion, args=[self, possible_version])
                 LoadNewVersion(self, possible_version)
         else:
-            self.AddNotification('Actual version.')
+            self.AddNotification(self.Language.UpdateNotificationNotFine)
 
     def ConsoleOC(self):
+        print(self.debug)
         win32gui.ShowWindow(self.CONSOLE_HWND, 4 if self.debug else 0)
         self.debug = not self.debug
 
@@ -306,9 +297,13 @@ class Game:
                              fr'{self.MAIN_DIR}\logs\{os.getpid()}log.txt')
             self.AddNotification('ERROR: %s' % err)
             self.SetScene(MAIN)
-        self.Notifications.update(self.mouse_left_press)
+        self.Notifications.update()
         self.screen.blit(self.ConvertScene.image, (0, 0))
-        pygame.mouse.set_cursor(self.cursor)
+        if type(self.cursor) is int:
+            pygame.mouse.set_cursor(self.cursor)
+            pygame.mouse.set_visible(True)
+        elif type(self.cursor) is bool:
+            pygame.mouse.set_visible(self.cursor)
         self.Notifications.draw(self.screen)
         pygame.display.flip()
         self.clock.tick(self.FPS)
@@ -316,6 +311,25 @@ class Game:
     def EditSettings(self, setting_type, name, value):
         self.Settings[setting_type][name]['value'] = value
         self.Settings = DATA(self.Settings.__dict__)
+        if name == 'Console':
+            self.ConsoleOC()
+        elif name == 'Links':
+            if windll.shell32.IsUserAnAdmin():
+                if 'py' in os.path.splitext(self.parent_path)[1]:
+                    file_name = f'{sys.executable} {self.parent_path}'
+                else:
+                    file_name = sys.executable
+                reg.init_deep_links(file_name)
+            else:
+                print(sys.executable)
+                print(__file__ + ' ' + ' '.join(sys.argv[1:]))
+                if (windll.shell32.ShellExecuteW(pygame.display.get_wm_info()['window'], "runas", sys.executable,
+                                                 None if self.EXE else __file__ + ' ' + ' '.join(sys.argv[1:]), None, True)) == 42:
+                    self.RUN = False
+                else:
+                    self.AddNotification(self.Language.Sudo)
+                    self.Settings[setting_type][name]['value'] = False
+                    self.Settings = DATA(self.Settings.__dict__)
 
     def EditWindowSize(self, size):
         pass

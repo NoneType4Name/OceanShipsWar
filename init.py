@@ -8,6 +8,26 @@ size = SIZE((int(namespace_args.size.split('x')[0]), int(namespace_args.size.spl
 theme = float(namespace_args.theme) if namespace_args.theme is not None else 0
 lang = namespace_args.lang if namespace_args.lang else LANG_RUS
 debug = namespace_args.debug if namespace_args.debug else False
+api_socket = None
+
+if run_with_links:
+    api_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    api_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    try:
+        log.debug(f'trying to create api handler.')
+        api_socket.bind((API_HOST, API_PORT))
+        api_socket.setblocking(False)
+        api_socket.listen(1)
+        log.debug(f'success create api handler.')
+    except OSError:
+        log.debug(f'error because, api handler instance is already running.')
+        if namespace_args.DeepLinksApi:
+            log.debug(f'connect to send args from this instance to main.')
+            api_socket.connect((API_HOST, API_PORT))
+            send = api_socket.send(namespace_args.DeepLinksApi.encode())
+            log.debug(f'success send args: {namespace_args.DeepLinksApi}, len: {send}.')
+            api_socket.close()
+        sys.exit(0)
 
 if hasattr(sys, '_MEIPASS'):
     os.chdir(sys._MEIPASS)
@@ -108,8 +128,46 @@ elif theme == THEME_DARK:
         }
     })
 
-game = Game(Settings, Language, Colors, MAIN_DIR, EXE, debug)
+game = Game(__file__, Settings, Language, Colors, MAIN_DIR, EXE, debug)
+
+
+def work_with_links(url):
+    log.debug(f'api not parsed uri: {url}.')
+    request = urlparse(url)
+    log.debug(f'api request: {request}.')
+    query = parse_qs(request.query)
+    log.debug(f'api query: {query}.')
+    for qr in query:
+        log.info(f'run {qr} with args: {query[qr]}.')
+        if qr == API_METHOD_CONNECT:
+            adr = query[qr][0]
+            if ':' in adr:
+                adr = adr.split(':')
+                adr = ':'.join(adr[:-1]), int(adr[-1])
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                sock.bind((GAME_HOST, GAME_PORT))
+                sock.settimeout(0.01)
+                sock, ex_ip, ex_port, source_ip, port = GetIP(sock, GAME_HOST, GAME_PORT)
+                game.SetScene(PLAY, socket=sock)
+                log.info(f'Api method CONNECT will be called, args: {query[qr]}.')
+            except Exception:
+                log.debug(f'failed connect to rm {adr}.', exc_info=True, stack_info=True)
+                game.AddNotification(game.Language.CreateGameConnectionError)
+
+        else:
+            log.warning(f'unknown request: {qr} with args: {" ".join(query[qr])}.')
+    else:
+        log.debug(f'null args.')
+
+
 game.init(GAME_NAME, ICON_PATH, size, pygame.SRCALPHA)
 game.MixerInit()
 while game.RUN:
+    if api_socket:
+        try:
+            threading.Thread(target=work_with_links, args=[api_socket.accept()[0].recv(1024 * 2).decode()]).start()
+        except BlockingIOError:
+            pass
     game.update()

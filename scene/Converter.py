@@ -27,7 +27,6 @@ class ConvertScene:
 
     # def ReSize(self):
 
-
     def update(self, *args):
         if self.old_alpha - self.step > 0 and self.new_alpha + self.step < 255:
             self.new_alpha += self.step

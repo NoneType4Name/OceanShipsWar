@@ -669,7 +669,7 @@ class TextInput(pygame.sprite.Sprite):
                             self.pos = 0
                         elif event.key == pygame.K_END:
                             self.pos = len(self.text)
-                        elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER or event.key == pygame.K_ESCAPE:
+                        elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                             if pygame.key.get_mods() & pygame.KMOD_LCTRL and not self.text:
                                 self.text = self.default
                                 self.pos = len(self.text)
@@ -684,6 +684,9 @@ class TextInput(pygame.sprite.Sprite):
                     elif event.type == pygame.TEXTINPUT:
                         self.text = self.text[:self.pos] + event.text + self.text[self.pos:]
                         self.pos += len(event.text)
+                    elif event.type == pygame.KEYUP:
+                        if event.key == pygame.K_ESCAPE:
+                            self.Deactivate()
                     self.value = self.text if self.text else self.default
                     self.NewFont()
         return self.image
@@ -715,9 +718,9 @@ class TextInput(pygame.sprite.Sprite):
 
 
 class Notification(pygame.sprite.Sprite):
-    def __init__(self, default_font, rect, text, background, around, font_color):
+    def __init__(self, parent, rect, text, background, around, font_color):
         pygame.sprite.Sprite.__init__(self)
-        self.default_font = default_font
+        self.parent = parent
         self.rect = pygame.Rect(rect[0], rect[1] - rect[3], rect[2], rect[3] * 3)
         self.NotificationRect = pygame.Rect(rect)
         self.StartRect = pygame.Rect(rect)
@@ -732,7 +735,7 @@ class Notification(pygame.sprite.Sprite):
         self.StartTime = None
         self.end = False
         self.height_font = 0
-        self.step = self.StartRect.h // 4
+        self.step = self.StartRect.h // 8
         self.max = ''  # max(max(self.text.values()))
         self.draw_point = 0
         for n, element in enumerate(str(text).split('\t')):
@@ -744,19 +747,21 @@ class Notification(pygame.sprite.Sprite):
                 self.max = el
 
         for s in range(0, 1000):
-            self.font = pygame.font.Font(default_font, s)
+            self.font = pygame.font.Font(FONT_PATH, s)
             self.size = list(self.font.size(self.max))
             self.size[1] = self.size[1] * self.height_font  # + self.size[1] * 0.2 * len(self.text)
             if self.size[0] >= self.NotificationRect.w * 0.9 or self.size[1] >= self.NotificationRect.h * 0.9:
-                self.font = pygame.font.Font(default_font, s - 1)
+                self.font = pygame.font.Font(FONT_PATH, s - 1)
                 self.size = list(self.font.size(self.max))
                 self.StartSize = self.font.size(self.max)
                 self.size[1] = self.size[1] * self.height_font  # + self.size[1] * 0.2 * len(self.text)
                 break
+        self.parent.PlaySound(SOUND_TYPE_NOTIFICATION, 'in')
 
     def update(self, mouse):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         if self.isCollide():
+            self.parent.cursor = pygame.SYSTEM_CURSOR_HAND
             if mouse:
                 self.end = True
         if not self.StartTime and self.NotificationRect.y < self.StartRect.y:
@@ -765,9 +770,9 @@ class Notification(pygame.sprite.Sprite):
                 self.StartTime = time.time()
             else:
                 self.NotificationRect.y += self.step
-        elif (
-                time.time() - self.height_font > self.StartTime and self.NotificationRect.y >= self.rect.y - self.StartRect.h and not self.isCollide()) or (
-                self.end and self.NotificationRect.y >= self.rect.y - self.StartRect.h):
+        elif (time.time() - self.height_font >= self.StartTime and self.NotificationRect.y >= self.rect.y - self.StartRect.h and not self.isCollide()) or (self.end and self.NotificationRect.y >= self.rect.y - self.StartRect.h):
+            if self.NotificationRect.y + self.NotificationRect.h + self.step >= self.rect.y + self.rect.h - self.StartRect.h:
+                self.parent.PlaySound(SOUND_TYPE_NOTIFICATION, 'out')
             self.NotificationRect.y -= self.step
         elif (
                 time.time() - self.height_font > self.StartTime and self.NotificationRect.y < self.rect.y - self.StartRect.h) or (

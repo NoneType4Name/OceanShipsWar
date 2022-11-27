@@ -6,6 +6,7 @@ import copy
 import json
 import stun
 import time
+import numpy
 import socket
 import psutil
 import pygame
@@ -100,3 +101,20 @@ def get_hwnd_by_pid(pid):
     win32gui.EnumWindows(lambda hw, null: hwnd.append(
         hw if ((win32process.GetWindowThreadProcessId(hw)[1] == pid) and (win32gui.IsWindowVisible(hw))) else 0), None)
     return max(hwnd)
+
+
+def GetIP(sock, ip, port):
+    nat = stun.get_nat_type(sock, ip, port, stun_host='stun.l.google.com', stun_port=19302)[1]
+    if nat['ExternalIP']:
+        return sock, nat['ExternalIP'], nat['ExternalPort'], ip, port
+    while True:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind((ip, port))
+        sock.settimeout(0.01)
+        nat = stun.get_nat_type(sock, ip, port, stun_host='stun.l.google.com', stun_port=19302)[1]
+        if nat['ExternalIP']:
+            return sock, nat['ExternalIP'], nat['ExternalPort'], ip, port
+        else:
+            port += 1
+            sock.close()

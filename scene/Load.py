@@ -21,14 +21,14 @@ class LoadScene:
         self.PercentLabel = Label(self,
                                   *[(parent.size[0] * 0.4, parent.size[1] * 0.6, parent.size[0] * 0.2, parent.size[1] * 0.05)] * 2,
                                   0.5,
-                                  '0%',
+                                  self.parent.Language.InitTextLabelDefault,
                                   *parent.Colors.Scene.Load.Label,
                                   )
         self.TextLabel = Label(self,
                                (parent.size[0] * 0.4, parent.size[1] * 0.65, parent.size[0] * 0.2, parent.size[1] * 0.05),
                                (parent.size[0] * 0.4, parent.size[1] * 0.65, parent.size[0] * 0.2, parent.size[1] * 0.05),
                                0.5,
-                               '',
+                               self.parent.Language.InitPercentLabelDefault.format(percent=0),
                                *parent.Colors.Scene.Load.Label)
         self.Elements = pygame.sprite.Group([self.ProgressBar, self.PercentLabel, self.TextLabel])
         if self.func:

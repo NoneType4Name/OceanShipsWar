@@ -1,14 +1,5 @@
-import copy
-import random
 import socket
-import sys
-import threading
-import time
 
-import pygame
-import numpy
-
-import log
 from functions import *
 from Gui import *
 
@@ -45,9 +36,9 @@ class Blocks(DATA):
             cords0 = self.GetRect(cords[0])
             cords1 = self.GetRect(cords[1])
             if cords0[1] == cords1[1]:
-                return pygame.Rect(*cords0.topleft, cords1.x - cords0.x + self.block_size, self.block_size)
+                return pygame.Rect(*numpy.array(cords0.topleft) + 1, cords1.x - cords0.x + self.block_size - 1, self.block_size - 1)
             else:
-                return pygame.Rect(*cords0.topleft, self.block_size, cords1.y - cords0.y + self.block_size)
+                return pygame.Rect(*numpy.array(cords0.topleft) + 1, self.block_size - 1, cords1.y - cords0.y + self.block_size - 1)
 
         except Exception:
             log.critical(f'{cords}.')
@@ -85,13 +76,6 @@ class Blocks(DATA):
             for x in range(cords[0][0], cords[1][0] + 1):
                 for y in range(cords[0][1], cords[1][1] + 1):
                     blocks.append([x, y])
-
-            # if cords[0][0] == cords[1][0]:
-            #     for pos in range(cords[0][1], cords[1][1] + 1):
-            #         blocks.append((cords[0][0], pos))
-            # else:
-            #     for pos in range(cords[0][0], cords[1][0] + 1):
-            #         blocks.append((pos, cords[0][1]))
             return blocks
         except Exception:
             log.critical(f'{cords}')
@@ -132,27 +116,28 @@ def MyNotAliveShip(self, image, rect):
 
 
 def DieBlocks(self, image, rect):
-    pygame.draw.line(image, self.not_alive_ship_color, numpy.array(rect.topleft) + self.ships_width, numpy.array(rect.bottomright) - self.ships_width, self.ships_width)
-    pygame.draw.line(image, self.not_alive_ship_color, numpy.array(rect.topright) - numpy.array((self.ships_width, -self.ships_width)),
-                     numpy.array(rect.bottomleft) + numpy.array((self.ships_width, -self.ships_width)), self.ships_width)
+    pygame.draw.line(image, self.not_alive_ship_color, numpy.array(rect.topleft) + self.ships_width // 2, numpy.array(rect.bottomright) - self.ships_width // 2, self.ships_width)
+    pygame.draw.line(image, self.not_alive_ship_color, numpy.array(rect.topright) - numpy.array((self.ships_width // 2, -self.ships_width // 2)),
+                     numpy.array(rect.bottomleft) + numpy.array((self.ships_width // 2, -self.ships_width // 2)), self.ships_width)
 
 
 def MyDieBlocks(self, image, rect):
     pygame.draw.line(image, self.not_alive_ship_color,
-                     numpy.array(rect.topright) - numpy.array((self.ships_width, -self.ships_width)),
-                     numpy.array(rect.midbottom) - numpy.array((0, self.ships_width)))
+                     numpy.array(rect.topright) - numpy.array((self.ships_width // 2, -self.ships_width // 2)),
+                     numpy.array(rect.midbottom) - numpy.array((0, self.ships_width // 2)))
     pygame.draw.line(image, self.not_alive_ship_color,
-                     numpy.array(rect.midtop) + numpy.array((0, self.ships_width)),
-                     numpy.array(rect.bottomleft) - numpy.array((-self.ships_width, self.ships_width)))
+                     numpy.array(rect.midtop) + numpy.array((0, self.ships_width // 2)),
+                     numpy.array(rect.bottomleft) - numpy.array((-self.ships_width // 2, self.ships_width // 2)))
 
 
 class Ships:
-    def __init__(self, blocks: Blocks, alive_ship_color, not_alive_ship_color, ships_width,
+    def __init__(self, parent, blocks: Blocks, alive_ship_color, not_alive_ship_color, ships_width,
                  func_to_draw_alive_count, func_to_draw_not_alive_count,
                  func_to_draw_alive_ship, func_to_draw_not_alive_ship,
                  func_to_draw_die_blocks,
                  solo_count=4, duo_count=3, trio_count=2,
                  quadro_count=1):
+        self.parent = parent
         self.counts = {1: solo_count, 2: duo_count, 3: trio_count, 4: quadro_count}
         self.ships = dict(map(lambda key: (key, {}), [1, 2, 3, 4]))
         self.ships_count = dict.fromkeys([1, 2, 3, 4], 0)
@@ -218,9 +203,6 @@ class Ships:
                             self,
                             image,
                             (mid[0] + num_block * (self.blocks.block_size // 2), mid[1] + self.blocks.block_size * type_ship, self.blocks.block_size // 2, self.blocks.block_size // 2))
-                    # pygame.draw.rect(image, color, (
-                    #     mid[0] + num_block * (self.blocks.block_size // 2), mid[1] + self.blocks.block_size * type_ship, self.blocks.block_size // 2, self.blocks.block_size // 2),
-                    #                  self.ships_width // 2)
 
     def DrawShip(self, cords: tuple, image, custom_color=None):
         if custom_color:
@@ -251,6 +233,8 @@ class Ships:
                 self.KillShip(self.ships[type_ship][number]['ship'], type_ship)
                 return True
             return False
+        elif block in self.die_blocks:
+            return 0
         else:
             return None
 
@@ -290,6 +274,20 @@ class Ships:
         for type_ship in self.ships:
             for num_ship in self.ships[type_ship]:
                 if self.blocks.GetShipEnv(self.blocks.GetShip(self.ships[type_ship][num_ship]['ship'])).colliderect(self.blocks.GetShip(ship_cord)):
+                    return type_ship, num_ship
+        return False
+
+    def CollideDieShip(self, ship_cord):
+        for type_ship in self.die_ships:
+            for num_ship in self.die_ships[type_ship]:
+                if self.blocks.GetShip(self.die_ships[type_ship][num_ship]['ship']).colliderect(self.blocks.GetShip(ship_cord)):
+                    return type_ship, num_ship
+        return False
+
+    def CollideDieShipEnv(self, ship_cord):
+        for type_ship in self.die_ships:
+            for num_ship in self.die_ships[type_ship]:
+                if self.blocks.GetShipEnv(self.blocks.GetShip(self.die_ships[type_ship][num_ship]['ship'])).colliderect(self.blocks.GetShip(ship_cord)):
                     return type_ship, num_ship
         return False
 
@@ -372,7 +370,7 @@ class Ships:
         return self._start_cord, self._end_cord
 
     def _random_placing(self, image):
-        while self.SumShipsMaxCount > self.SumShipsCount() and run:
+        while self.SumShipsMaxCount > self.SumShipsCount() and self.parent.parent.RUN:
             self.Clear()
             cord_not_used = dict.fromkeys([x for x in range(len(self.blocks.blocks.keys()) - 1)],
                                           dict.fromkeys([y for y in range(len(self.blocks.blocks.values()) - 1)], True))
@@ -413,7 +411,7 @@ class Ships:
                             ship[0][1] -= 1 if ship[0][1] - 1 >= 0 else 0
                             ship[1][0] += 1 if ship[1][0] + 1 < len(self.blocks.blocks.keys()) - 1 else 0
                             ship[1][1] += 1 if ship[1][1] + 1 < len(self.blocks.blocks.values()) - 1 else 0
-                            for block in G.Ships.blocks.GetShipBlocks(ship):
+                            for block in self.blocks.GetShipBlocks(ship):
                                 cord_not_used[block[0]][block[1]] = False
                                 cords_used.append(block)
                     else:
@@ -438,147 +436,42 @@ sz = (920, 540)
 bl = int(sz[0] // BLOCK_ATTITUDE)
 
 
-class Exemplar:
-    def __init__(self):
-        self.size = SIZE(sz)
-        self.block_size = int(self.size.w // BLOCK_ATTITUDE)
-        self.Colors = DATA({
-            'KilledShip': (60, 60, 60),
-            'Lines': (255, 255, 255),
-            'Background': (24, 24, 24),
-            'Label': ((41, 42, 43), (91, 92, 93), (232, 234, 236), (232, 234, 236), False, (91, 92, 93), (), False,
-                      (255, 255, 255), ()),
-            'Button': (
-            (41, 42, 43), (255, 255, 255), (232, 234, 236), (0, 0, 0), False, (91, 92, 93), (91, 92, 93), False,
-            (91, 92, 93)),
-            'ButtonRed': (
-            (255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
-            'ButtonActive': (
-            (255, 255, 255), (255, 255, 255), (91, 92, 93), (91, 92, 93), False, (100, 0, 200), (), False,
-            (91, 92, 93)),
-            'Switch': ((64, 64, 64), (64, 64, 64), (0, 255, 0), (255, 255, 255)),
-            'Slide': ((53, 86, 140, 100), (53, 86, 140, 100), (38, 80, 148), (138, 180, 248)),
-            'List': (
-            (29, 29, 31), (29, 29, 31), (232, 234, 236), (255, 255, 255), (41, 42, 45), False, (89, 111, 146), (),
-            False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146), ()),
-            'Path': ((138, 180, 248), (53, 86, 140), (232, 234, 236)),
-            'ProgressBar': ((255, 255, 255), (0, 255, 0)),
-            'TextInput': (
-            (24, 24, 24), (24, 24, 24), (155, 155, 155), (255, 255, 255), False, (100, 0, 255, 100), (), False,
-            (100, 0, 255), ()),
-            'Red': (255, 0, 0),
-            'Green': (0, 255, 0),
-            'Blue': (0, 0, 255),
-            'White': (0, 0, 255),
-            'Scene': {
-                'Load': {
-                    'Label': ((0, 0, 0, 0), (0, 0, 0, 0), (0, 255, 0), (0, 255, 0)),
-                    'ProgressBar': ((24, 24, 24), (0, 255, 0))},
-                'Main': {
-                    'Button': (
-                    (0, 0, 0), (0, 0, 0), (255, 255, 255), (100, 0, 200), True, (24, 24, 24), (0, 0, 0), True,
-                    (24, 24, 24), (0, 0, 0)),
-                }
-            }
-        })
-        self.VERSION = '0'
-        self.Language = DATA(replace_str_var(Language(DEFAULT_LANGUAGES, DEFAULT_LANGUAGE, False).__dict__, self))
-        self.source_ip, self.source_port = '0.0.0.0', 9997
-        self.external_ip = None
-        self.external_port = None
-        self.mouse_pos = (0, 0)
-        self.mouse_right_press = False
-        self.mouse_right_release = False
-        self.mouse_left_press = False
-        self.mouse_left_release = False
-        self.mouse_middle_press = False
-        self.mouse_middle_release = False
-        self.mouse_wheel_x = 0
-        self.mouse_wheel_y = 0
-        self.cursor = pygame.SYSTEM_CURSOR_ARROW
-        self.io = threading.Thread(target=self._IO, args=[])
-        self.io.start()
-        self.events = []
-
-    def PlaySound(self, sound_type: str, sound_name: str, loops=0, maxtime=0, fade_ms=0):
-        print((sound_type, sound_name))
-
-    def _IO(self):
-        while run:
-            data = input('>')
-            print(data)
-
-    def update(self, events):
-        if not self.io.is_alive():
-            self.io = threading.Thread(target=self._IO, args=[])
-            self.io.start()
-        self.mouse_left_release = False
-        self.mouse_right_release = False
-        self.mouse_middle_release = False
-
-        self.mouse_wheel_x = 0
-        self.mouse_wheel_y = 0
-
-        self.mouse_pos = pygame.mouse.get_pos()
-        self.cursor = pygame.SYSTEM_CURSOR_ARROW
-        self.events = events
-        for event in self.events:
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == pygame.BUTTON_LEFT:
-                    self.mouse_left_press = True
-                    self.mouse_left_release = False
-                elif event.button == pygame.BUTTON_RIGHT:
-                    self.mouse_right_press = True
-                    self.mouse_right_release = False
-                elif event.button == pygame.BUTTON_MIDDLE:
-                    self.mouse_middle_press = True
-                    self.mouse_middle_release = False
-
-            elif event.type == pygame.MOUSEBUTTONUP:
-                if event.button == pygame.BUTTON_LEFT:
-                    self.mouse_left_press = False
-                    self.mouse_left_release = True
-                elif event.button == pygame.BUTTON_RIGHT:
-                    self.mouse_right_press = False
-                    self.mouse_right_release = True
-                elif event.button == pygame.BUTTON_MIDDLE:
-                    self.mouse_middle_press = False
-                    self.mouse_middle_release = True
-            elif event.type == pygame.MOUSEWHEEL:
-                self.mouse_wheel_x = event.x
-                self.mouse_wheel_y = event.y
-
-            elif event.type == pygame.MOUSEMOTION:
-                if event.buttons[0] or event.touch:
-                    self.mouse_wheel_x = event.rel[0]
-                    self.mouse_wheel_y = event.rel[1]
-
-
 def RndFunc(self):
     self.parent.Ships.RandomPlacing(self.parent.image)
 
 
+def again(self):
+    self.parent.Again()
+    self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select')
+
+
 class PlayGame:
-    def __init__(self, parent: Exemplar, socket:socket.socket, enemy: (str, int)):
+    def __init__(self, parent, input_scene, kwargs):
         self.type = PLAY
         self.parent = parent
-        self.enemy_host, self.enemy_port = enemy
+        self.InputScene = input_scene
+        self.enemy_host, self.enemy_port = None, None
+        if 'enemy' in kwargs:
+            self.enemy_host, self.enemy_port = kwargs.get('enemy')
         self.size = self.parent.size
         self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
         self.image.fill(self.parent.Colors.Background)
         self.Lines = None
         self.Blocks = Blocks(self.size, 10, (self.parent.size.w * 0.5 - self.parent.block_size * 5),
                              (self.parent.size.h * 0.5 - self.parent.block_size * 5), self.parent.block_size)
-        self.Ships = Ships(self.Blocks, self.parent.Colors.Lines, (100, 100, 100), self.Blocks.block_size // 7,
+        self.Ships = Ships(self, self.Blocks, self.parent.Colors.Lines, (100, 100, 100), self.Blocks.block_size // 7,
                            AliveCount, NotAliveCount, MyAliveShip, MyNotAliveShip, MyDieBlocks)
-        self.EnemyShips = Ships(self.Blocks, (255, 0, 0), (0, 0, 255), self.Blocks.block_size // 7,
+        self.EnemyShips = Ships(self, self.Blocks, (255, 0, 0), (0, 0, 255), self.Blocks.block_size // 7,
                                 AliveCount, NotAliveCount, AliveShip, NotAliveShip, DieBlocks)
 
-        self.socket = socket
+        self.socket = kwargs.get('socket')
+        self.socket.settimeout(None)
         self.socket_activated = False
 
         self.recv_thread = threading.Thread(target=lambda a: a, args=[None])
         self.recv_thread.start()
+        self.send_messages = 0
+        self.recv_messages = 0
         self.attacked_blocks = []
         self.condition = GAME_CONDITION_WAIT
         self.events = []
@@ -596,7 +489,7 @@ class PlayGame:
             'attacked_blocks': self.attacked_blocks,
             'condition': self.condition,
             'events': self.events,
-            'time': 0
+            'count': self.send_messages
         }
         self._recv_dict = {
             'ships': self.EnemyShips.ships,
@@ -607,7 +500,7 @@ class PlayGame:
             'attacked_blocks': [],
             'condition': self.condition,
             'events': [],
-            'time': 0
+            'count': self.recv_messages
         }
         rect_w, rect_h = self.size.w * 0.1, self.size.h * 0.05
         border = rect_h * BORDER_ATTITUDE
@@ -636,8 +529,44 @@ class PlayGame:
                                '',
                                *parent.Colors.Scene.Load.Label
                                )
-        self.Elements = pygame.sprite.Group(self.ClearMap, self.RandomPlacing, self.MoveLabel)
+        rect_w, rect_h = self.size.w * 0.2, self.size.h * 0.1
+        border = rect_h * BORDER_ATTITUDE
+        text_rect = (border, border, rect_w - border * 2, rect_h - border * 2)
+        self.EndGameLabel = Label(self, (parent.size.w * 0.5 - rect_w * 0.5, parent.size.h * 0.7, rect_w, rect_h * 0.5),
+                                  text_rect,
+                                  0.5,
+                                  '',
+                                  *parent.Colors.Scene.Load.Label
+                                  )
+        rect_w, rect_h = self.size.h * 0.2, self.size.h * 0.1
+        border = rect_h * BORDER_ATTITUDE
+        text_rect = (border, border, rect_w - border * 2, rect_h - border * 2)
+        # self.EndGameButtonAgain = Button(self,
+        #                                  (self.size.w * 0.5 - rect_w * 0.5, self.size.h * 0.4 - rect_h * 0.5, rect_w, rect_h),
+        #                                  text_rect,
+        #                                  text_rect,
+        #                                  'Again',
+        #                                  'Again',
+        #                                  (100, 100, 100), (100, 100, 100), (255, 255, 255), (255, 255, 255), False,
+        #                                  (100, 100, 200), (255, 255, 255), False, (200, 100, 255), (), border=border,
+        #                                  func=RndFunc)
+        self.EndGameButtonQuit = Button(self,
+                                        (self.size.w * 0.5 - rect_w * 0.5, self.size.h * 0.5 - rect_h * 0.5, rect_w, rect_h),
+                                        text_rect,
+                                        text_rect,
+                                        self.parent.Language.PlayGameQuit,
+                                        self.parent.Language.PlayGameQuit,
+                                        (100, 100, 100), (100, 100, 100), (255, 255, 255), (255, 255, 255), False,
+                                        (100, 100, 200), (255, 255, 255), False, (200, 100, 255), (), border=border,
+                                        func=EscActivate)
+        self.BuildElements = pygame.sprite.Group(self.ClearMap, self.RandomPlacing, self.MoveLabel)
+        self.GameElements = pygame.sprite.Group(self.MoveLabel)
+        self.EndGameElements = pygame.sprite.Group(self.EndGameLabel, self.EndGameButtonQuit)
         self._random_place = False
+        self.ActivateSocket()
+
+    def Again(self):
+        pass
 
     def DrawLines(self):
         if not self.Lines:
@@ -676,42 +605,40 @@ class PlayGame:
         threading.Thread(target=self._activate_socket).start()
 
     def _read_thread(self):
-        while not self._activate_enemy:
-            data = self.socket.recv(2**12)
+        while not self._activate_enemy and self.parent.RUN:
+            data, addr = self.socket.recvfrom(GAME_DATA_LEN)
             try:
                 data = data.decode().split(',')
                 if 'OSW' in data:
+                    self.enemy_host, self.enemy_port = addr
                     self._activate_enemy = float(data[1])
                     log.debug(self._activate_enemy)
                     break
             except UnicodeError:
-                log.warning(f'data:{data}.')
+                log.warning(f'data:{data}, from:{addr}.')
 
     def _activate_socket(self):
         self._activate = time.time()
-        threading.Thread(target=self._read_thread).start()
-        while not self.socket_activated:
+        if self.enemy_host:
+            threading.Thread(target=self._read_thread).start()
+        else:
+            self._read_thread()
+        while not self.socket_activated and self.parent.RUN:
             try:
                 self.socket.sendto(f'OSW,{self._activate},{self._activate_enemy}'.encode(), (self.enemy_host, self.enemy_port))
                 if self._activate_enemy:
                     self.socket_activated = True
                     self.recv_thread = threading.Thread(target=self._socket_recv)
                     self.recv_thread.start()
-                    if self._activate < self._activate_enemy:
-                        self.condition = GAME_CONDITION_ATTACK
-                    else:
-                        self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
-                    while not self.EnemyShips.SumShipsCount():
-                        self.Send('SYNC.')
-                        self.socket.settimeout(30)
-                    break
+                    self.socket.settimeout(GAME_PING_DELAY)
+                    return
             except Exception as err:
                 log.error(err, stack_info=True, exc_info=True)
 
     def _socket_recv(self):
-        while self.socket_activated:
+        while self.socket_activated and self.parent.RUN:
             try:
-                data = self.socket.recv(2**16).decode()
+                data = self.socket.recv(GAME_DATA_LEN).decode()
                 print(data)
                 if 'OSW' in data:
                     data = data.split(',')
@@ -724,10 +651,15 @@ class PlayGame:
                 elif 'PING' in data:
                     self.Send('PONG!.')
                 elif 'PONG' in data:
-                    self.socket.settimeout(30)
+                    self.socket.settimeout(GAME_PING_DELAY)
                     continue
                 else:
-                    self._recv_dict = literal_eval(data)
+                    data = literal_eval(data)
+                    if data['count'] >= self.recv_messages:
+                        self._recv_dict = data
+                        self.recv_messages += 1
+                    else:
+                        continue
                 self.EnemyShips.ships = self._recv_dict['ships']
                 self.EnemyShips.ships_count = self._recv_dict['ships_count']
                 self.EnemyShips.die_ships = self._recv_dict['die_ships']
@@ -738,7 +670,6 @@ class PlayGame:
                     if event.type == GAME_EVENT_ATTACK:
                         block = event.block
                         result = self.Ships.KillBlock(block)
-                        print(result)
                         if result is None:
                             self.condition = GAME_CONDITION_ATTACK
                         elif result is False:
@@ -748,23 +679,21 @@ class PlayGame:
                             self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
                             self.parent.PlaySound(SOUND_TYPE_GAME, 'kill')
                     elif event.type == GAME_EVENT_LEAVE_GAME:
-                        log.info('exit by enemy!.')
-                        sys.exit(0)
+                        self.condition = GAME_CONDITION_WIN
                     elif event.type == GAME_EVENT_END:
                         self.Event(GAME_EVENT_END, {})
                         self.Send()
                         self.socket_activated = False
                         if self.Ships.SumShipsCount():
-                            log.info('you win!.')
-                            sys.exit(-1)
+                            self.condition = GAME_CONDITION_WIN
                         else:
-                            log.info('enemy win!.')
-                            sys.exit(1)
+                            self.condition = GAME_CONDITION_LOSE
             except socket.timeout:
                 self.Send('PING!.')
-                self.socket.settimeout(1)
-            if not any(self.EnemyShips.ships.values()):
-                self.Send('SYNC.')
+                self.socket.settimeout(GAME_EXTRA_PING_DELAY)
+            if self._activate_enemy and self._recv_dict['condition'] > GAME_CONDITION_BUILD:
+                if not any(self.EnemyShips.ships.values()):
+                    self.Send('SYNC.')
 
     def Send(self, text=''):
         print(text)
@@ -780,10 +709,11 @@ class PlayGame:
             'attacked_blocks': self.attacked_blocks,
             'condition': self.condition,
             'events': self.events,
-            'time': time.time()
+            'count': self.send_messages
         }
         self.socket.sendto(str(self._send_dict).encode(), (self.enemy_host, self.enemy_port))
         self.events = []
+        self.send_messages += 1
 
     def Event(self, event_type, dict_for_events: dict):
         event = {'type': event_type}
@@ -791,9 +721,29 @@ class PlayGame:
         self.events.append(event)
 
     def inBuild(self):
-        self.Elements.update()
-        self.Elements.draw(self.image)
+        if not self._random_place:
+            self.BuildElements.update()
+            self.BuildElements.draw(self.image)
         self.Ships.draw(self.image)
+        if self.selected:
+            if self.Ships.GetImaginaryShipStartCord():
+                if self.Ships.GetImaginaryShipStartCord() != self.Ships.GetImaginaryShipEndCord() and not self._random_place:
+                    if self.Ships.GetImaginaryShipDirection():
+                        self.parent.cursor = pygame.SYSTEM_CURSOR_SIZENS
+                    else:
+                        self.parent.cursor = pygame.SYSTEM_CURSOR_SIZEWE
+                if not self.Blocks.GetRect(self.selected).colliderect(
+                        self.Blocks.GetShip(self.Ships.GetImaginaryShipCords())):
+                    self.Ships.DrawShip((self.selected, self.selected), self.image, (0, 255, 0))
+            else:
+                self.parent.cursor = False
+                if self.Ships.CollideShipEnv((self.selected, self.selected)):
+                    if self.Ships.CollideShip((self.selected, self.selected)):
+                        pass
+                    else:
+                        self.Ships.DrawShip((self.selected, self.selected), self.image, (255, 0, 0))
+                else:
+                    self.Ships.DrawShip((self.selected, self.selected), self.image, (0, 255, 0))
         if self.ClearMap.isCollide() and self.parent.mouse_left_release:
             self.ClearMap.Function()
         elif self.RandomPlacing.isCollide() and self.parent.mouse_left_release:
@@ -820,20 +770,28 @@ class PlayGame:
                 error = self.Ships.EndBuildShip()
                 if error:
                     if error.type == 'rule':
-                        print('Ne Po Pravilam.')
+                        self.parent.AddNotification(self.parent.Language.PlayGameRule.format(value=error.value))
                     elif error.type == 'count':
-                        print(f'{error.value}-h kletochniye corabli zakonchilis')
+                        self.parent.AddNotification(self.parent.Language.PlayGameCount.format(value=error.value))
                     elif error.type == 'len':
-                        print('max len ship: 4')
+                        self.parent.AddNotification(self.parent.Language.PlayGameLen.format(value=error.value))
                 elif self.Ships.SumShipsMaxCount == self.Ships.SumShipsCount():
                     self.condition = GAME_CONDITION_WAIT_AFTER_BUILD
 
     def inGame(self):
         if self.condition == GAME_CONDITION_ATTACK:
-            self.MoveLabel.value = 'Сейчас атакуете Вы.'
+            self.MoveLabel.value = self.parent.Language.PlayGameAttackBySelf
             self.MoveLabel.text_color = (200, 50, 100)
             self.MoveLabel.text_color_active = (200, 50, 100)
             self.EnemyShips.draw(self.image, alive=False)
+            if self.selected:
+                if self.EnemyShips.CollideDieShipEnv((self.selected, self.selected)):
+                    if self.EnemyShips.CollideDieShip((self.selected, self.selected)):
+                        pass
+                    else:
+                        self.Ships.DrawShip((self.selected, self.selected), self.image, (255, 255, 0))
+                else:
+                    self.Ships.DrawShip((self.selected, self.selected), self.image, (0, 255, 0))
             for point in self.attacked_blocks:
                 if point not in self.EnemyShips.die_blocks:
                     pygame.draw.circle(self.image, (100, 100, 100), self.Ships.blocks.GetRect(point).center, self.Ships.blocks.block_size * 0.1)
@@ -844,18 +802,39 @@ class PlayGame:
                     self.Event(GAME_EVENT_ATTACK, {'block': self.selected})
                     if result is None:
                         self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
+                    elif type(result) is int:
+                        pass
                     elif result:
                         if self.EnemyShips.SumShipsMaxCount == self.EnemyShips.SumDieShipCount():
                             self.Event(GAME_EVENT_END, {})
                     self.Send()
         elif self.condition == GAME_CONDITION_WAIT_AFTER_ATTACK:
-            self.MoveLabel.value = 'Сейчас атакует Ваш противник.'
+            self.MoveLabel.value = self.parent.Language.PlayGameAttackByNotSelf
             self.MoveLabel.text_color = (100, 50, 200)
             self.MoveLabel.text_color_active = (100, 50, 200)
+            if self.selected:
+                if self.Ships.CollideShip((self.selected, self.selected)):
+                    pass
+                else:
+                    self.Ships.DrawShip((self.selected, self.selected), self.image, (255, 0, 0))
             for point in self._recv_dict['attacked_blocks']:
                 if point not in self.Ships.die_blocks:
                     pygame.draw.circle(self.image, (255, 0, 0), self.Ships.blocks.GetRect(point).center, self.Ships.blocks.block_size * 0.1)
             self.Ships.draw(self.image)
+
+    def inEnd(self):
+        self.EndGameElements.update()
+        self.EndGameElements.draw(self.image)
+        if self.condition == GAME_CONDITION_WIN:
+            self.EndGameLabel.value = self.parent.Language.PlayGameWin
+            self.EndGameLabel.text_color = (100, 200, 255)
+            self.EndGameLabel.text_color_active = (100, 100, 255)
+        elif self.condition == GAME_CONDITION_LOSE:
+            self.EndGameLabel.value = self.parent.Language.PlayGameLose
+            self.EndGameLabel.text_color = (200, 200, 100)
+            self.EndGameLabel.text_color_active = (200, 100, 155)
+        if self.EndGameButtonQuit.isCollide() and self.parent.mouse_left_release:
+            self.EndGameButtonQuit.Function()
 
     def update(self, active, args):
         if not active:
@@ -886,85 +865,38 @@ class PlayGame:
         if self._keyboard_input and self.parent.mouse_left_press:
             self._keyboard_input = False
         self.image.fill(self.parent.Colors.Background)
-        self.DrawLines()
         self.selected = self.Blocks.GetCollide()
-
+        self.GameElements.update()
+        self.GameElements.draw(self.image)
         if self._keyboard_input:
             self.selected = self._keyboard_input
-        if self.selected:
-            if self.Ships.GetImaginaryShipStartCord():
-                if not self.Blocks.GetRect(self.selected).colliderect(
-                        self.Blocks.GetShip(self.Ships.GetImaginaryShipCords())):
-                    self.Ships.DrawShip((self.selected, self.selected), self.image, (0, 255, 0))
-            else:
-                self.Ships.DrawShip((self.selected, self.selected), self.image, (0, 255, 0))
         if self.condition == GAME_CONDITION_WAIT:
-            self.condition += 1
+            self.MoveLabel.value = self.parent.Language.PlayGameWaitEnemy
+            if self.socket_activated:
+                self.condition = GAME_CONDITION_BUILD
         elif self.condition == GAME_CONDITION_BUILD:
+            self.MoveLabel.value = self.parent.Language.PlayGameBuild
+            self.DrawLines()
             self.inBuild()
         elif self.condition == GAME_CONDITION_WAIT_AFTER_BUILD:
-            if not self._activate:
-                self.ActivateSocket()
-        elif self.condition >= GAME_CONDITION_WAIT_AFTER_ATTACK:
-            self.MoveLabel.update()
-            self.image.blit(self.MoveLabel.image, self.MoveLabel.rect)
+            self.MoveLabel.value = self.parent.Language.PlayGameWait
+            self.DrawLines()
+            self.Ships.draw(self.image)
+            if not self.send_messages:
+                self.Send()
+            if self.EnemyShips.SumShipsCount():
+                if self._activate < self._activate_enemy:
+                    self.condition = GAME_CONDITION_ATTACK
+                else:
+                    self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
+        elif any(map(lambda cond: cond == self.condition, (GAME_CONDITION_ATTACK, GAME_CONDITION_WAIT_AFTER_ATTACK))):
+            self.DrawLines()
             if self.EnemyShips.SumShipsMaxCount:
                 self.inGame()
             if not self.recv_thread.is_alive():
                 self.recv_thread = threading.Thread(target=self._socket_recv)
                 self.recv_thread.start()
+        elif any(map(lambda cond: cond == self.condition, (GAME_CONDITION_LOSE, GAME_CONDITION_WIN))):
+            self.MoveLabel.value = ''
+            self.inEnd()
         return self.image
-
-
-adr_loc = ('0.0.0.0', 9997)
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-
-def GetIP(loc):
-    global sock
-    ip, port = loc
-    while True:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind((ip, port))
-        sock.settimeout(0.1)
-
-        nat_type, nat = stun.get_nat_type(sock, ip, port, stun_host='stun.l.google.com', stun_port=19302)
-        if nat['ExternalIP']:
-            ex_ip = nat['ExternalIP']
-            ex_port = nat['ExternalPort']
-            sock.settimeout(None)
-            log.info("Мой адрес: %s:%s" % (ex_ip, ex_port))
-            return (ip, port), (ex_ip, ex_port)
-        else:
-            port += 1
-
-
-adr_loc, extern = GetIP(adr_loc)
-enemy = input('>>>>').split(':')
-enemy = enemy[0], int(enemy[1])
-
-run = True
-E = Exemplar()
-G = PlayGame(E, sock, enemy)
-
-pygame.init()
-screen = pygame.display.set_mode(sz, pygame.SRCALPHA)
-c = pygame.time.Clock()
-while run:
-    ev = pygame.event.get()
-    E.update(ev)
-    screen.blit(G.update(True, ''), (0, 0))
-    pygame.key.set_repeat(1, 1)
-    for e in ev:
-        if e.type == pygame.QUIT:
-            run = False
-            sys.exit()
-        elif e.type == pygame.KEYDOWN:
-            if e.key == pygame.K_ESCAPE:
-                run = False
-            elif e.key == pygame.K_q:
-                G.EnemyShips.draw(screen)
-    pygame.display.flip()
-    c.tick(60)
