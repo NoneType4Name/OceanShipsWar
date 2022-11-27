@@ -30,10 +30,14 @@ def _GetIP(self, link):
         self.external_ip = nat['ExternalIP']
         self.external_port = nat['ExternalPort']
         if link:
-            self.value = self.parent.parent.Language.CreateGameYouLink
+            self.text = self.parent.parent.Language.CreateGameYouLink
+            self.text_active = self.parent.parent.Language.CreateGameYouLink
         else:
-            self.value = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
-                                                                            port=self.external_port)
+            self.text = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
+                                                                           port=self.external_port)
+            self.text_active = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
+                                                                                  port=self.external_port)
+        self.UpdateImage()
         return
     while self.parent.parent.RUN:
         self.parent.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -45,10 +49,14 @@ def _GetIP(self, link):
             self.external_ip = nat['ExternalIP']
             self.external_port = nat['ExternalPort']
             if link:
-                self.value = self.parent.parent.Language.CreateGameYouLink
+                self.text = self.parent.parent.Language.CreateGameYouLink
+                self.text_active = self.parent.parent.Language.CreateGameYouLink
             else:
-                self.value = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
-                                                                                port=self.external_port)
+                self.text = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
+                                                                               external_ipport=self.external_port)
+                self.text_active = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
+                                                                                      port=self.external_port)
+            self.UpdateImage()
             return
         else:
             self.parent.source_port += 1
@@ -58,9 +66,8 @@ def _GetIP(self, link):
 def CopyIpToClipboard(self, link):
     text = f'{self.external_ip}:{self.external_port}'
     if link:
-        text = f'osw://join?{API_METHOD_CONNECT}={text}'
-    if ':' in self.value:
-        pygame.scrap.put(pygame.SCRAP_TEXT, text.encode())
+        text = f'{GITHUB_PAGE_URL}?{API_METHOD_CONNECT}={text}'
+    pygame.scrap.put(pygame.SCRAP_TEXT, text.encode())
     self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouIPCopied)
 
 
@@ -102,30 +109,36 @@ class CreateGame:
         rect_w, rect_h = parent.size.w * 0.2, parent.size.h * 0.1
         border = parent.size.h * 0.01
         text_rect = (border, border, rect_w - border * 2, rect_h - border * 2)
-        self.MyIpLabel = Label(self, (parent.size.w * 0.5 - rect_w * 0.4, parent.size.h * 0.6 - rect_h * 0.4, rect_w * 0.8, rect_h * 0.8),
-                               (parent.size.w * 0.4 + border, parent.size.h * 0.6 + border, rect_w * 0.5 - border * 2, rect_h * 0.5 - border * 2),
-                               0.5,
-                               self.parent.Language.CreateGameYouIPDefault,
-                               *parent.Colors.Label,
-                               border=border, border_active=border_active, radius=1, radius_active=1,
-                               func=CopyIpToClipboard
-                               )
-        self.MyLinkLabel = Label(self, (parent.size.w * 0.5 - rect_w * 0.4, parent.size.h * 0.7 - rect_h * 0.4, rect_w * 0.8, rect_h * 0.8),
-                                 (parent.size.w * 0.4 + border, parent.size.h * 0.6 + border, rect_w * 0.5 - border * 2, rect_h * 0.5 - border * 2),
-                                 0.5,
-                                 self.parent.Language.CreateGameYouLinkDefault,
-                                 *parent.Colors.Label,
-                                 border=border, border_active=border_active, radius=1, radius_active=1,
-                                 func=CopyIpToClipboard
-                                 )
+        self.MyIpButton = Button(
+            self,
+            (parent.size.w * 0.4 - rect_w * 0.4, parent.size.h * 0.6 - rect_h * 0.25, rect_w * 0.8, rect_h * 0.5),
+            (parent.size.w * 0.4 + border, parent.size.h * 0.6 + border, rect_w * 0.8 - border * 2, rect_h * 0.5 - border * 2),
+            (parent.size.w * 0.4 + border, parent.size.h * 0.6 + border, rect_w * 0.8 - border * 2, rect_h * 0.5 - border * 2),
+            self.parent.Language.CreateGameYouIPDefault,
+            self.parent.Language.CreateGameYouIPDefault,
+            *parent.Colors.Button,
+            border=border, border_active=border_active, radius=1, radius_active=1,
+            func=CopyIpToClipboard, args=[0]
+            )
+        self.MyLinkButton = Button(
+            self,
+            (parent.size.w * 0.6 - rect_w * 0.4, parent.size.h * 0.6 - rect_h * 0.25, rect_w * 0.8, rect_h * 0.5),
+            (parent.size.w * 0.4 + border, parent.size.h * 0.6 + border, rect_w * 0.8 - border * 2, rect_h * 0.5 - border * 2),
+            (parent.size.w * 0.4 + border, parent.size.h * 0.6 + border, rect_w * 0.8 - border * 2, rect_h * 0.5 - border * 2),
+            self.parent.Language.CreateGameYouLinkDefault,
+            self.parent.Language.CreateGameYouLinkDefault,
+            *parent.Colors.Button,
+            border=border, border_active=border_active, radius=1, radius_active=1,
+            func=CopyIpToClipboard, args=[1]
+            )
         self.ConditionLabel = Label(self, (parent.size.w * 0.5 - rect_w * 0.5, parent.size.h * 0.9, rect_w, rect_h * 0.5),
                                     (parent.size.w * 0.5 - rect_w * 0.5, parent.size.h * 0.9, rect_w, rect_h * 0.5),
                                     0.5,
                                     self.parent.Language.CreateGameConditionDefault,
                                     *parent.Colors.Scene.Load.Label
                                     )
-        threading.Thread(target=_GetIP, args=[self.MyIpLabel, 0]).start()
-        threading.Thread(target=_GetIP, args=[self.MyLinkLabel, 1]).start()
+        threading.Thread(target=_GetIP, args=[self.MyIpButton, 0]).start()
+        threading.Thread(target=_GetIP, args=[self.MyLinkButton, 1]).start()
         self.Input = TextInput(self, (parent.size.w * 0.4, parent.size.h * 0.4, rect_w, rect_h),
                                text_rect,
                                self.parent.Language.CreateGameInputDefault,
@@ -138,7 +151,7 @@ class CreateGame:
                                radius_active=0.5,
                                func_deactivate=StartGame)
         self.Input.Activate()
-        self.Elements = pygame.sprite.Group(self.ButtonEsc, self.MyIpLabel, self.ConditionLabel)
+        self.Elements = pygame.sprite.Group(self.ButtonEsc, self.MyIpButton, self.MyLinkButton, self.ConditionLabel)
 
     def update(self, active, args):
         if active:
@@ -156,8 +169,10 @@ class CreateGame:
                 if self.ButtonEsc.isCollide():
                     self.ButtonEsc.Function()
 
-                elif self.MyIpLabel.isCollide():
-                    self.MyIpLabel.Function()
+                elif self.MyIpButton.isCollide():
+                    self.MyIpButton.Function()
+                elif self.MyLinkButton.isCollide():
+                    self.MyLinkButton.Function()
 
                 elif self.Input.isCollide() and not self.Input.active:
                     self.Input.Activate()

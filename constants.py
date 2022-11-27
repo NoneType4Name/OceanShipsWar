@@ -155,6 +155,7 @@ THEMES = [THEME_DARK, THEME_LIGHT]
 GAME_NAME = 'OceanShipsWar'
 CONSOLE_TITLE = "OceanShipsWar - Debug Console"
 GITHUB_REPOS_URL = 'https://api.github.com/repos/NoneType4Name/OceanShipsWar/'
+GITHUB_PAGE_URL = 'https://nonetype4name.github.io/OceanShipsWar'
 
 INIT = -1
 MAIN = 0

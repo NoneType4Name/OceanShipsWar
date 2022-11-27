@@ -173,6 +173,20 @@ class Button(pygame.sprite.Sprite):
         else:
             self.image = self.image_base
 
+    def UpdateImage(self):
+        font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.text, self.text_rect))
+        size = font.size(self.text)
+        self.image_base = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+        self.image_base.blit(RoundedRect(self.rect, self.color, self.radius, self.gradient, self.gradient_start, self.gradient_end, self.border), (0, 0))
+        self.image_base.blit(font.render(self.text, True, self.text_color),
+                             (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
+        font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.text_active, self.text_rect_active))
+        size = font.size(self.text)
+        self.image_active = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+        self.image_active.blit(RoundedRect(self.rect, self.color_active, self.radius_active, self.gradient_active, self.gradient_start_active, self.gradient_end_active, self.border_active), (0, 0))
+        self.image_active.blit(font.render(self.text, True, self.color_act_text),
+                               (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
+
     def isCollide(self):
         return self.rect.collidepoint(pygame.mouse.get_pos())
 

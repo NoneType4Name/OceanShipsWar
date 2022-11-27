@@ -164,6 +164,8 @@ def work_with_links(url):
 
 game.init(GAME_NAME, ICON_PATH, size, pygame.SRCALPHA)
 game.MixerInit()
+if namespace_args.DeepLinksApi:
+    threading.Thread(target=work_with_links, args=[namespace_args.DeepLinksApi]).start()
 while game.RUN:
     if api_socket:
         try:

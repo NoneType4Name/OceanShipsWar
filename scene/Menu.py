@@ -20,7 +20,8 @@ class MainScene:
                                    (-1, parent.size.h - parent.block_size * 0.5,
                                     rect_w, rect_h),
                                    text_rect, text_rect,
-                                   parent.Language.Version, parent.Language.Version, *parent.Colors.Scene.Main.Button, border=border, border_active=border_active)
+                                   parent.Language.Version.format(version=self.parent.VERSION),
+                                   parent.Language.Version.format(version=self.parent.VERSION), *parent.Colors.Scene.Main.Button, border=border, border_active=border_active)
 
         rect_w, rect_h = parent.size.w * 0.24, parent.size.h * 0.15
         border = rect_h * BORDER_ATTITUDE * 2

@@ -18,3 +18,5 @@ settings.json
 tesst.py
 test2.py
 .vscode
+build/
+dist/

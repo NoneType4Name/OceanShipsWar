@@ -33,13 +33,20 @@ def LoadNewVersion(parent, version):
 
 class Version:
     def __init__(self, string_version: str):
-        self.major, self.minor, self.micro, self.type = map(int, string_version.split('.'))
-        st = string_version.split('.')[:-1]
+        vers = {
+            'major': 0,
+            'minor': 0,
+            'micro': 0,
+            'type': 0,
+                }
+        [vers.update({list(vers.keys())[key_n]: value}) for key_n, value in enumerate(map(int, string_version.split('.')))]
+        self.major, self.minor, self.micro, self.type = vers.values()
+        st = '.'.join(list(map(str, vers.values()))[:-1])
         try:
             str_type = VERSIONS[int(self.type)]
         except KeyError:
             str_type = str(self.type)
-        self.string_version = '.'.join(st) + str_type
+        self.string_version = st + '.' + str_type
 
     def __gt__(self, other):
         if type(other) is not Version:
@@ -157,48 +164,47 @@ class Game:
         except pygame.error:
             pass
 
-        if pygame.mixer.get_init():
-            Load = 0
-            scene.PercentLabel.value = ''
-            scene.TextLabel.value = ''
-            while self.RUN:
-                scene.TextLabel.value = self.Language.InitTextLabelConnect
-                try:
-                    requests.get(GITHUB_REPOS_URL + 'releases/latest')
-                    scene.TextLabel.value = self.Language.InitTextLabelSuccessConnect
-                    break
-                except requests.exceptions.ConnectionError:
-                    pass
+        Load = 0
+        scene.PercentLabel.value = ''
+        scene.TextLabel.value = ''
+        while self.RUN:
+            scene.TextLabel.value = self.Language.InitTextLabelConnect
+            try:
+                requests.get(GITHUB_REPOS_URL + 'releases/latest')
+                scene.TextLabel.value = self.Language.InitTextLabelSuccessConnect
+                break
+            except requests.exceptions.ConnectionError:
+                pass
 
-            MaxLoad = len(list(itertools.chain(*SoundsDict.values()))) * 2
-            for sound_type in SoundsDict:
-                for sound_name in SoundsDict[sound_type]:
-                    scene.TextLabel.value = self.Language.InitTextLabelSearch.format(file=os.path.join(".", SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE))
-                    while self.RUN:
-                        if os.path.exists(f'{os.path.join(".", DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'):
-                            Load += 1
-                            break
-                        elif os.path.exists(f'{os.path.join(self.MAIN_DIR, DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'):
-                            SoundsDict[sound_type][sound_name] = 1
-                            Load += 1
-                            break
-                    scene.ProgressBar.value = Load / MaxLoad
-                    scene.PercentLabel.value = self.Language.InitPercentLabel.format(percent=round(Load / MaxLoad * 100))
+        MaxLoad = len(list(itertools.chain(*SoundsDict.values()))) * 2
+        for sound_type in SoundsDict:
+            for sound_name in SoundsDict[sound_type]:
+                scene.TextLabel.value = self.Language.InitTextLabelSearch.format(file=os.path.join(".", SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE))
+                while self.RUN:
+                    if os.path.exists(f'{os.path.join(".", DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'):
+                        Load += 1
+                        break
+                    elif os.path.exists(f'{os.path.join(self.MAIN_DIR, DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}'):
+                        SoundsDict[sound_type][sound_name] = 1
+                        Load += 1
+                        break
+                scene.ProgressBar.value = Load / MaxLoad
+                scene.PercentLabel.value = self.Language.InitPercentLabel.format(percent=round(Load / MaxLoad * 100))
 
-            for sound_type in SoundsDict:
-                for sound_name in SoundsDict[sound_type]:
-                    scene.TextLabel.value = self.Language.InitTextLabelLoad.format(file=os.path.join(SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE))
-                    if SoundsDict[sound_type][sound_name]:
-                        sound = pygame.mixer.Sound(f'{os.path.join(self.MAIN_DIR, DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}')
-                    else:
-                        sound = pygame.mixer.Sound(f'{os.path.join(DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}')
-                    self.Sounds[sound_type][sound_name] = sound
-                    Load += 1
-                    scene.ProgressBar.value = Load / MaxLoad
-                    scene.PercentLabel.value = self.Language.InitPercentLabel.format(percent=round(Load / MaxLoad * 100))
-            self.Sounds = DATA(self.Sounds)
-            self.SOUND = True
-            return
+        for sound_type in SoundsDict:
+            for sound_name in SoundsDict[sound_type]:
+                scene.TextLabel.value = self.Language.InitTextLabelLoad.format(file=os.path.join(SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE))
+                if SoundsDict[sound_type][sound_name]:
+                    sound = pygame.mixer.Sound(f'{os.path.join(self.MAIN_DIR, DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}')
+                else:
+                    sound = pygame.mixer.Sound(f'{os.path.join(DATAS_FOLDER_NAME, SOUNDS_DIR, sound_type, sound_name+"."+SOUNDS_TYPE)}')
+                self.Sounds[sound_type][sound_name] = sound
+                Load += 1
+                scene.ProgressBar.value = Load / MaxLoad
+                scene.PercentLabel.value = self.Language.InitPercentLabel.format(percent=round(Load / MaxLoad * 100))
+        self.Sounds = DATA(self.Sounds)
+        self.SOUND = pygame.mixer.get_init()
+        return
 
     def AddNotification(self, notification_text):
         self.Notifications.add(Notification(self, (self.size[0] * 0.3, self.size[1] * 0.07,
@@ -216,8 +222,8 @@ class Game:
                 self.Sounds[SOUND_TYPE_GAME][sound_name].play(loops, maxtime, fade_ms)
 
     def GetUpdate(self):
-        possible_version = Version('4.0.0.0')
-        # possible_version = Version(json.loads(requests.get('https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name'])
+        possible_version = Version(json.loads(requests.get(
+            'https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name'])
         if self.version < possible_version:
             possible_version = json.loads(
                 requests.get('https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name']
@@ -231,7 +237,6 @@ class Game:
             self.AddNotification(self.Language.UpdateNotificationNotFine)
 
     def ConsoleOC(self):
-        print(self.debug)
         win32gui.ShowWindow(self.CONSOLE_HWND, 4 if self.debug else 0)
         self.debug = not self.debug
 
