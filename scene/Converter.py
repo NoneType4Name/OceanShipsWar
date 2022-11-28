@@ -27,15 +27,15 @@ class ConvertScene:
     # def ReSize(self):
 
     def update(self, *args):
-        if self.old_alpha - self.step > 0 and self.new_alpha + self.step < 255:
+        if self.new_alpha + self.step < 255:  # self.old_alpha - self.step > 0
             self.new_alpha += self.step
-            self.old_alpha -= self.step
-        elif self.old_alpha and self.new_alpha != 255:
+            # self.old_alpha -= self.step
+        elif self.new_alpha != 255:
             self.old_alpha = 0
             self.new_alpha = 255
-        if self.old_alpha:
+        # if self.old_alpha:
             image_old = self.old.update(False, [])
-            image_old.set_alpha(self.old_alpha)
+        #     image_old.set_alpha(self.old_alpha)
             self.image.blit(image_old, (0, 0))
         image_new = self.new.update(True, args)
         image_new.set_alpha(self.new_alpha)

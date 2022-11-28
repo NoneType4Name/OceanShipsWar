@@ -9,26 +9,25 @@ from scene.Notification import Notifications
 
 def LoadNewVersion(self, version):
     b = 0
-    self.ProgressBar = 0
-    self.PercentLabel = self.parent.Language.LoadVersionPercent.format(percent=0)
-    self.TextLabel = self.parent.Language.LoadVersionTextConnect
-    print(self.parent.MAIN_DIR)
-    print(self)
+    self.ProgressBar.value = 0
+    self.PercentLabel.value = self.parent.Language.LoadVersionPercent.format(percent=0)
+    self.TextLabel.value = self.parent.Language.LoadVersionTextConnect
     while True:
         file = requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe', stream=True)
-        self.TextLabel = self.parent.Language.LoadVersionTextLoad
+        self.TextLabel.value = self.parent.Language.LoadVersionTextLoad
         break
-    with open(fr'{self.parent.MAIN_DIR}{GAME_NAME}{version.string_version}.exe', 'wb') as f:
-        for chunk in file.iter_content(8):
+    with open(fr'{self.parent.MAIN_DIR}\{GAME_NAME} {version.string_version}.exe', 'wb') as f:
+        for chunk in file.iter_content(4096):
             f.write(chunk)
-            b += 8
-            self.PercentLabel = self.parent.Language.LoadVersionPercent.format(percent=round(b / int(file.headers["Content-Length"] * 100)))
-            self.PercentLabel = b / int(file.headers['Content-Length'])
+            b += 4096
+            self.PercentLabel.value = self.parent.Language.LoadVersionPercent.format(percent=round((b / int(file.headers["Content-Length"])) * 100))
+            self.ProgressBar.value = b / int(file.headers['Content-Length'])
     self.parent.AddNotification(self.parent.Language.LoadVersionLaunchNotification)
+    self.TextLabel.value = self.parent.Language.LoadVersionTextLaunch
     if (windll.user32.MessageBoxW(self.parent.GAME_HWND,
-                                  self.parent.Language.LoadVersionLaunchYNMessageBoxText.format(version=version),
-                                  self.parent.Language.LoadVersionLaunchYNMessageBoxTitle, 36)) == 6:
-        subprocess.Popen(fr'{self.parent.MAIN_DIR}{GAME_NAME}{version.string_version}.exe')
+                                  self.parent.Language.LoadVersionLaunchYNMessageBoxText.format(version=version.string_version),
+                                  self.parent.Language.LoadVersionLaunchYNMessageBoxTitle, 33)) == 1:
+        subprocess.Popen(fr'{self.parent.MAIN_DIR}\{GAME_NAME} {version.string_version}.exe')
         self.parent.RUN = False
 
 
@@ -228,8 +227,8 @@ class Game:
         if self.version < possible_version:
             self.AddNotification(self.Language.UpdateNotificationFine)
             if (windll.user32.MessageBoxW(self.GAME_HWND,
-                                          self.Language.UpdateNotificationYNMessageBoxText.format(version=possible_version),
-                                          self.Language.UpdateNotificationYNMessageBoxTitle.format(version=possible_version), 36)) == 6:
+                                          self.Language.UpdateNotificationYNMessageBoxText.format(version=possible_version.string_version),
+                                          self.Language.UpdateNotificationYNMessageBoxTitle.format(version=possible_version.string_version), 33)) == 1:
                 self.SetScene(LOAD, func=LoadNewVersion, args=[possible_version])
                 # threading.Thread(target=LoadNewVersion, args=(self, possible_version)).start()
         else:
