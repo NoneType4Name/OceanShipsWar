@@ -32,7 +32,8 @@ class LoadScene:
                                *parent.Colors.Scene.Load.Label)
         self.Elements = pygame.sprite.Group([self.ProgressBar, self.PercentLabel, self.TextLabel])
         if self.func:
-            self.Thread = threading.Thread(target=self.func, args=[self, self.parent, self.kwargs.get('args')])
+            print(kwargs)
+            self.Thread = threading.Thread(target=self.func, args=[self, *self.kwargs.get('args')])
         else:
             self.Thread = threading.Thread(target=self.parent.mixer_init_thread, args=[self, self.kwargs])
         self.Thread.start()

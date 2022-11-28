@@ -7,28 +7,29 @@ from scene.Play import PlayGame
 from scene.Notification import Notifications
 
 
-def LoadNewVersion(parent, version):
-    scene = parent.ConverScene.new
+def LoadNewVersion(self, version):
     b = 0
-    scene.ProgressBar = 0
-    scene.PercentLabel = parent.Language.LoadVersionPercent.format(percent=0)
-    scene.TextLabel = parent.Language.LoadVersionTextConnect
+    self.ProgressBar = 0
+    self.PercentLabel = self.parent.Language.LoadVersionPercent.format(percent=0)
+    self.TextLabel = self.parent.Language.LoadVersionTextConnect
+    print(self.parent.MAIN_DIR)
+    print(self)
     while True:
         file = requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe', stream=True)
-        scene.TextLabel = parent.Language.LoadVersionTextLoad
+        self.TextLabel = self.parent.Language.LoadVersionTextLoad
         break
-    with open(fr'{parent.MAIN_DIR}\OceanShipsWar {version}.exe', 'wb') as f:
+    with open(fr'{self.parent.MAIN_DIR}{GAME_NAME}{version.string_version}.exe', 'wb') as f:
         for chunk in file.iter_content(8):
             f.write(chunk)
             b += 8
-            scene.PercentLabel = f'{b / file.headers["Content-Length"]}%'
-            scene.PercentLabel = b / file.headers['Content-Length']
-    parent.AddNotification(parent.Language.LoadVersionLaunchNotification)
-    if (windll.user32.MessageBoxW(parent.GAME_HWND,
-                                  parent.Language.LoadVersionLaunchYNMessageBoxText.format(version=version),
-                                  parent.Language.LoadVersionLaunchYNMessageBoxTitle, 36)) == 6:
-        subprocess.Popen(fr'{parent.MAIN_DIR}\OceanShipsWar {version}.exe')
-        parent.RUN = False
+            self.PercentLabel = self.parent.Language.LoadVersionPercent.format(percent=round(b / int(file.headers["Content-Length"] * 100)))
+            self.PercentLabel = b / int(file.headers['Content-Length'])
+    self.parent.AddNotification(self.parent.Language.LoadVersionLaunchNotification)
+    if (windll.user32.MessageBoxW(self.parent.GAME_HWND,
+                                  self.parent.Language.LoadVersionLaunchYNMessageBoxText.format(version=version),
+                                  self.parent.Language.LoadVersionLaunchYNMessageBoxTitle, 36)) == 6:
+        subprocess.Popen(fr'{self.parent.MAIN_DIR}{GAME_NAME}{version.string_version}.exe')
+        self.parent.RUN = False
 
 
 class Version:
@@ -106,7 +107,7 @@ class Game:
         self.Notifications = Notifications(self)
         self.GameEvents = []
         self.Properties = reg.getFileProperties(sys.executable)
-        self.version = Version(str(self.Properties.FileVersion))
+        self.version = Version(str('0.0.8.1'))
         self.VERSION = self.version.string_version
         self.MAIN_DIR = main_dir
         self.EXE = exe
@@ -225,14 +226,12 @@ class Game:
         possible_version = Version(json.loads(requests.get(
             'https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name'])
         if self.version < possible_version:
-            possible_version = json.loads(
-                requests.get('https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name']
             self.AddNotification(self.Language.UpdateNotificationFine)
             if (windll.user32.MessageBoxW(self.GAME_HWND,
                                           self.Language.UpdateNotificationYNMessageBoxText.format(version=possible_version),
                                           self.Language.UpdateNotificationYNMessageBoxTitle.format(version=possible_version), 36)) == 6:
-                self.SetScene(LOAD, func=LoadNewVersion, args=[self, possible_version])
-                LoadNewVersion(self, possible_version)
+                self.SetScene(LOAD, func=LoadNewVersion, args=[possible_version])
+                # threading.Thread(target=LoadNewVersion, args=(self, possible_version)).start()
         else:
             self.AddNotification(self.Language.UpdateNotificationNotFine)
 
