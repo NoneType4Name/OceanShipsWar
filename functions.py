@@ -98,9 +98,12 @@ class Language(DATA):
 
 def get_hwnd_by_pid(pid):
     hwnd = []
-    win32gui.EnumWindows(lambda hw, null: hwnd.append(
-        hw if ((win32process.GetWindowThreadProcessId(hw)[1] == pid) and (win32gui.IsWindowVisible(hw))) else 0), None)
+    win32gui.EnumWindows(lambda hw, null: hwnd.append(hw if ((win32process.GetWindowThreadProcessId(hw)[1] == pid) and (win32gui.IsWindowVisible(hw))) else 0), None)
     return max(hwnd)
+
+
+def get_pid_by_hwnd(hwnd):
+    return win32process.GetWindowThreadProcessId(hwnd)[1]
 
 
 def GetIP(sock, ip, port):

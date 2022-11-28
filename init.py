@@ -1,5 +1,4 @@
 from Game import *
-
 DISPLAY_SIZE = (get_monitors()[0].width, get_monitors()[0].height)
 parser = reg.createParser()
 namespace_args = parser.parse_args()
@@ -162,11 +161,15 @@ def work_with_links(url):
         log.debug(f'null args.')
 
 
+args_parsed = False
+
 game.init(GAME_NAME, ICON_PATH, size, pygame.SRCALPHA)
 game.MixerInit()
-if namespace_args.DeepLinksApi:
-    threading.Thread(target=work_with_links, args=[namespace_args.DeepLinksApi]).start()
+
 while game.RUN:
+    if not args_parsed and not game.Blocked and namespace_args.DeepLinksApi:
+        threading.Thread(target=work_with_links, args=[namespace_args.DeepLinksApi]).start()
+        args_parsed = True
     if api_socket:
         try:
             threading.Thread(target=work_with_links, args=[api_socket.accept()[0].recv(1024 * 2).decode()]).start()

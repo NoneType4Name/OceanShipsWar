@@ -4,7 +4,9 @@ from Gui import *
 
 def StartGame(self: TextInput):
     split = self.value.replace('/', '').split(':')
-    if '/' not in self.value:
+    if 'dummy' in self.value:
+        enemy = ('', 0)
+    elif '/' not in self.value:
         try:
             if self.value.count(':') > 1:
                 socket.inet_pton(socket.AF_INET6, split[:-1])
@@ -53,7 +55,7 @@ def _GetIP(self, link):
                 self.text_active = self.parent.parent.Language.CreateGameYouLink
             else:
                 self.text = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
-                                                                               external_ipport=self.external_port)
+                                                                               port=self.external_port)
                 self.text_active = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
                                                                                       port=self.external_port)
             self.UpdateImage()
@@ -67,8 +69,12 @@ def CopyIpToClipboard(self, link):
     text = f'{self.external_ip}:{self.external_port}'
     if link:
         text = f'{GITHUB_PAGE_URL}?{API_METHOD_CONNECT}={text}'
+        self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouLinkCopied)
+        self.parent.Input.value = 'dummy'
+        self.parent.Input.Deactivate()
+    else:
+        self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouIPCopied)
     pygame.scrap.put(pygame.SCRAP_TEXT, text.encode())
-    self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouIPCopied)
 
 
 def EscActivate(self, **kwargs):

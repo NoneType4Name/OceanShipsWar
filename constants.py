@@ -13,7 +13,7 @@ VERSIONS = {
     RELEASE:     'r'
 }
 
-RUS_DICT = {'StartGame': 'Создать игру',
+RUS_DICT = {'StartGame': 'Начать игру',
             'Settings': 'Настройки',
             'ThemeLight': 'Яркая',
             'ThemeDark': 'Тёмная',
@@ -80,7 +80,7 @@ RUS_DICT = {'StartGame': 'Создать игру',
             'Sudo': 'Запустите игру с правами администратора.'
             }
 
-ENG_DICT = {'StartGame': 'Create game',
+ENG_DICT = {'StartGame': 'Start game',
             'Settings': 'Settings',
             'ThemeLight': 'Light',
             'ThemeDark': 'Dark',

@@ -13,6 +13,8 @@ class ConvertScene:
         self.step = SPEED_MERGE_SCENE
 
     def NewScene(self, new, kwargs):
+        if self.old and self.old.type == LOAD:
+            self.parent.Blocked = False
         self.image = pygame.Surface(self.parent.size, pygame.SRCALPHA)
         self.old = self.new
         if kwargs and 'parent' in kwargs:
@@ -21,6 +23,8 @@ class ConvertScene:
             self.new = new(self.parent, last, kwargs)
         else:
             self.new = new(self.parent, self.old.type, kwargs)
+        if self.new.type == LOAD:
+            self.parent.Blocked = True
         self.old_alpha = 255
         self.new_alpha = 0
 
@@ -33,6 +37,7 @@ class ConvertScene:
         elif self.new_alpha != 255:
             self.old_alpha = 0
             self.new_alpha = 255
+            self.parent.SCENE = self.new.type
         # if self.old_alpha:
             image_old = self.old.update(False, [])
         #     image_old.set_alpha(self.old_alpha)

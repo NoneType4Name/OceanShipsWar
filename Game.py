@@ -1,3 +1,5 @@
+import psutil
+
 from functions import *
 from scene.Menu import MainScene
 from scene.Load import LoadScene
@@ -80,8 +82,10 @@ class Game:
 
         self.CONSOLE_HWND = None
         self.CONSOLE_PROCESS = None
+        self.CONSOLE_PID = None
         self.GAME_HWND = None
         self.GAME_PROCESS = None
+        self.GAME_PID = None
         self.RUN = False
         self.size = None
         self.flag = None
@@ -102,7 +106,9 @@ class Game:
             SOUND_TYPE_NOTIFICATION:{},
             SOUND_TYPE_GAME:{}
                        }
-        self.SOUND = False
+        self.SCENE = INIT
+        self.SOUND = None
+        self.Blocked = False
         self.Notifications = Notifications(self)
         self.GameEvents = []
         self.Properties = reg.getFileProperties(sys.executable)
@@ -136,13 +142,20 @@ class Game:
         pygame.display.set_caption(caption)
         pygame.scrap.init()
         self.block_size = int(size.w // BLOCK_ATTITUDE)
-        self.GAME_PROCESS = psutil.Process(os.getpid())
-        try:
-            self.CONSOLE_PROCESS = psutil.Process(self.GAME_PROCESS.ppid())
-        except Exception:
-            self.CONSOLE_PROCESS = self.GAME_PROCESS
+
         self.GAME_HWND = pygame.display.get_wm_info()['window']
-        self.CONSOLE_HWND = get_hwnd_by_pid(self.CONSOLE_PROCESS.pid)
+        self.GAME_PID = get_pid_by_hwnd(self.GAME_HWND)
+        self.GAME_PROCESS = psutil.Process(self.GAME_PID)
+        self.CONSOLE_PID = self.GAME_PROCESS.ppid()
+        print(self.GAME_PROCESS.parents())
+        print(self.CONSOLE_PID)
+        self.CONSOLE_PROCESS = psutil.Process(self.CONSOLE_PID)
+        self.CONSOLE_HWND = get_hwnd_by_pid(self.CONSOLE_PID)
+        # try:
+        #     self.CONSOLE_PROCESS = psutil.Process(self.GAME_PROCESS.ppid())
+        # except Exception:
+        #     self.CONSOLE_PROCESS = self.GAME_PROCESS
+        # self.CONSOLE_HWND = get_hwnd_by_pid(self.CONSOLE_PROCESS.pid)
         self.ConsoleOC()
         self.RUN = True
         self.ConvertScene.NewScene(self.Scene[INIT], None)
@@ -230,7 +243,6 @@ class Game:
                                           self.Language.UpdateNotificationYNMessageBoxText.format(version=possible_version.string_version),
                                           self.Language.UpdateNotificationYNMessageBoxTitle.format(version=possible_version.string_version), 33)) == 1:
                 self.SetScene(LOAD, func=LoadNewVersion, args=[possible_version])
-                # threading.Thread(target=LoadNewVersion, args=(self, possible_version)).start()
         else:
             self.AddNotification(self.Language.UpdateNotificationNotFine)
 
@@ -317,17 +329,18 @@ class Game:
         if name == 'Console':
             self.ConsoleOC()
         elif name == 'Links':
-            if windll.shell32.IsUserAnAdmin():
-                if 'py' in os.path.splitext(self.parent_path)[1]:
-                    file_name = f'{sys.executable} {self.parent_path}'
-                else:
-                    file_name = sys.executable
-                reg.init_deep_links(file_name)
+            if self.EXE:
+                file_name = ''
             else:
-                print(sys.executable)
-                print(__file__ + ' ' + ' '.join(sys.argv[1:]))
+                file_name = self.parent_path
+            if windll.shell32.IsUserAnAdmin():
+                if value:
+                    reg.init_deep_links(f'{sys.executable} {file_name}'.replace('  ', ' '))
+                else:
+                    reg.del_deep_link()
+            else:
                 if (windll.shell32.ShellExecuteW(pygame.display.get_wm_info()['window'], "runas", sys.executable,
-                                                 None if self.EXE else __file__ + ' ' + ' '.join(sys.argv[1:]), None, True)) == 42:
+                                                 file_name + ' ' + ' '.join(sys.argv[1:]), None, True)) == 42:
                     self.RUN = False
                 else:
                     self.AddNotification(self.Language.Sudo)
