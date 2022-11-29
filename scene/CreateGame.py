@@ -27,6 +27,8 @@ def StartGame(self: TextInput):
 
 
 def _GetIP(self, link):
+    st_tm = self.parent.socket.gettimeout()
+    self.parent.socket.settimeout(0.01)
     nat = stun.get_nat_type(self.parent.socket, self.parent.source_ip, self.parent.source_port, stun_host='stun.l.google.com', stun_port=19302)[1]
     if nat['ExternalIP']:
         self.external_ip = nat['ExternalIP']
@@ -40,8 +42,10 @@ def _GetIP(self, link):
             self.text_active = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
                                                                                   port=self.external_port)
         self.UpdateImage()
+        self.parent.socket.settimeout(st_tm)
         return
     while self.parent.parent.RUN:
+        print(1)
         self.parent.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.parent.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.parent.socket.bind((self.parent.source_ip, self.parent.source_port))
@@ -59,6 +63,7 @@ def _GetIP(self, link):
                 self.text_active = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
                                                                                       port=self.external_port)
             self.UpdateImage()
+            self.parent.socket.settimeout(st_tm)
             return
         else:
             self.parent.source_port += 1
@@ -78,6 +83,7 @@ def CopyIpToClipboard(self, link):
 
 
 def EscActivate(self, **kwargs):
+    self.parent.socket.shutdown(0)
     self.parent.socket.close()
     self.parent.parent.SetScene(self.parent.InputScene, *kwargs)
     self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select')

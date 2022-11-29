@@ -437,6 +437,7 @@ bl = int(sz[0] // BLOCK_ATTITUDE)
 
 
 def RndFunc(self):
+    self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select')
     self.parent.Ships.RandomPlacing(self.parent.image)
 
 
@@ -513,7 +514,7 @@ class PlayGame:
                                self.parent.Language.GameClearMap,
                                (10, 10, 10), (10, 10, 10), (255, 255, 255), (255, 255, 255), False, (100, 100, 200),
                                (255, 255, 255), False, (200, 100, 255), (), border=border,
-                               func=lambda s: s.parent.Ships.Clear())
+                               func=lambda s: s.parent.Ships.Clear() or s.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select'))
         self.RandomPlacing = Button(self,
                                     (self.size.w * 0.1, self.size.h * 0.7, rect_w, rect_h),
                                     text_rect,
@@ -619,12 +620,10 @@ class PlayGame:
 
     def _activate_socket(self):
         self._activate = time.time()
-        if self.enemy_host:
-            threading.Thread(target=self._read_thread).start()
-        else:
-            self._read_thread()
-        while not self.socket_activated and self.parent.RUN:
+        threading.Thread(target=self._read_thread).start()
+        while not self.socket_activated and self.parent.RUN and self.enemy_host:
             try:
+                print(self.enemy_host)
                 self.socket.sendto(f'OSW,{self._activate},{self._activate_enemy}'.encode(), (self.enemy_host, self.enemy_port))
                 if self._activate_enemy:
                     self.socket_activated = True
@@ -672,6 +671,7 @@ class PlayGame:
                         result = self.Ships.KillBlock(block)
                         if result is None:
                             self.condition = GAME_CONDITION_ATTACK
+                            self.parent.PlaySound(SOUND_TYPE_GAME, 'miss')
                         elif result is False:
                             self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
                             self.parent.PlaySound(SOUND_TYPE_GAME, 'wound')
@@ -801,12 +801,17 @@ class PlayGame:
                     result = self.EnemyShips.KillBlock(self.selected)
                     self.Event(GAME_EVENT_ATTACK, {'block': self.selected})
                     if result is None:
+                        self.parent.PlaySound(SOUND_TYPE_GAME, 'miss')
                         self.condition = GAME_CONDITION_WAIT_AFTER_ATTACK
                     elif type(result) is int:
                         pass
-                    elif result:
-                        if self.EnemyShips.SumShipsMaxCount == self.EnemyShips.SumDieShipCount():
-                            self.Event(GAME_EVENT_END, {})
+                    else:
+                        if result:
+                            self.parent.PlaySound(SOUND_TYPE_GAME, 'kill')
+                            if self.EnemyShips.SumShipsMaxCount == self.EnemyShips.SumDieShipCount():
+                                self.Event(GAME_EVENT_END, {})
+                        else:
+                            self.parent.PlaySound(SOUND_TYPE_GAME, 'wound')
                     self.Send()
         elif self.condition == GAME_CONDITION_WAIT_AFTER_ATTACK:
             self.MoveLabel.value = self.parent.Language.PlayGameAttackByNotSelf

@@ -149,8 +149,8 @@ def work_with_links(url):
                 sock.bind((GAME_HOST, GAME_PORT))
                 sock.settimeout(0.01)
                 sock, ex_ip, ex_port, source_ip, port = GetIP(sock, GAME_HOST, GAME_PORT)
-                game.SetScene(PLAY, socket=sock)
-                log.info(f'Api method CONNECT will be called, args: {query[qr]}.')
+                game.SetScene(PLAY, socket=sock, enemy=adr)
+                log.info(f'Api method CONNECT will be called, args: {query[qr]}, {adr}.')
             except Exception:
                 log.debug(f'failed connect to rm {adr}.', exc_info=True, stack_info=True)
                 game.AddNotification(game.Language.CreateGameConnectionError)

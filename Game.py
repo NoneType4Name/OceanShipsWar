@@ -1,5 +1,6 @@
 import psutil
 
+import log
 from functions import *
 from scene.Menu import MainScene
 from scene.Load import LoadScene
@@ -80,12 +81,12 @@ class Game:
 
         self.FPS = GAME_FPS
 
-        self.CONSOLE_HWND = None
+        self.CONSOLE_HWND = 0
         self.CONSOLE_PROCESS = None
-        self.CONSOLE_PID = None
-        self.GAME_HWND = None
+        self.CONSOLE_PID = 0
+        self.GAME_HWND = 0
         self.GAME_PROCESS = None
-        self.GAME_PID = None
+        self.GAME_PID = 0
         self.RUN = False
         self.size = None
         self.flag = None
@@ -142,20 +143,25 @@ class Game:
         pygame.display.set_caption(caption)
         pygame.scrap.init()
         self.block_size = int(size.w // BLOCK_ATTITUDE)
-
         self.GAME_HWND = pygame.display.get_wm_info()['window']
         self.GAME_PID = get_pid_by_hwnd(self.GAME_HWND)
         self.GAME_PROCESS = psutil.Process(self.GAME_PID)
-        self.CONSOLE_PID = self.GAME_PROCESS.ppid()
-        print(self.GAME_PROCESS.parents())
-        print(self.CONSOLE_PID)
+        for hw in get_hwnd_by_pid(self.GAME_PID):
+            if hw != self.GAME_HWND:
+                self.CONSOLE_HWND = hw
+                break
+        if not self.CONSOLE_HWND:
+            for hw in get_hwnd_by_pid(self.GAME_PROCESS.ppid()):
+                if hw != self.GAME_HWND:
+                    self.CONSOLE_HWND = hw
+                    break
+        if not self.CONSOLE_HWND:
+            for hw in get_hwnd_by_pid(psutil.Process(self.GAME_PROCESS.ppid()).ppid()):
+                if hw != self.GAME_HWND:
+                    self.CONSOLE_HWND = hw
+                    break
+        self.CONSOLE_PID = get_pid_by_hwnd(self.CONSOLE_HWND)
         self.CONSOLE_PROCESS = psutil.Process(self.CONSOLE_PID)
-        self.CONSOLE_HWND = get_hwnd_by_pid(self.CONSOLE_PID)
-        # try:
-        #     self.CONSOLE_PROCESS = psutil.Process(self.GAME_PROCESS.ppid())
-        # except Exception:
-        #     self.CONSOLE_PROCESS = self.GAME_PROCESS
-        # self.CONSOLE_HWND = get_hwnd_by_pid(self.CONSOLE_PROCESS.pid)
         self.ConsoleOC()
         self.RUN = True
         self.ConvertScene.NewScene(self.Scene[INIT], None)
@@ -247,7 +253,7 @@ class Game:
             self.AddNotification(self.Language.UpdateNotificationNotFine)
 
     def ConsoleOC(self):
-        win32gui.ShowWindow(self.CONSOLE_HWND, 4 if self.debug else 0)
+        win32gui.ShowWindow(self.CONSOLE_HWND, 8 if self.debug else 0)
         self.debug = not self.debug
 
     def SetScene(self, scene, **kwargs):
