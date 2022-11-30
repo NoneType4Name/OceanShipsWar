@@ -121,4 +121,5 @@ def GetIP(sock, ip, port):
             return sock, nat['ExternalIP'], nat['ExternalPort'], ip, port
         else:
             port += 1
+            sock.shutdown(0)
             sock.close()

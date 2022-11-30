@@ -150,6 +150,8 @@ def work_with_links(url):
                 sock.settimeout(0.01)
                 sock, ex_ip, ex_port, source_ip, port = GetIP(sock, GAME_HOST, GAME_PORT)
                 game.SetScene(PLAY, socket=sock, enemy=adr)
+                pygame.scrap.put(pygame.SCRAP_TEXT, f'{GITHUB_PAGE_URL}?{API_METHOD_CONNECT}={ex_ip}:{ex_port}'.encode())
+                game.AddNotification(game.Language.CreateGameYouLinkCopied)
                 log.info(f'Api method CONNECT will be called, args: {query[qr]}, {adr}.')
             except Exception:
                 log.debug(f'failed connect to rm {adr}.', exc_info=True, stack_info=True)
@@ -162,7 +164,7 @@ def work_with_links(url):
 
 
 args_parsed = False
-
+game.demo = True
 game.init(GAME_NAME, ICON_PATH, size, pygame.SRCALPHA)
 game.MixerInit()
 

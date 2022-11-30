@@ -66,7 +66,7 @@ class Version:
 
 class Game:
     def __init__(self, run_from, settings: DATA, language: Language, colors: DATA, main_dir: str, exe: bool, debug=0):
-        pygame.font.init()
+        self.demo = False
         self.mouse_pos = (0, 0)
         self.mouse_right_press = False
         self.mouse_right_release = False
@@ -142,6 +142,7 @@ class Game:
         self.screen = pygame.display.set_mode(self.size, self.flag, self.depth)
         pygame.display.set_icon(pygame.image.load(icon_path))
         pygame.display.set_caption(caption)
+        pygame.font.init()
         pygame.scrap.init()
         self.block_size = int(size.w // BLOCK_ATTITUDE)
         self.GAME_HWND = pygame.display.get_wm_info()['window']
@@ -328,8 +329,9 @@ class Game:
         elif type(self.cursor) is bool:
             pygame.mouse.set_visible(self.cursor)
         self.Notifications.draw(self.screen)
-        self.Ticker.update()
-        self.screen.blit(self.Ticker.image, self.Ticker.rect)
+        if self.demo:
+            self.Ticker.update()
+            self.screen.blit(self.Ticker.image, self.Ticker.rect)
         pygame.display.flip()
         self.clock.tick(self.FPS)
 

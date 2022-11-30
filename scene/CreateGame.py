@@ -6,7 +6,18 @@ def StartGame(self: TextInput):
     split = self.value.replace('/', '').split(':')
     if 'dummy' in self.value:
         enemy = ('', 0)
-    elif '/' not in self.value:
+    elif GITHUB_PAGE_URL in self.value:
+        request = urlparse(self.value)
+        query = parse_qs(request.query)
+        for qr in query:
+            log.info(f'run {qr} with args: {query[qr]}.')
+            if qr == API_METHOD_CONNECT:
+                adr = query[qr][0]
+                if ':' in adr:
+                    adr = adr.split(':')
+                    enemy = ':'.join(adr[:-1]), int(adr[-1])
+                    break
+    elif '||' not in self.value:
         try:
             if self.value.count(':') > 1:
                 socket.inet_pton(socket.AF_INET6, split[:-1])
@@ -45,7 +56,6 @@ def _GetIP(self, link):
         self.parent.socket.settimeout(st_tm)
         return
     while self.parent.parent.RUN:
-        print(1)
         self.parent.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.parent.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.parent.socket.bind((self.parent.source_ip, self.parent.source_port))
@@ -75,8 +85,8 @@ def CopyIpToClipboard(self, link):
     if link:
         text = f'{GITHUB_PAGE_URL}?{API_METHOD_CONNECT}={text}'
         self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouLinkCopied)
-        self.parent.Input.value = 'dummy'
-        self.parent.Input.Deactivate()
+        # self.parent.Input.value = 'dummy'
+        # self.parent.Input.Deactivate()
     else:
         self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouIPCopied)
     pygame.scrap.put(pygame.SCRAP_TEXT, text.encode())
