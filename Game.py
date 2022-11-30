@@ -129,6 +129,7 @@ class Game:
             })
         self.ConvertScene = ConvertScene(self, self.Scene[INIT])
         self.ConvertSceneThread = threading.Thread(target=lambda _:True)
+        self.Ticker = None
 
     def init(self, caption: str, icon_path: str, size: SIZE, flag=0, depth=0, display=0, vsync=0):
         os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -165,6 +166,7 @@ class Game:
         self.ConsoleOC()
         self.RUN = True
         self.ConvertScene.NewScene(self.Scene[INIT], None)
+        self.Ticker = Ticker((0, self.size.h * 0.9, self.size.w, self.size.h * 0.05), self.Language.Demo, 0.5, (200, 200, 200), (255, 0, 0))
 
     def MixerInit(self, frequency=44100, size=-16, channels=2, buffer=512, devicename='', allowedchanges=5):
         self.SetScene(LOAD,
@@ -326,6 +328,8 @@ class Game:
         elif type(self.cursor) is bool:
             pygame.mouse.set_visible(self.cursor)
         self.Notifications.draw(self.screen)
+        self.Ticker.update()
+        self.screen.blit(self.Ticker.image, self.Ticker.rect)
         pygame.display.flip()
         self.clock.tick(self.FPS)
 

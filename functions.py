@@ -13,6 +13,7 @@ import pygame
 import random
 import win32gui
 import requests
+import itertools
 import threading
 import traceback
 import Reg as reg
