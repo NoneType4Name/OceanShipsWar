@@ -123,3 +123,12 @@ def GetIP(sock, ip, port):
             port += 1
             sock.shutdown(0)
             sock.close()
+
+
+def GetIpFromTuple(tpl):
+    return '{}:{}'.format(*tpl)
+
+
+def GetIpFromString(st):
+    st = st.split(':')
+    return ':'.join(st[:-1]), int(st[-1])

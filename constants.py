@@ -46,6 +46,7 @@ RUS_DICT = {'StartGame': 'Начать игру',
             'CreateGameConditionDefault': '',
             'CreateGameInputDefault': 'Введите IP в формате IP:PORT.',
             'CreateGameConnectionError': 'Неверный адрес приглашения',
+            'PlayGameIncorrectLink': 'Неверная или недействительная ссылка',
             'PlayGameQuit': 'Главное меню.',
             'PlayGameRule': 'Это действие запрещено правилами.',
             'PlayGameCount': '{value} клеточные корабли уже установлены.',
@@ -113,6 +114,7 @@ ENG_DICT = {'StartGame': 'Start game',
             'CreateGameConditionDefault': '',
             'CreateGameInputDefault': 'You IP with format: IP:PORT.',
             'CreateGameConnectionError': 'Invalid invitation address',
+            'PlayGameIncorrectLink': 'Link is invalid or incorrect',
             'PlayGameQuit': 'Main menu.',
             'PlayGameRule': 'This action is prohibited by the rules.',
             'PlayGameCount': '{value} cell ships have already been installed.',
@@ -209,6 +211,9 @@ GAME_PORT = 9997
 GAME_PING_DELAY = 10
 GAME_EXTRA_PING_DELAY = 1
 GAME_DATA_LEN = 2**16
+
+AROUND_NAT_SERVER_IP = '0.0.0.0'
+AROUND_NAT_SERVER_PORT = 0
 
 BLOCK_ATTITUDE = 27.428571428571427
 SHIP_ATTITUDE = 7

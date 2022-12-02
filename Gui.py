@@ -10,6 +10,11 @@ ESCAPE_CHARS_TRANSLATER = str.maketrans(dict.fromkeys(list(ESCAPE_CHARS), None))
 pygame.font.init()
 
 
+def FontRender(font, text, text_rect: pygame.Rect, color, background: None):
+    srf = pygame.font.Font(font, 1000).render(text, True, color, background)
+    return pygame.transform.smoothscale(srf, (text_rect.w, text_rect.h))
+
+
 def EscActivate(self, **kwargs):
     self.parent.parent.SetScene(self.parent.InputScene, *kwargs)
     self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select')

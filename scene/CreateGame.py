@@ -6,17 +6,6 @@ def StartGame(self: TextInput):
     split = self.value.replace('/', '').split(':')
     if 'dummy' in self.value:
         enemy = ('', 0)
-    elif GITHUB_PAGE_URL in self.value:
-        request = urlparse(self.value)
-        query = parse_qs(request.query)
-        for qr in query:
-            log.info(f'run {qr} with args: {query[qr]}.')
-            if qr == API_METHOD_CONNECT:
-                adr = query[qr][0]
-                if ':' in adr:
-                    adr = adr.split(':')
-                    enemy = ':'.join(adr[:-1]), int(adr[-1])
-                    break
     elif '||' not in self.value:
         try:
             if self.value.count(':') > 1:
@@ -34,25 +23,34 @@ def StartGame(self: TextInput):
     else:
         enemy = (':'.join(split[:-1]), int(split[-1]))
     self.parent.ConditionLabel.value = self.parent.parent.Language.CreateGameConnect
-    self.parent.parent.SetScene(PLAY, socket=self.parent.socket, enemy=enemy)
+    self.parent.parent.SetScene(PLAY, socket=self.parent.socket, enemy=enemy, link=self.parent.around_nat_socket)
 
 
 def _GetIP(self, link):
+    self.external_tcp_ip, self.external_tcp_port = None, None
+    if link:
+        self.parent.around_nat_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.parent.around_nat_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        self.parent.around_nat_socket.connect((AROUND_NAT_SERVER_IP, AROUND_NAT_SERVER_PORT))
+        self.parent.around_nat_socket.send('mine.'.encode())
+        self.external_tcp_ip, self.external_tcp_port = GetIpFromString(self.parent.around_nat_socket.recv(1024).decode())
+        print(self.external_tcp_ip)
+        self.text = self.parent.parent.Language.CreateGameYouLink
+        self.text_active = self.parent.parent.Language.CreateGameYouLink
+        self.UpdateImage()
+
     st_tm = self.parent.socket.gettimeout()
     self.parent.socket.settimeout(0.01)
     nat = stun.get_nat_type(self.parent.socket, self.parent.source_ip, self.parent.source_port, stun_host='stun.l.google.com', stun_port=19302)[1]
     if nat['ExternalIP']:
         self.external_ip = nat['ExternalIP']
         self.external_port = nat['ExternalPort']
-        if link:
-            self.text = self.parent.parent.Language.CreateGameYouLink
-            self.text_active = self.parent.parent.Language.CreateGameYouLink
-        else:
+        if not link:
             self.text = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
                                                                            port=self.external_port)
             self.text_active = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
                                                                                   port=self.external_port)
-        self.UpdateImage()
+            self.UpdateImage()
         self.parent.socket.settimeout(st_tm)
         return
     while self.parent.parent.RUN:
@@ -64,15 +62,12 @@ def _GetIP(self, link):
         if nat['ExternalIP']:
             self.external_ip = nat['ExternalIP']
             self.external_port = nat['ExternalPort']
-            if link:
-                self.text = self.parent.parent.Language.CreateGameYouLink
-                self.text_active = self.parent.parent.Language.CreateGameYouLink
-            else:
+            if not link:
                 self.text = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
                                                                                port=self.external_port)
                 self.text_active = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
                                                                                       port=self.external_port)
-            self.UpdateImage()
+                self.UpdateImage()
             self.parent.socket.settimeout(st_tm)
             return
         else:
@@ -83,10 +78,10 @@ def _GetIP(self, link):
 def CopyIpToClipboard(self, link):
     text = f'{self.external_ip}:{self.external_port}'
     if link:
-        text = f'{GITHUB_PAGE_URL}?{API_METHOD_CONNECT}={text}'
-        self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouLinkCopied)
-        # self.parent.Input.value = 'dummy'
-        # self.parent.Input.Deactivate()
+        text = f'{GITHUB_PAGE_URL}?{API_METHOD_CONNECT}={self.external_tcp_ip}:{self.external_tcp_port}|{text}'
+        # self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouLinkCopied)
+        self.parent.Input.value = 'dummy'
+        self.parent.Input.Deactivate()
     else:
         self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouIPCopied)
     pygame.scrap.put(pygame.SCRAP_TEXT, text.encode())

@@ -6,7 +6,7 @@ run_with_links = namespace_args.links if namespace_args.links is not None else T
 size = SIZE((int(namespace_args.size.split('x')[0]), int(namespace_args.size.split('x')[1])) if namespace_args.size else DISPLAY_SIZE)
 theme = float(namespace_args.theme) if namespace_args.theme is not None else 0
 lang = namespace_args.lang if namespace_args.lang else LANG_RUS
-debug = namespace_args.debug if namespace_args.debug else False
+debug = namespace_args.debug if namespace_args.debug else 0
 api_socket = None
 
 if run_with_links:
@@ -139,19 +139,21 @@ def work_with_links(url):
     for qr in query:
         log.info(f'run {qr} with args: {query[qr]}.')
         if qr == API_METHOD_CONNECT:
-            adr = query[qr][0]
-            if ':' in adr:
-                adr = adr.split(':')
-                adr = ':'.join(adr[:-1]), int(adr[-1])
+            adr = query[qr][0].split('|')
+            adr_external = GetIpFromString(adr[0])
+            udp_external = GetIpFromString(adr[1])
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 sock.bind((GAME_HOST, GAME_PORT))
                 sock.settimeout(0.01)
                 sock, ex_ip, ex_port, source_ip, port = GetIP(sock, GAME_HOST, GAME_PORT)
-                game.SetScene(PLAY, socket=sock, enemy=adr)
-                pygame.scrap.put(pygame.SCRAP_TEXT, f'{GITHUB_PAGE_URL}?{API_METHOD_CONNECT}={ex_ip}:{ex_port}'.encode())
-                game.AddNotification(game.Language.CreateGameYouLinkCopied)
+                tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                tcp_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                tcp_socket.connect((AROUND_NAT_SERVER_IP, AROUND_NAT_SERVER_PORT))
+                game.SetScene(PLAY, socket=sock, enemy=udp_external, link=[ex_ip, ex_port, tcp_socket, *adr_external])
+                # pygame.scrap.put(pygame.SCRAP_TEXT, f'{GITHUB_PAGE_URL}?{API_METHOD_CONNECT}={ex_ip}:{ex_port}'.encode())
+                # game.AddNotification(game.Language.CreateGameYouLinkCopied)
                 log.info(f'Api method CONNECT will be called, args: {query[qr]}, {adr}.')
             except Exception:
                 log.debug(f'failed connect to rm {adr}.', exc_info=True, stack_info=True)
@@ -164,7 +166,7 @@ def work_with_links(url):
 
 
 args_parsed = False
-game.demo = True
+# game.demo = True
 game.init(GAME_NAME, ICON_PATH, size, pygame.SRCALPHA)
 game.MixerInit()
 

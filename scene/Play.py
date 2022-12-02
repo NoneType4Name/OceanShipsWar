@@ -1,5 +1,3 @@
-import socket
-
 from functions import *
 from Gui import *
 
@@ -451,9 +449,18 @@ class PlayGame:
         self.type = PLAY
         self.parent = parent
         self.InputScene = input_scene
-        self.enemy_host, self.enemy_port = None, None
+        self.external_host, self.external_port, self.enemy_external_host, self.enemy_external_port, self.enemy_host, self.enemy_port = None, None, None, None, None, None
         if 'enemy' in kwargs:
             self.enemy_host, self.enemy_port = kwargs.get('enemy')
+        self.link = False
+        if 'link' in kwargs:
+            self.link = True
+            lnk = kwargs.get('link')
+            if isinstance(lnk, (tuple, list)):
+                self.external_host, self.external_port, self.AroundNatSocket, self.enemy_external_host, self.enemy_external_port = lnk
+            else:
+                self.AroundNatSocket = lnk
+
         self.size = self.parent.size
         self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
         self.image.fill(self.parent.Colors.Background)
@@ -478,6 +485,7 @@ class PlayGame:
         self.events = []
         self.selected = None
         self._activate_press = False
+        self._activate_release = False
         self._keyboard_input = False
         self._activate = 0
         self._activate_enemy = 0
@@ -605,6 +613,42 @@ class PlayGame:
     def ActivateSocket(self):
         threading.Thread(target=self._activate_socket).start()
 
+    def _ping(self):
+        while self.parent.RUN:
+            try:
+                l = time.time()
+                while time.time() - l < 1 and self.parent.RUN:
+                    pass
+                self.AroundNatSocket.send('ping!.'.encode())
+            except (ConnectionAbortedError, OSError):
+                self.AroundNatSocket.close()
+
+    def _around_nat(self):
+        threading.Thread(target=self._ping).start()
+        if self.enemy_host:
+            self.AroundNatSocket.send(f'ConnectAroundNAT{self.enemy_external_host}:{self.enemy_external_port}|'
+                                      f'{self.enemy_host}:{self.external_port}'.encode())
+        while self.parent.RUN:
+            try:
+                d = self.AroundNatSocket.recv(1024).decode()
+            except (ConnectionAbortedError, OSError):
+                self.AroundNatSocket.close()
+                break
+            if 'pong!.' not in d:
+                print(d)
+                if self.enemy_host:
+                    if 'ConnectAroundNATInboundError' in d:
+                        self.socket.shutdown(0)
+                        self.socket.close()
+                        self.parent.AddNotification(self.parent.Language.PlayGameIncorrectLink)
+                        self.parent.SetScene(MAIN)
+                        break
+                else:
+                    if 'ConnectAroundNATInbound' in d and not self.enemy_host:
+                        self.enemy_host, self.enemy_port = GetIpFromString(d.replace('ConnectAroundNATInbound', ''))
+                        break
+        self.AroundNatSocket.shutdown(0)
+
     def _read_thread(self):
         while not self._activate_enemy and self.parent.RUN:
             data, addr = self.socket.recvfrom(GAME_DATA_LEN)
@@ -621,24 +665,25 @@ class PlayGame:
     def _activate_socket(self):
         self._activate = time.time()
         threading.Thread(target=self._read_thread).start()
-        while not self.socket_activated and self.parent.RUN and self.enemy_host:
-            try:
-                print(self.enemy_host)
-                self.socket.sendto(f'OSW,{self._activate},{self._activate_enemy}'.encode(), (self.enemy_host, self.enemy_port))
-                if self._activate_enemy:
-                    self.socket_activated = True
-                    self.recv_thread = threading.Thread(target=self._socket_recv)
-                    self.recv_thread.start()
-                    self.socket.settimeout(GAME_PING_DELAY)
-                    return
-            except Exception as err:
-                log.error(err, stack_info=True, exc_info=True)
+        if self.link:
+            threading.Thread(target=self._around_nat).start()
+        while not self.socket_activated and self.parent.RUN:
+            if self.enemy_host:
+                try:
+                    self.socket.sendto(f'OSW,{self._activate},{self._activate_enemy}'.encode(), (self.enemy_host, self.enemy_port))
+                    if self._activate_enemy:
+                        self.socket_activated = True
+                        self.recv_thread = threading.Thread(target=self._socket_recv)
+                        self.recv_thread.start()
+                        self.socket.settimeout(GAME_PING_DELAY)
+                        return
+                except Exception as err:
+                    log.error(err, stack_info=True, exc_info=True)
 
     def _socket_recv(self):
         while self.socket_activated and self.parent.RUN:
             try:
                 data = self.socket.recv(GAME_DATA_LEN).decode()
-                print(data)
                 if 'OSW' in data:
                     data = data.split(',')
                     if not float(data[2]):
@@ -691,12 +736,13 @@ class PlayGame:
             except socket.timeout:
                 self.Send('PING!.')
                 self.socket.settimeout(GAME_EXTRA_PING_DELAY)
+            except OSError:
+                break
             if self._activate_enemy and self._recv_dict['condition'] > GAME_CONDITION_BUILD:
                 if not any(self.EnemyShips.ships.values()):
                     self.Send('SYNC.')
 
     def Send(self, text=''):
-        print(text)
         if text:
             self.socket.sendto(str(text).encode(), (self.enemy_host, self.enemy_port))
             return
@@ -780,6 +826,8 @@ class PlayGame:
 
     def inGame(self):
         if self.condition == GAME_CONDITION_ATTACK:
+            if not self._keyboard_input and self.selected:
+                self.parent.cursor = False
             self.MoveLabel.value = self.parent.Language.PlayGameAttackBySelf
             self.MoveLabel.text_color = (200, 50, 100)
             self.MoveLabel.text_color_active = (200, 50, 100)
@@ -787,7 +835,7 @@ class PlayGame:
             if self.selected:
                 if self.EnemyShips.CollideDieShipEnv((self.selected, self.selected)):
                     if self.EnemyShips.CollideDieShip((self.selected, self.selected)):
-                        pass
+                        self.parent.cursor = pygame.SYSTEM_CURSOR_NO
                     else:
                         self.Ships.DrawShip((self.selected, self.selected), self.image, (255, 255, 0))
                 else:
@@ -795,7 +843,7 @@ class PlayGame:
             for point in self.attacked_blocks:
                 if point not in self.EnemyShips.die_blocks:
                     pygame.draw.circle(self.image, (100, 100, 100), self.Ships.blocks.GetRect(point).center, self.Ships.blocks.block_size * 0.1)
-            if self._activate_press:
+            if self._activate_release:
                 if self.selected and self.selected not in self.attacked_blocks:
                     self.attacked_blocks.append(self.selected)
                     result = self.EnemyShips.KillBlock(self.selected)
@@ -814,12 +862,15 @@ class PlayGame:
                             self.parent.PlaySound(SOUND_TYPE_GAME, 'wound')
                     self.Send()
         elif self.condition == GAME_CONDITION_WAIT_AFTER_ATTACK:
+            if not self._keyboard_input and self.selected:
+                self.parent.cursor = False
             self.MoveLabel.value = self.parent.Language.PlayGameAttackByNotSelf
             self.MoveLabel.text_color = (100, 50, 200)
             self.MoveLabel.text_color_active = (100, 50, 200)
             if self.selected:
                 if self.Ships.CollideShip((self.selected, self.selected)):
-                    pass
+                    if not self._keyboard_input:
+                        self.parent.cursor = pygame.SYSTEM_CURSOR_CROSSHAIR
                 else:
                     self.Ships.DrawShip((self.selected, self.selected), self.image, (255, 0, 0))
             for point in self._recv_dict['attacked_blocks']:
@@ -845,10 +896,12 @@ class PlayGame:
         if not active:
             return self.image
         self._activate_press = self.parent.mouse_left_press
+        self._activate_release = self.parent.mouse_left_release
         for event in self.parent.events:
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_SPACE):
                     self._activate_press = True
+                    self._activate_release = False
                 elif event.key == pygame.K_TAB:
                     self._keyboard_input = [0, 0]
                     pygame.key.set_repeat(200, 100)
@@ -867,6 +920,7 @@ class PlayGame:
             elif event.type == pygame.KEYUP:
                 if event.key in (pygame.K_LSHIFT, pygame.K_RSHIFT):
                     self._activate_press = False
+                    self._activate_release = True
         if self._keyboard_input and self.parent.mouse_left_press:
             self._keyboard_input = False
         self.image.fill(self.parent.Colors.Background)
@@ -887,6 +941,7 @@ class PlayGame:
             self.MoveLabel.value = self.parent.Language.PlayGameWait
             self.DrawLines()
             self.Ships.draw(self.image)
+            self.parent.cursor = False
             if not self.send_messages:
                 self.Send()
             if self.EnemyShips.SumShipsCount():
