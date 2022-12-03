@@ -594,11 +594,12 @@ class PlayGame:
                                  left_margin + it * self.parent.block_size, upper_margin + 10 * self.parent.block_size),
                                  1)
                 if it < 10:
-                    font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.parent.Language.Letters[0],
-                                                                   pygame.Rect(0, 0, self.parent.block_size,
-                                                                               self.parent.block_size)))
-                    num = font.render(str(it + 1), True, self.parent.Colors.Lines)
-                    letter = font.render(self.parent.Language.Letters[it], True, self.parent.Colors.Lines)
+                    # font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.parent.Language.Letters[0],
+                    #                                                pygame.Rect(0, 0, self.parent.block_size,
+                    #                                                            self.parent.block_size)))
+                    num = Font.render(str(it + 1), True, self.parent.Colors.Lines)
+                    letter = Font.render(self.parent.Language.Letters[it], pygame.Rect(0, 0, self.parent.block_size, self.parent.block_size), True, self.parent.Colors.Lines)
+                    # letter = font.render(self.parent.Language.Letters[it], True, self.parent.Colors.Lines)
                     num_ver_width = num.get_width()
                     num_ver_height = num.get_height()
                     letters_hor_width = letter.get_width()
@@ -607,7 +608,7 @@ class PlayGame:
                                                       self.parent.block_size * 0.5 - num_ver_height * 0.5)))
                     self.Lines.blit(letter, (left_margin + it * self.parent.block_size + (
                                 self.parent.block_size * 0.5 - letters_hor_width * 0.5),
-                                             upper_margin - font.size(self.parent.Language.Letters[it])[1] * 1.2))
+                                             upper_margin - letter.get_height() * 1.2))
         self.image.blit(self.Lines, (0, 0))
 
     def ActivateSocket(self):
