@@ -597,7 +597,7 @@ class PlayGame:
                     # font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.parent.Language.Letters[0],
                     #                                                pygame.Rect(0, 0, self.parent.block_size,
                     #                                                            self.parent.block_size)))
-                    num = Font.render(str(it + 1), True, self.parent.Colors.Lines)
+                    num = Font.render(str(it + 1), pygame.Rect(0, 0, self.parent.block_size, self.parent.block_size), True, self.parent.Colors.Lines)
                     letter = Font.render(self.parent.Language.Letters[it], pygame.Rect(0, 0, self.parent.block_size, self.parent.block_size), True, self.parent.Colors.Lines)
                     # letter = font.render(self.parent.Language.Letters[it], True, self.parent.Colors.Lines)
                     num_ver_width = num.get_width()
