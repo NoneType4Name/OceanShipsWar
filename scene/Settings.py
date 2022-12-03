@@ -56,7 +56,7 @@ class Settings:
                                 *parent.Colors.Scene.Main.Button, border=border, border_active=border_active,
                                 func=EscActivate)
         self.elements = {'default':{None: pygame.sprite.Group(self.ButtonEsc)}}
-        threading.Thread(target=self.LoadElements).start()
+        threading.Thread(target=self.LoadElements, daemon=True).start()
 
     def LoadElements(self):
         self.selected = None

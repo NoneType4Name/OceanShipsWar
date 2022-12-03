@@ -4,9 +4,10 @@ parser = reg.createParser()
 namespace_args = parser.parse_args()
 run_with_links = namespace_args.links if namespace_args.links is not None else True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None) else False
 size = SIZE((int(namespace_args.size.split('x')[0]), int(namespace_args.size.split('x')[1])) if namespace_args.size else DISPLAY_SIZE)
-theme = float(namespace_args.theme) if namespace_args.theme is not None else 0
+theme = float(namespace_args.theme) if namespace_args.theme is not None else 1
 lang = namespace_args.lang if namespace_args.lang else LANG_RUS
 debug = namespace_args.debug if namespace_args.debug else 0
+demo = namespace_args.demo if namespace_args.demo else False
 api_socket = None
 
 if run_with_links:
@@ -72,32 +73,34 @@ for file_name in map(os.path.basename, glob.glob(fr'{MAIN_DIR}/{DATAS_FOLDER_NAM
         LANGS[file_name.replace(LANGUAGE_FILE_MASK, '')] = read_dictionary(DEFAULT_DICTIONARY, json.loads(f.read()))
 
 if theme == THEME_LIGHT:
-    Colors = DATA({
-        'KilledShip': (200, 200, 200),
-        'Lines': (24, 24, 24),
-        'Background': (227, 227, 227),
-        'Label': ((214, 213, 212), (23, 21, 19), [(0, 0, 0), (200, 200, 200)]),
-        'Button': ((214, 213, 212), (214, 213, 212), (23, 21, 19), (0, 0, 0), (164, 163, 162), (23, 21, 19)),
-        'ButtonRed': ((255, 100, 100, 20), (255, 100, 100, 20), (23, 21, 19), (0, 0, 0), (255, 0, 0), (23, 21, 19)),
-        'ButtonActive': ((0, 0, 0), (164, 163, 162), (0, 0, 0), (164, 163, 162), (23, 21, 19), (23, 21, 19)),
-        'Switch': ((0, 255, 0), (0, 0, 0), (191, 191, 191)),
-        'Slide': ((117, 75, 7), (202, 169, 115)),
-        'List': ((23, 21, 19), (226, 226, 224), (214, 213, 210)),
-        'Path': ((117, 75, 7), (202, 169, 115), (23, 21, 19)),
-        'ProgressBar': ((24, 24, 24), (0, 255, 0)),
-        'Red': (255, 0, 0),
-        'Green': (0, 255, 0),
-        'Blue': (0, 0, 255),
-        'White': (0, 0, 255),
-        'Scene':{
-            'Load':{
-                'Label': ((0, 0, 0, 0), (0, 255, 0)),
-                'ProgressBar': ((24, 24, 24), (0, 255, 0))},
-            'Main':{
-                'Button':((177, 220, 237), (255, 255, 255), (64, 64, 64), (255, 255, 255), (127, 127, 127), (0, 0, 0)),
+    if theme == THEME_LIGHT:
+        Colors = DATA({
+            'KilledShip': (60, 60, 60),
+            'Lines': (26, 26, 26),
+            'Background': (222, 228, 231),
+            'Label': ((41, 42, 43), (91, 92, 93), (232, 234, 236), (232, 234, 236), False, (91, 92, 93), (), False,(255, 255, 255), ()),
+            'Button': ((41, 42, 43), (255, 255, 255), (232, 234, 236), (0, 0, 0), False, (91, 92, 93), (91, 92, 93), False, (91, 92, 93)),
+            'ButtonRed': ((255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
+            'ButtonActive': ((255, 255, 255), (255, 255, 255), (91, 92, 93), (91, 92, 93), False, (100, 0, 200), (), False, (91, 92, 93)),
+            'Switch': ((64, 64, 64), (64, 64, 64), (0, 255, 0), (255, 255, 255)),
+            'Slide': ((53, 86, 140, 100), (53, 86, 140, 100), (38, 80, 148), (138, 180, 248)),
+            'List': ((29, 29, 31), (29, 29, 31), (232, 234, 236), (255, 255, 255), (41, 42, 45), False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146), ()),
+            'Path': ((138, 180, 248), (53, 86, 140), (232, 234, 236)),
+            'ProgressBar': ((255, 255, 255), (0, 255, 0)),
+            'TextInput': ((24, 24, 24), (24, 24, 24), (155, 155, 155), (255, 255, 255), False, (100, 0, 255, 100), (), False,(100, 0, 255), ()),
+            'Red': (255, 0, 0),
+            'Green': (0, 255, 0),
+            'Blue': (0, 0, 255),
+            'White': (0, 0, 255),
+            'Scene': {
+                'Load': {
+                    'Label': ((0, 0, 0, 0), (0, 0, 0, 0), (24, 24, 24), (0, 179, 255)),
+                    'ProgressBar': ((124, 153, 171), (255, 255, 255))},
+                'Main': {
+                    'Button': ((124, 153, 171), (124, 153, 171), (255, 255, 255), (213, 240, 177), True, (222, 228, 231), (124, 153, 171), True, (222, 228, 231), (124, 153, 171)),
+                }
             }
-        }
-    })
+        })
 elif theme == THEME_DARK:
     Colors = DATA({
         'KilledShip': (60, 60, 60),
@@ -152,11 +155,9 @@ def work_with_links(url):
                 tcp_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                 tcp_socket.connect((AROUND_NAT_SERVER_IP, AROUND_NAT_SERVER_PORT))
                 game.SetScene(PLAY, socket=sock, enemy=udp_external, link=[ex_ip, ex_port, tcp_socket, *adr_external])
-                # pygame.scrap.put(pygame.SCRAP_TEXT, f'{GITHUB_PAGE_URL}?{API_METHOD_CONNECT}={ex_ip}:{ex_port}'.encode())
-                # game.AddNotification(game.Language.CreateGameYouLinkCopied)
-                log.info(f'Api method CONNECT will be called, args: {query[qr]}, {adr}.')
+                log.info(f'Api method CONNECT will be called, args: {query[qr]}.')
             except Exception:
-                log.debug(f'failed connect to rm {adr}.', exc_info=True, stack_info=True)
+                log.debug(f'connection is over.', exc_info=True, stack_info=True)
                 game.AddNotification(game.Language.CreateGameConnectionError)
 
         else:
@@ -166,17 +167,17 @@ def work_with_links(url):
 
 
 args_parsed = False
-# game.demo = True
+game.demo = demo
 game.init(GAME_NAME, ICON_PATH, size, pygame.SRCALPHA)
 game.MixerInit()
 
 while game.RUN:
     if not args_parsed and not game.Blocked and namespace_args.DeepLinksApi:
-        threading.Thread(target=work_with_links, args=[namespace_args.DeepLinksApi]).start()
+        threading.Thread(target=work_with_links, args=[namespace_args.DeepLinksApi], daemon=True).start()
         args_parsed = True
     if api_socket:
         try:
-            threading.Thread(target=work_with_links, args=[api_socket.accept()[0].recv(1024 * 2).decode()]).start()
+            threading.Thread(target=work_with_links, args=[api_socket.accept()[0].recv(1024 * 2).decode()], daemon=True).start()
         except BlockingIOError:
             pass
     game.update()

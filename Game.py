@@ -66,7 +66,6 @@ class Version:
 
 class Game:
     def __init__(self, run_from, settings: DATA, language: Language, colors: DATA, main_dir: str, exe: bool, debug=0):
-        self.demo = False
         self.mouse_pos = (0, 0)
         self.mouse_right_press = False
         self.mouse_right_release = False
@@ -113,11 +112,12 @@ class Game:
         self.Notifications = Notifications(self)
         self.GameEvents = []
         self.Properties = reg.getFileProperties(sys.executable)
-        self.version = Version(str('0.0.8.1'))
+        self.version = Version(str(self.Properties.FileVersion))
         self.VERSION = self.version.string_version
         self.MAIN_DIR = main_dir
         self.EXE = exe
         self.Language = language
+        self.demo = False
         self.Scene = DATA(
             {
                 INIT: InitScene,
@@ -168,6 +168,7 @@ class Game:
         self.RUN = True
         self.ConvertScene.NewScene(self.Scene[INIT], None)
         self.Ticker = Ticker((0, self.size.h * 0.9, self.size.w, self.size.h * 0.05), self.Language.Demo, 0.5, (200, 200, 200), (255, 0, 0))
+        log.debug(f'$GREENGame {self.caption} ({self.VERSION}) inited, args:\n'+'\n'.join([f'$CYAN{el[0]}:$RESET\t{el[1]}' for el in zip(self.__dict__.keys(), self.__dict__.values())]))
 
     def MixerInit(self, frequency=44100, size=-16, channels=2, buffer=512, devicename='', allowedchanges=5):
         self.SetScene(LOAD,
@@ -226,15 +227,18 @@ class Game:
                 scene.PercentLabel.value = self.Language.InitPercentLabel.format(percent=round(Load / MaxLoad * 100))
         self.Sounds = DATA(self.Sounds)
         self.SOUND = pygame.mixer.get_init()
+        log.debug('$GREENSounds init. Mixer args:\n'+'\n'.join([f'$CYAN{el[0]}:$RESET\t{el[1]}' for el in zip(kwargs.keys(), kwargs.values())]))
         return
 
     def AddNotification(self, notification_text):
+        log.debug(f'Added notification: {notification_text}.')
         self.Notifications.add(Notification(self, (self.size[0] * 0.3, self.size[1] * 0.07,
                                                    self.size[0] * 0.4, self.size[1] * 0.1),
                                             notification_text, (86, 86, 86), (0, 0, 0), (255, 255, 255)))
         self.PlaySound(SOUND_TYPE_NOTIFICATION, 'in')
 
     def PlaySound(self, sound_type: str, sound_name: str, loops=0, maxtime=0, fade_ms=0):
+        log.debug(f'Played sound: {sound_type}-> {sound_name}-> loops:{loops}, maxtime:{maxtime}, fade_ms:{fade_ms}.')
         if self.SOUND:
             if sound_type == SOUND_TYPE_NOTIFICATION and self.Settings.Sound.Notification:
                 self.Sounds[SOUND_TYPE_NOTIFICATION][sound_name].set_volume(self.Settings.Sound.Notification.value)
@@ -244,22 +248,35 @@ class Game:
                 self.Sounds[SOUND_TYPE_GAME][sound_name].play(loops, maxtime, fade_ms)
 
     def GetUpdate(self):
+        log.debug(f'Getting update, Game version {self.VERSION}.')
         possible_version = Version(json.loads(requests.get(
             'https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name'])
+        log.debug(f'Possible version {possible_version}.')
         if self.version < possible_version:
+            log.debug('Ask user for update.')
             self.AddNotification(self.Language.UpdateNotificationFine)
             if (windll.user32.MessageBoxW(self.GAME_HWND,
                                           self.Language.UpdateNotificationYNMessageBoxText.format(version=possible_version.string_version),
                                           self.Language.UpdateNotificationYNMessageBoxTitle.format(version=possible_version.string_version), 33)) == 1:
                 self.SetScene(LOAD, func=LoadNewVersion, args=[possible_version])
+                log.debug('User has accepted update.')
         else:
+            log.debug('Actual version.')
             self.AddNotification(self.Language.UpdateNotificationNotFine)
 
     def ConsoleOC(self):
+        log.debug(f'Now console is open: {bool(self.debug)}')
         win32gui.ShowWindow(self.CONSOLE_HWND, 8 if self.debug else 0)
+        self.Foreground()
         self.debug = not self.debug
 
+    def Foreground(self):
+        log.debug(f'Game window is foreground, his HWND:{self.GAME_HWND}.')
+        win32com.client.Dispatch("WScript.Shell").SendKeys("%")
+        windll.user32.SetForegroundWindow(self.GAME_HWND)
+
     def SetScene(self, scene, **kwargs):
+        log.debug(f'Set new scene: {scene}, dict: {kwargs}')
         self.ConvertScene.NewScene(self.Scene[scene], kwargs)
 
     def UpdateEvents(self):
@@ -278,24 +295,24 @@ class Game:
                 self.RUN = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == pygame.BUTTON_LEFT:
-                    self.mouse_left_press = True
+                    self.mouse_left_press = event.pos
                     self.mouse_left_release = False
                 elif event.button == pygame.BUTTON_RIGHT:
-                    self.mouse_right_press = True
+                    self.mouse_right_press = event.pos
                     self.mouse_right_release = False
                 elif event.button == pygame.BUTTON_MIDDLE:
-                    self.mouse_middle_press = True
+                    self.mouse_middle_press = event.pos
                     self.mouse_middle_release = False
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == pygame.BUTTON_LEFT:
                     self.mouse_left_press = False
-                    self.mouse_left_release = True
+                    self.mouse_left_release = event.pos
                 elif event.button == pygame.BUTTON_RIGHT:
                     self.mouse_right_press = False
-                    self.mouse_right_release = True
+                    self.mouse_right_release = event.pos
                 elif event.button == pygame.BUTTON_MIDDLE:
                     self.mouse_middle_press = False
-                    self.mouse_middle_release = True
+                    self.mouse_middle_release = event.pos
             elif event.type == pygame.MOUSEWHEEL:
                 self.mouse_wheel_x = event.x
                 self.mouse_wheel_y = event.y
@@ -305,20 +322,23 @@ class Game:
                     self.mouse_wheel_x = event.rel[0]
                     self.mouse_wheel_y = event.rel[1]
 
+    def Report(self, err):
+        if self.EXE:
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            traceback_exception = ''.join(traceback.TracebackException(exc_type, exc_value, exc_tb).format())
+            send_message(['alexkim0710@gmail.com'], f'ERROR {type(err)}',
+                         f'{traceback_exception}'
+                         f'\nis adm:\t {bool(windll.shell32.IsUserAnAdmin())}',
+                         reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion,
+                         fr'{self.MAIN_DIR}\logs\{os.getpid()}log.txt')
+
     def update(self):
         self.UpdateEvents()
         try:
             self.ConvertScene.update()
         except Exception as err:
-            exc_type, exc_value, exc_tb = sys.exc_info()
-            traceback_exception = ''.join(traceback.TracebackException(exc_type, exc_value, exc_tb).format())
             log.critical(err, exc_info=True, stack_info=True)
-            if self.EXE:
-                send_message(['alexkim0710@gmail.com'], f'ERROR {type(err)}',
-                             f'{traceback_exception}'
-                             f'\nis adm:\t {windll.shell32.IsUserAnAdmin()}',
-                             reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion,
-                             fr'{self.MAIN_DIR}\logs\{os.getpid()}log.txt')
+            self.Report(err)
             self.AddNotification('ERROR: %s' % err)
             self.SetScene(MAIN)
         self.Notifications.update()

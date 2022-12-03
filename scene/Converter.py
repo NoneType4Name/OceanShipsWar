@@ -8,9 +8,9 @@ class ConvertScene:
         self.image = None
         self.parent = parent
         self.new = new(parent)
-        self.old_alpha = 255
         self.new_alpha = 0
         self.step = SPEED_MERGE_SCENE
+        log.debug(f'ConvertScene speed: {self.step}.')
 
     def NewScene(self, new, kwargs):
         if self.old and self.old.type == LOAD:
@@ -25,7 +25,7 @@ class ConvertScene:
             self.new = new(self.parent, self.old.type, kwargs)
         if self.new.type == LOAD:
             self.parent.Blocked = True
-        self.old_alpha = 255
+        log.debug(f'Installed new scene: {self.new.type}, old: {self.old.type}')
         self.new_alpha = 0
 
     # def ReSize(self):
@@ -35,7 +35,6 @@ class ConvertScene:
             self.new_alpha += self.step
             # self.old_alpha -= self.step
         elif self.new_alpha != 255:
-            self.old_alpha = 0
             self.new_alpha = 255
             self.parent.SCENE = self.new.type
         # if self.old_alpha:

@@ -42,7 +42,7 @@ RUS_DICT = {'StartGame': 'Начать игру',
             'CreateGameYouIPDefault': 'Секунду...',
             'CreateGameYouLinkDefault': 'Секунду...',
             'CreateGameYouIPCopied': 'IP адрес скопирован в буфер обмена.',
-            'CreateGameYouLinkCopied': 'Ссылка приглашение скопирована в буфер обмена.',
+            'CreateGameYouLinkCopied': 'Ссылка-приглашение скопирована в буфер обмена.',
             'CreateGameConditionDefault': '',
             'CreateGameInputDefault': 'Введите IP в формате IP:PORT.',
             'CreateGameConnectionError': 'Неверный адрес приглашения',
@@ -53,6 +53,7 @@ RUS_DICT = {'StartGame': 'Начать игру',
             'PlayGameLen': 'Максимальноя длина корбля: 4 клетки.',
             'PlayGameAttackBySelf': 'Сейчас атакуете Вы.',
             'PlayGameAttackByNotSelf': 'Сейчас атакует Ваш противник.',
+            'PlayGameEnemyDisconnected': 'Противник отключился от игры.',
             'PlayGameLose': 'Вы проиграли :(.',
             'PlayGameWin': 'Вы выиграли :).',
             'PlayGameWait': 'Ждем готовности противника.',
@@ -121,6 +122,7 @@ ENG_DICT = {'StartGame': 'Start game',
             'PlayGameLen': 'Maximum ship length: 4 cells.',
             'PlayGameAttackBySelf': 'Now you are attacking.',
             'PlayGameAttackByNotSelf': 'Now your opponent is attacking.',
+            'PlayGameEnemyDisconnected': 'Opponent disconnected from the Game.',
             'PlayGameLose': 'You lost :(.',
             'PlayGameWin': 'You won :).',
             'PlayGameWait': 'Waiting for the enemy to be ready.',
@@ -212,8 +214,8 @@ GAME_PING_DELAY = 10
 GAME_EXTRA_PING_DELAY = 1
 GAME_DATA_LEN = 2**16
 
-AROUND_NAT_SERVER_IP = '0.0.0.0'
-AROUND_NAT_SERVER_PORT = 0
+AROUND_NAT_SERVER_IP = '16.16.29.148'
+AROUND_NAT_SERVER_PORT = 61023
 
 BLOCK_ATTITUDE = 27.428571428571427
 SHIP_ATTITUDE = 7

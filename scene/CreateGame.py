@@ -4,8 +4,10 @@ from Gui import *
 
 def StartGame(self: TextInput):
     split = self.value.replace('/', '').split(':')
+    lnk = False
     if 'dummy' in self.value:
         enemy = ('', 0)
+        lnk = self.parent.around_nat_socket
     elif '||' not in self.value:
         try:
             if self.value.count(':') > 1:
@@ -22,74 +24,69 @@ def StartGame(self: TextInput):
             return
     else:
         enemy = (':'.join(split[:-1]), int(split[-1]))
+    log.debug(f'Start game, enemy addr: {enemy}, inputted value: {self.value}.')
     self.parent.ConditionLabel.value = self.parent.parent.Language.CreateGameConnect
-    self.parent.parent.SetScene(PLAY, socket=self.parent.socket, enemy=enemy, link=self.parent.around_nat_socket)
+    self.parent.parent.SetScene(PLAY, socket=self.parent.socket, enemy=enemy, link=lnk)
 
 
-def _GetIP(self, link):
-    self.external_tcp_ip, self.external_tcp_port = None, None
-    if link:
-        self.parent.around_nat_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.parent.around_nat_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        self.parent.around_nat_socket.connect((AROUND_NAT_SERVER_IP, AROUND_NAT_SERVER_PORT))
-        self.parent.around_nat_socket.send('mine.'.encode())
-        self.external_tcp_ip, self.external_tcp_port = GetIpFromString(self.parent.around_nat_socket.recv(1024).decode())
-        print(self.external_tcp_ip)
-        self.text = self.parent.parent.Language.CreateGameYouLink
-        self.text_active = self.parent.parent.Language.CreateGameYouLink
-        self.UpdateImage()
-
-    st_tm = self.parent.socket.gettimeout()
-    self.parent.socket.settimeout(0.01)
-    nat = stun.get_nat_type(self.parent.socket, self.parent.source_ip, self.parent.source_port, stun_host='stun.l.google.com', stun_port=19302)[1]
-    if nat['ExternalIP']:
-        self.external_ip = nat['ExternalIP']
-        self.external_port = nat['ExternalPort']
-        if not link:
-            self.text = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
-                                                                           port=self.external_port)
-            self.text_active = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
-                                                                                  port=self.external_port)
-            self.UpdateImage()
-        self.parent.socket.settimeout(st_tm)
-        return
-    while self.parent.parent.RUN:
-        self.parent.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.parent.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.parent.socket.bind((self.parent.source_ip, self.parent.source_port))
-        self.parent.socket.settimeout(0.01)
-        nat = stun.get_nat_type(self.parent.socket, self.parent.source_ip, self.parent.source_port, stun_host='stun.l.google.com', stun_port=19302)[1]
+def _GetIP(ip_button, link_button):
+    link_button.parent.around_nat_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    link_button.parent.around_nat_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    link_button.parent.around_nat_socket.connect((AROUND_NAT_SERVER_IP, AROUND_NAT_SERVER_PORT))
+    link_button.parent.around_nat_socket.send('mine.'.encode())
+    ip_button.external_tcp_ip, ip_button.external_tcp_port = link_button.external_tcp_ip, link_button.external_tcp_port = GetIpFromString(link_button.parent.around_nat_socket.recv(1024).decode())
+    log.debug(f'external tcp addr: {GetIpFromTuple((ip_button.external_tcp_ip, ip_button.external_tcp_port))}.')
+    st_tm = ip_button.parent.socket.gettimeout()
+    ip_button.parent.socket.shutdown(0)
+    ip_button.parent.socket.close()
+    while ip_button.parent.parent.RUN:
+        ip_button.parent.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        ip_button.parent.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        ip_button.parent.socket.bind((ip_button.parent.source_ip, ip_button.parent.source_port))
+        ip_button.parent.socket.settimeout(0.1)
+        nat = stun.get_nat_type(ip_button.parent.socket, ip_button.parent.source_ip, ip_button.parent.source_port, stun_host='stun.l.google.com', stun_port=19302)[1]
         if nat['ExternalIP']:
-            self.external_ip = nat['ExternalIP']
-            self.external_port = nat['ExternalPort']
-            if not link:
-                self.text = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
-                                                                               port=self.external_port)
-                self.text_active = self.parent.parent.Language.CreateGameYouIP.format(ip=self.external_ip,
-                                                                                      port=self.external_port)
-                self.UpdateImage()
-            self.parent.socket.settimeout(st_tm)
+            ip_button.external_ip = nat['ExternalIP']
+            ip_button.external_port = nat['ExternalPort']
+            ip_button.text = ip_button.parent.parent.Language.CreateGameYouIP.format(ip=ip_button.external_ip,
+                                                                                     port=ip_button.external_port)
+            ip_button.text_active = ip_button.parent.parent.Language.CreateGameYouIP.format(ip=ip_button.external_ip,
+                                                                                            port=ip_button.external_port)
+
+            link_button.external_ip = nat['ExternalIP']
+            link_button.external_port = nat['ExternalPort']
+            link_button.text = link_button.parent.parent.Language.CreateGameYouLink
+            link_button.text_active = link_button.parent.parent.Language.CreateGameYouLink
+            link_button.UpdateImage()
+            ip_button.UpdateImage()
+            ip_button.parent.socket.settimeout(st_tm)
+            log.debug(f'external udp addr: {GetIpFromTuple((ip_button.external_ip, ip_button.external_port))}.')
+            log.debug(f'hosted udp addr: {GetIpFromTuple((ip_button.parent.source_ip, ip_button.parent.source_port))}.')
             return
         else:
-            self.parent.source_port += 1
-            self.parent.socket.close()
+            ip_button.parent.source_port += 1
+            link_button.parent.source_port += 1
+            ip_button.parent.socket.shutdown(0)
+            ip_button.parent.socket.close()
 
 
 def CopyIpToClipboard(self, link):
     text = f'{self.external_ip}:{self.external_port}'
     if link:
         text = f'{GITHUB_PAGE_URL}?{API_METHOD_CONNECT}={self.external_tcp_ip}:{self.external_tcp_port}|{text}'
-        # self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouLinkCopied)
+        self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouLinkCopied)
         self.parent.Input.value = 'dummy'
         self.parent.Input.Deactivate()
     else:
         self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouIPCopied)
+    log.debug(f'Copied text:$BOLD$GREEN\t{text}$RESET.\tButton value:{self.parent.Input.value}.')
     pygame.scrap.put(pygame.SCRAP_TEXT, text.encode())
 
 
 def EscActivate(self, **kwargs):
     self.parent.socket.shutdown(0)
     self.parent.socket.close()
+    log.debug(f'Close scene {self.parent.type}, args:{kwargs}, socket: {self.parent.socket}.')
     self.parent.parent.SetScene(self.parent.InputScene, *kwargs)
     self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select')
 
@@ -100,6 +97,7 @@ class CreateGame:
         self.parent = parent
         self.InputScene = input_scene
         self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
+        log.debug(f'New Scene: {self.type}, last {self.InputScene}, dict:{kwargs}.')
 
         self.source_ip = GAME_HOST
         self.source_port = GAME_PORT
@@ -107,6 +105,7 @@ class CreateGame:
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.source_ip, self.source_port))
         self.socket.settimeout(0.01)
+        log.debug(f'Created socket: {self.socket}')
 
         rect_w, rect_h = parent.block_size * 0.75, parent.block_size * 0.5
         border = rect_h * BORDER_ATTITUDE
@@ -154,8 +153,7 @@ class CreateGame:
                                     self.parent.Language.CreateGameConditionDefault,
                                     *parent.Colors.Scene.Load.Label
                                     )
-        threading.Thread(target=_GetIP, args=[self.MyIpButton, 0]).start()
-        threading.Thread(target=_GetIP, args=[self.MyLinkButton, 1]).start()
+        threading.Thread(target=_GetIP, args=[self.MyIpButton, self.MyLinkButton], daemon=True).start()
         self.Input = TextInput(self, (parent.size.w * 0.4, parent.size.h * 0.4, rect_w, rect_h),
                                text_rect,
                                self.parent.Language.CreateGameInputDefault,

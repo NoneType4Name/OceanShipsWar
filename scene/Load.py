@@ -11,7 +11,7 @@ class LoadScene:
         self.func = kwargs.get('func')
         self.kwargs = kwargs
         self.Thread = None
-        self.cursor = self.parent.cursor
+        log.debug(f'New Scene: {self.type}, last {self.InputScene}, dict:{kwargs}')
 
         self.ProgressBar = ProgressBar((parent.size.w * 0.4, parent.size.h * 0.7,
                                         parent.size.w * 0.2, parent.size.h * 0.05),
@@ -32,10 +32,11 @@ class LoadScene:
                                *parent.Colors.Scene.Load.Label)
         self.Elements = pygame.sprite.Group([self.ProgressBar, self.PercentLabel, self.TextLabel])
         if self.func:
-            print(kwargs)
+            log.debug(f'Start custom func {self.func}, with args:{self.kwargs.get("args")}')
             self.Thread = threading.Thread(target=self.func, args=[self, *self.kwargs.get('args')])
         else:
-            self.Thread = threading.Thread(target=self.parent.mixer_init_thread, args=[self, self.kwargs])
+            log.debug(f'Sound init func start, args:{self.kwargs}')
+            self.Thread = threading.Thread(target=self.parent.mixer_init_thread, args=[self, self.kwargs], daemon=True)
         self.Thread.start()
 
     def update(self, active, *args):

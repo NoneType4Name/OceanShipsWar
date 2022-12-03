@@ -55,7 +55,7 @@ def handle(u_s, u_ad):
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-sock.bind(('0.0.0.0', 0))
+sock.bind(('192.168.1.64', 61023))
 sock.listen(True)
 connected = {GetIpFromTuple(sock.getsockname()): sock}
 connected_data_list = {GetIpFromTuple(sock.getsockname()): []}

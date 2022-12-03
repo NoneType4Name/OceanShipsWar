@@ -206,6 +206,7 @@ class Button(pygame.sprite.Sprite):
 
     def Function(self):
         if self.args:
+            # threading.Thread(target=self.func, args=(self, *self.args)).start()
             self.func(self, *self.args)
         else:
             self.func(self)

@@ -73,7 +73,7 @@ class MainScene:
                 if self.ButtonUpdate.isCollide():
                     if not self.UpdateThread.is_alive():
                         self.parent.PlaySound(SOUND_TYPE_GAME, 'select')
-                        self.UpdateThread = threading.Thread(target=self.parent.GetUpdate)
+                        self.UpdateThread = threading.Thread(target=self.parent.GetUpdate, daemon=True)
                         self.UpdateThread.start()
                     else:
                         self.parent.PlaySound(SOUND_TYPE_GAME, 'denied')
