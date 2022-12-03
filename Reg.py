@@ -88,7 +88,7 @@ def createParser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-l', '--links', dest='links', action='store_false')
     parser.add_argument('-s', '--size', dest='size')
-    parser.add_argument('-t', '--theme', dest='theme', action='store_true')
+    parser.add_argument('-t', '--theme', dest='theme', type=float)
     parser.add_argument('-L', '--lang', dest='lang', choices=['русский', 'english'])
     parser.add_argument('--DeepLinksApi', dest='DeepLinksApi')
     parser.add_argument('--debug', '-d', dest='debug', type=int)
