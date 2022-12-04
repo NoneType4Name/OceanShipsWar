@@ -1,13 +1,10 @@
-import psutil
-import pygame
-
-import log
 from functions import *
+from scene.Play import PlayGame
 from scene.Menu import MainScene
 from scene.Load import LoadScene
-from scene.Converter import ConvertScene
+from scene.Settings import Settings
 from scene.CreateGame import CreateGame
-from scene.Play import PlayGame
+from scene.Converter import ConvertScene
 from scene.Notification import Notifications
 
 
@@ -66,7 +63,7 @@ class Version:
 
 
 class Game:
-    def __init__(self, run_from, settings: DATA, language: Language, colors: DATA, main_dir: str, exe: bool, debug=0):
+    def __init__(self, run_from, settings: DATA, language: Language, colors: Color, main_dir: str, exe: bool, debug=0):
         self.mouse_pos = (0, 0)
         self.mouse_right_press = False
         self.mouse_right_release = False
@@ -247,7 +244,6 @@ class Game:
         self.PlaySound(SOUND_TYPE_NOTIFICATION, 'in')
 
     def PlaySound(self, sound_type: str, sound_name: str, loops=0, maxtime=0, fade_ms=0):
-        log.debug(f'Played sound: {sound_type}-> {sound_name}-> loops:{loops}, maxtime:{maxtime}, fade_ms:{fade_ms}.')
         if self.SOUND:
             if sound_type == SOUND_TYPE_NOTIFICATION and self.Settings.Sound.Notification:
                 self.Sounds[SOUND_TYPE_NOTIFICATION][sound_name].set_volume(self.Settings.Sound.Notification.value)
@@ -260,7 +256,7 @@ class Game:
         log.debug(f'Getting update, Game version {self.VERSION}.')
         possible_version = Version(json.loads(requests.get(
             'https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name'])
-        log.debug(f'Possible version {possible_version}.')
+        log.debug(f'Possible version {possible_version.string_version}.')
         if self.version < possible_version:
             log.debug('Ask user for update.')
             self.AddNotification(self.Language.UpdateNotificationFine)
@@ -301,10 +297,10 @@ class Game:
         self.events = pygame.event.get()
         for event in self.events:
             if event.type == pygame.QUIT:
-                if not self.Blocked:
-                    self.RUN = False
-                else:
-                    pygame.event.post(pygame.event.Event(pygame.QUIT, {}))
+                # if not self.Blocked:
+                self.RUN = False
+                # else:
+                #     pygame.event.post(pygame.event.Event(pygame.QUIT, {}))
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == pygame.BUTTON_LEFT:
                     self.mouse_left_press = event.pos
@@ -338,11 +334,11 @@ class Game:
         if self.EXE:
             exc_type, exc_value, exc_tb = sys.exc_info()
             traceback_exception = ''.join(traceback.TracebackException(exc_type, exc_value, exc_tb).format())
-            send_message(['alexkim0710@gmail.com'], f'ERROR {type(err)}',
-                         f'{traceback_exception}'
-                         f'\nis adm:\t {bool(windll.shell32.IsUserAnAdmin())}',
-                         reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion,
-                         fr'{self.MAIN_DIR}\logs\{os.getpid()}log.txt')
+            threading.Thread(target=send_message, args=(['alexkim0710@gmail.com'], f'ERROR {type(err)}',
+                                                        f'{traceback_exception}'
+                                                        f'\nis adm:\t {bool(windll.shell32.IsUserAnAdmin())}',
+                                                        reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion,
+                                                        fr'{self.MAIN_DIR}\logs\{os.getpid()}log.txt')).start()
 
     def update(self):
         self.UpdateEvents()
@@ -368,16 +364,44 @@ class Game:
         self.clock.tick(self.FPS)
 
     def EditSettings(self, setting_type, name, value):
+        last = self.Settings[setting_type][name]['value']
         self.Settings[setting_type][name]['value'] = value
-        self.Settings = DATA(self.Settings.__dict__)
-        if name == 'Console':
-            self.ConsoleOC()
-        elif name == 'WindowSize':
-            self.size = SIZE(self.Settings.Graphic.WindowSize.value)
+        if last != value:
+            if name == 'Console':
+                self.ConsoleOC()
+            elif name == 'WindowSize':
+                self.EditWindowSize(value)
+            elif name == 'Language':
+                self.EditLanguage()
+            elif name == 'Theme':
+                self.EditTheme()
+
+            elif name == 'Links':
+                if self.EXE:
+                    file_name = ''
+                else:
+                    file_name = self.parent_path
+                if windll.shell32.IsUserAnAdmin():
+                    if value:
+                        reg.init_deep_links(f'{sys.executable} {file_name}'.replace('  ', ' '))
+                    else:
+                        reg.del_deep_link()
+                else:
+                    if (windll.shell32.ShellExecuteW(pygame.display.get_wm_info()['window'], "runas", sys.executable,
+                                                     file_name + ' ' + ' '.join(sys.argv[1:]), None, True)) == 42:
+                        self.RUN = False
+                    else:
+                        self.AddNotification(self.Language.Sudo)
+                        self.Settings[setting_type][name]['value'] = False
+
+    def EditWindowSize(self, size=None):
+        if not self.Blocked:
+            self.size = SIZE(size if size else self.Settings.Graphic.WindowSize.value)
             pygame.display.quit()
             os.environ['SDL_VIDEO_CENTERED'] = '1'
             pygame.display.init()
             self.screen = pygame.display.set_mode(self.size, self.flag, self.depth, vsync=self.vsync)
+            pygame.scrap.init()
             pygame.display.set_caption(self.caption)
             pygame.display.set_icon(pygame.image.load(ICON_PATH))
             self.block_size = int(self.size.w // BLOCK_ATTITUDE)
@@ -385,34 +409,16 @@ class Game:
             self.GAME_PID = get_pid_by_hwnd(self.GAME_HWND)
             self.GAME_PROCESS = psutil.Process(self.GAME_PID)
             self.ConvertScene.ReNew(self)
-        elif name == 'Language':
-            self.Language.SetLanguage(self.Settings.Graphic.Language.value)
+
+    def EditLanguage(self, lang=None):
+        if not self.Blocked:
+            self.Language.SetLanguage(lang if lang else self.Settings.Graphic.Language.value)
             self.Settings.Graphic.Theme.values = dict(zip(THEMES, self.Language.ThemeList))
             self.ConvertScene.ReNew(self)
-        elif name == 'Theme':
 
-        elif name == 'Links':
-            if self.EXE:
-                file_name = ''
-            else:
-                file_name = self.parent_path
-            if windll.shell32.IsUserAnAdmin():
-                if value:
-                    reg.init_deep_links(f'{sys.executable} {file_name}'.replace('  ', ' '))
-                else:
-                    reg.del_deep_link()
-            else:
-                if (windll.shell32.ShellExecuteW(pygame.display.get_wm_info()['window'], "runas", sys.executable,
-                                                 file_name + ' ' + ' '.join(sys.argv[1:]), None, True)) == 42:
-                    self.RUN = False
-                else:
-                    self.AddNotification(self.Language.Sudo)
-                    self.Settings[setting_type][name]['value'] = False
-                    self.Settings = DATA(self.Settings.__dict__)
-
-    def EditWindowSize(self, size):
-        pass
-        # self.ConvertScene = ConvertScene(self, self.Scene[self.])
+    def EditTheme(self, theme=None):
+        self.Colors.SetColor(theme if theme else self.Settings.Graphic.Theme.value)
+        self.ConvertScene.ReNew(self)
 
 
 class InitScene:

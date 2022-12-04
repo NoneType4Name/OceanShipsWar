@@ -4,7 +4,7 @@ parser = reg.createParser()
 namespace_args = parser.parse_args()
 run_with_links = namespace_args.links if namespace_args.links is not None else True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None) else False
 size = SIZE((int(namespace_args.size.split('x')[0]), int(namespace_args.size.split('x')[1])) if namespace_args.size else DISPLAY_SIZE)
-theme = float(namespace_args.theme) if namespace_args.theme is not None else 1
+theme = float(namespace_args.theme) if namespace_args.theme is not None else 0
 lang = namespace_args.lang if namespace_args.lang else LANG_RUS
 debug = namespace_args.debug if namespace_args.debug else 0
 demo = namespace_args.demo if namespace_args.demo else False
@@ -43,7 +43,7 @@ sz_modes = pygame.display.list_modes()
 if size not in sz_modes:
     sz_modes.insert(0, size)
 
-Language = Language(DEFAULT_LANGUAGES, DEFAULT_LANGUAGE, False)
+Language = Language(DEFAULT_LANGUAGES, DEFAULT_LANGUAGE)
 
 
 Settings = DATA({
@@ -57,7 +57,7 @@ Settings = DATA({
     },
     'Sound': {
         'Notification': {'value': 1, 'type': Slide},
-        'Game': {'value': 0, 'type': Slide}
+        'Game': {'value': 1, 'type': Slide}
     },
     'Other': {
         'Links': {'value': True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == MAIN_DIR and run_with_links else False,
@@ -72,20 +72,20 @@ for file_name in map(os.path.basename, glob.glob(fr'{MAIN_DIR}/{DATAS_FOLDER_NAM
     with open(fr'{MAIN_DIR}/{DATAS_FOLDER_NAME}/{file_name}') as f:
         LANGS[file_name.replace(LANGUAGE_FILE_MASK, '')] = read_dictionary(DEFAULT_DICTIONARY, json.loads(f.read()))
 
-Colors = DATA({THEME_LIGHT:{
+Colors = Color({THEME_LIGHT:{
     'KilledShip': (60, 60, 60),
     'Lines': (26, 26, 26),
-    'Background': (222, 228, 231),
-    'Label': ((41, 42, 43), (91, 92, 93), (232, 234, 236), (232, 234, 236), False, (91, 92, 93), (), False,(255, 255, 255), ()),
-    'Button': ((41, 42, 43), (255, 255, 255), (232, 234, 236), (0, 0, 0), False, (91, 92, 93), (91, 92, 93), False, (91, 92, 93)),
-    'ButtonRed': ((255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
+    'Background': (237, 222, 255),
+    'Label': ((151, 119, 186), (161, 129, 196), (232, 234, 236), (232, 234, 236), False, (91, 92, 93), (), False, (108, 55, 166), ()),
+    'Button': ((151, 119, 186), (237, 232, 255), (232, 234, 236), (0, 0, 0), False, (82, 41, 125), (), False, (108, 55, 166)),
+    'ButtonRed': ((255, 0, 0, 100), (255, 0, 0, 100), (232, 234, 236), (255, 255, 255), False, (255, 0, 0), (), False, (255, 0, 0, 200)),
     'ButtonActive': ((255, 255, 255), (255, 255, 255), (91, 92, 93), (91, 92, 93), False, (100, 0, 200), (), False, (91, 92, 93)),
-    'Switch': ((64, 64, 64), (64, 64, 64), (0, 255, 0), (255, 255, 255)),
-    'Slide': ((53, 86, 140, 100), (53, 86, 140, 100), (38, 80, 148), (138, 180, 248)),
-    'List': ((29, 29, 31), (29, 29, 31), (232, 234, 236), (255, 255, 255), (41, 42, 45), False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146), ()),
+    'Switch': ((82, 41, 125), (148, 95, 206), (0, 255, 0), (255, 255, 255)),
+    'Slide': ((82, 41, 125, 100), (148, 95, 206, 100), (82, 41, 125), (148, 95, 206)),
+    'List': ((82, 41, 125), (148, 95, 206), (232, 234, 236), (255, 255, 255), (108, 55, 166), False, (255, 111, 146, 0), (), False, (89, 111, 146, 0), (), False, (0, 0, 0, 0), (), False, (255, 111, 146), ()),
     'Path': ((138, 180, 248), (53, 86, 140), (232, 234, 236)),
     'ProgressBar': ((255, 255, 255), (0, 255, 0)),
-    'TextInput': ((24, 24, 24), (24, 24, 24), (155, 155, 155), (255, 255, 255), False, (100, 0, 255, 100), (), False,(100, 0, 255), ()),
+    'TextInput': ((151, 119, 186), (209, 166, 255), (200, 200, 200), (255, 255, 255), False, (82, 41, 125), (), False, (108, 55, 166), ()),
     'Red': (255, 0, 0),
     'Green': (0, 255, 0),
     'Blue': (0, 0, 255),
@@ -93,40 +93,40 @@ Colors = DATA({THEME_LIGHT:{
     'Scene': {
         'Load': {
             'Label': ((0, 0, 0, 0), (0, 0, 0, 0), (24, 24, 24), (0, 179, 255)),
-            'ProgressBar': ((124, 153, 171), (255, 255, 255))},
+            'ProgressBar': ((168, 130, 213), (255, 255, 255))},
         'Main': {
-            'Button': ((124, 153, 171), (124, 153, 171), (255, 255, 255), (213, 240, 177), True, (222, 228, 231), (124, 153, 171), True, (222, 228, 231), (124, 153, 171)),
+            'Button': ((209, 166, 255), (168, 130, 213), (255, 255, 255), (255, 255, 255), True, (237, 222, 255), (209, 166, 255), True, (237, 222, 255), (168, 130, 213)),
         }
     }
 },
-    THEME_DARK: {
-        'KilledShip': (60, 60, 60),
-        'Lines': (255, 255, 255),
-        'Background': (24, 24, 24),
-        'Label': ((41, 42, 43), (91, 92, 93), (232, 234, 236), (232, 234, 236), False, (91, 92, 93), (), False, (255, 255, 255), ()),
-        'Button': ((41, 42, 43), (255, 255, 255), (232, 234, 236), (0, 0, 0), False, (91, 92, 93), (91, 92, 93), False, (91, 92, 93)),
-        'ButtonRed': ((255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), (255, 0, 0), (232, 234, 236)),
-        'ButtonActive': ((255, 255, 255), (255, 255, 255), (91, 92, 93), (91, 92, 93), False, (100, 0, 200), (), False, (91, 92, 93)),
-        'Switch': ((64, 64, 64), (64, 64, 64), (0, 255, 0), (255, 255, 255)),
-        'Slide': ((53, 86, 140, 100), (53, 86, 140, 100), (38, 80, 148), (138, 180, 248)),
-        'List': ((29, 29, 31), (29, 29, 31), (232, 234, 236), (255, 255, 255), (41, 42, 45), False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146), ()),
-        'Path': ((138, 180, 248), (53, 86, 140), (232, 234, 236)),
-        'ProgressBar': ((255, 255, 255), (0, 255, 0)),
-        'TextInput': ((24, 24, 24), (24, 24, 24), (155, 155, 155), (255, 255, 255), False, (100, 0, 255, 100), (), False, (100, 0, 255), ()),
-        'Red': (255, 0, 0),
-        'Green': (0, 255, 0),
-        'Blue': (0, 0, 255),
-        'White': (0, 0, 255),
-        'Scene':{
-            'Load':{
-                'Label': ((0, 0, 0, 0), (0, 0, 0, 0), (0, 179, 255), (0, 200, 255)),
-                'ProgressBar': ((24, 24, 24), (0, 255, 0))},
-            'Main':{
-                'Button':((0, 0, 0), (0, 0, 0), (255, 255, 255), (100, 0, 200), True, (24, 24, 24), (0, 0, 0), True, (24, 24, 24), (0, 0, 0)),
-            }
+THEME_DARK: {
+    'KilledShip': (60, 60, 60),
+    'Lines': (255, 255, 255),
+    'Background': (24, 24, 24),
+    'Label': ((41, 42, 43), (91, 92, 93), (232, 234, 236), (232, 234, 236), False, (91, 92, 93), (), False, (255, 255, 255), ()),
+    'Button': ((41, 42, 43), (255, 255, 255), (232, 234, 236), (0, 0, 0), False, (91, 92, 93), (91, 92, 93), False, (91, 92, 93)),
+    'ButtonRed': ((255, 0, 0, 20), (255, 0, 0, 20), (232, 234, 236), (255, 255, 255), False, (255, 0, 0), (), False, (255, 0, 0, 200)),
+    'ButtonActive': ((255, 255, 255), (255, 255, 255), (91, 92, 93), (91, 92, 93), False, (100, 0, 200), (), False, (91, 92, 93)),
+    'Switch': ((64, 64, 64), (64, 64, 64), (0, 255, 0), (255, 255, 255)),
+    'Slide': ((53, 86, 140, 100), (53, 86, 140, 100), (38, 80, 148), (138, 180, 248)),
+    'List': ((29, 29, 31), (29, 29, 31), (232, 234, 236), (255, 255, 255), (41, 42, 45), False, (89, 111, 146), (), False, (89, 111, 146), (), False, (89, 111, 146, 0), (), False, (89, 111, 146), ()),
+    'Path': ((138, 180, 248), (53, 86, 140), (232, 234, 236)),
+    'ProgressBar': ((255, 255, 255), (0, 255, 0)),
+    'TextInput': ((24, 24, 24), (24, 24, 24), (155, 155, 155), (255, 255, 255), False, (100, 0, 255, 100), (), False, (100, 0, 255), ()),
+    'Red': (255, 0, 0),
+    'Green': (0, 255, 0),
+    'Blue': (0, 0, 255),
+    'White': (0, 0, 255),
+    'Scene':{
+        'Load':{
+            'Label': ((0, 0, 0, 0), (0, 0, 0, 0), (0, 179, 255), (0, 200, 255)),
+            'ProgressBar': ((24, 24, 24), (0, 255, 0))},
+        'Main':{
+            'Button':((0, 0, 0), (0, 0, 0), (255, 255, 255), (100, 0, 200), True, (24, 24, 24), (0, 0, 0), True, (24, 24, 24), (0, 0, 0)),
         }
     }
-})
+}
+}, theme)
 
 game = Game(__file__, Settings, Language, Colors, MAIN_DIR, EXE, debug)
 
@@ -147,7 +147,7 @@ def work_with_links(url):
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 sock.bind((GAME_HOST, GAME_PORT))
-                sock.settimeout(0.01)
+                sock.settimeout(0.1)
                 sock, ex_ip, ex_port, source_ip, port = GetIP(sock, GAME_HOST, GAME_PORT)
                 tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 tcp_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -170,12 +170,16 @@ game.init(GAME_NAME, ICON_PATH, size, pygame.SRCALPHA)
 game.MixerInit()
 
 while game.RUN:
-    if not args_parsed and not game.Blocked and namespace_args.DeepLinksApi:
-        threading.Thread(target=work_with_links, args=[namespace_args.DeepLinksApi], daemon=True).start()
-        args_parsed = True
-    if api_socket:
-        try:
-            threading.Thread(target=work_with_links, args=[api_socket.accept()[0].recv(1024 * 2).decode()], daemon=True).start()
-        except BlockingIOError:
-            pass
-    game.update()
+    try:
+        if not args_parsed and not game.Blocked and namespace_args.DeepLinksApi:
+            threading.Thread(target=work_with_links, args=[namespace_args.DeepLinksApi], daemon=True).start()
+            args_parsed = True
+        if api_socket:
+            try:
+                threading.Thread(target=work_with_links, args=[api_socket.accept()[0].recv(1024 * 2).decode()], daemon=True).start()
+            except BlockingIOError:
+                pass
+        game.update()
+    except Exception as err:
+        log.critical(err, stack_info=True, exc_info=True)
+        game.Report(err)

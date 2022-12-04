@@ -89,7 +89,7 @@ class Settings:
                 BaseRect = pygame.Rect(self.parent.size[0] * 0.24, self.parent.size[1] * pad,
                                        self.parent.size[0] * 0.52, self.parent.size[1] * 0.027)
                 settings_elements[element+'_label'] = Label(self, BaseRect, BaseRect, 0.15, language[type_settings+element],
-                                                            *self.parent.Colors['Label'], border=1, border_active=1, radius=1, radius_active=1)
+                                                            *self.parent.Colors['Label'], border=1, border_active=2,  radius=1, radius_active=1)
                 if self.parent.Settings[type_settings][element]['type'] is Switch:
                     settings_elements[element] = Switch(self, (BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1, BaseRect.y + 1, BaseRect.h * 2 - BaseRect.h * 0.1, BaseRect.h - 2),
                                                         type_settings,

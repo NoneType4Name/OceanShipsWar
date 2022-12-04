@@ -17,8 +17,8 @@ def StartGame(self: TextInput):
                 socket.inet_pton(socket.AF_INET, split[0])
                 enemy = (split[0], int(split[1]))
             else:
-                raise OSError
-        except OSError:
+                raise Exception
+        except Exception:
             self.Activate()
             self.parent.ConditionLabel.value = self.parent.parent.Language.CreateGameWrongIP
             return
@@ -71,16 +71,17 @@ def _GetIP(ip_button, link_button):
 
 
 def CopyIpToClipboard(self, link):
-    text = f'{self.external_ip}:{self.external_port}'
-    if link:
-        text = f'{GITHUB_PAGE_URL}?{API_METHOD_CONNECT}={self.external_tcp_ip}:{self.external_tcp_port}|{text}'
-        self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouLinkCopied)
-        self.parent.Input.value = 'dummy'
-        self.parent.Input.Deactivate()
-    else:
-        self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouIPCopied)
-    log.debug(f'Copied text:$BOLD$GREEN\t{text}$RESET.\tButton value:{self.parent.Input.value}.')
-    pygame.scrap.put(pygame.SCRAP_TEXT, text.encode())
+    if hasattr(self, 'external_ip'):
+        text = f'{self.external_ip}:{self.external_port}'
+        if link:
+            text = f'{GITHUB_PAGE_URL}?{API_METHOD_CONNECT}={self.external_tcp_ip}:{self.external_tcp_port}|{text}'
+            self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouLinkCopied)
+            self.parent.Input.value = 'dummy'
+            self.parent.Input.Deactivate()
+        else:
+            self.parent.parent.AddNotification(self.parent.parent.Language.CreateGameYouIPCopied)
+        log.debug(f'Copied text:$BOLD$GREEN\t{text}$RESET.\tButton value:{self.parent.Input.value}.')
+        pygame.scrap.put(pygame.SCRAP_TEXT, text.encode())
 
 
 def EscActivate(self, **kwargs):

@@ -246,8 +246,9 @@ class Ships:
             log.warning(f'{type_ship} ship is not in Ships!, ship num: {number}, \n{self.ships}.')
 
     def KillBlock(self, block):
-        if block in GetDeepData(self.ships):
-            type_ship, number = self.CollideShip((block, block))
+        rtn = self.CollideShip((block, block))
+        if rtn:
+            type_ship, number = rtn
             self.ships[type_ship][number]['blocks'].remove(block)
             self.die_blocks.append(block)
             log.debug(f'Block {block} successful killed.')
@@ -295,7 +296,7 @@ class Ships:
         for type_ship in self.ships:
             for num_ship in self.ships[type_ship]:
                 if self.blocks.GetShip(self.ships[type_ship][num_ship]['ship']).colliderect(self.blocks.GetShip(ship_cord)):
-                    log.debug(f'ship: {ship_cord} collided with {type_ship}, {num_ship}.', stack_info=True)
+                    # log.debug(f'ship: {ship_cord} collided with {type_ship}, {num_ship}.', stack_info=True)
                     return type_ship, num_ship
         return False
 
@@ -303,7 +304,7 @@ class Ships:
         for type_ship in self.ships:
             for num_ship in self.ships[type_ship]:
                 if self.blocks.GetShipEnv(self.blocks.GetShip(self.ships[type_ship][num_ship]['ship'])).colliderect(self.blocks.GetShip(ship_cord)):
-                    log.debug(f'ship env: {ship_cord} collided with {type_ship}, {num_ship}.', stack_info=True)
+                    # log.debug(f'ship env: {ship_cord} collided with {type_ship}, {num_ship}.', stack_info=True)
                     return type_ship, num_ship
         return False
 
@@ -311,7 +312,7 @@ class Ships:
         for type_ship in self.die_ships:
             for num_ship in self.die_ships[type_ship]:
                 if self.blocks.GetShip(self.die_ships[type_ship][num_ship]['ship']).colliderect(self.blocks.GetShip(ship_cord)):
-                    log.debug(f'Die ship: {ship_cord} collided with {type_ship}, {num_ship}.', stack_info=True)
+                    # log.debug(f'Die ship: {ship_cord} collided with {type_ship}, {num_ship}.', stack_info=True)
                     return type_ship, num_ship
         return False
 
@@ -319,7 +320,7 @@ class Ships:
         for type_ship in self.die_ships:
             for num_ship in self.die_ships[type_ship]:
                 if self.blocks.GetShipEnv(self.blocks.GetShip(self.die_ships[type_ship][num_ship]['ship'])).colliderect(self.blocks.GetShip(ship_cord)):
-                    log.debug(f'Die ship env: {ship_cord} collided with {type_ship}, {num_ship}.', stack_info=True)
+                    # log.debug(f'Die ship env: {ship_cord} collided with {type_ship}, {num_ship}.', stack_info=True)
                     return type_ship, num_ship
         return False
 
@@ -408,7 +409,7 @@ class Ships:
 
     def _random_placing(self, image):
         log.debug('Start random placing.')
-        while self.SumShipsMaxCount > self.SumShipsCount() and self.parent.parent.RUN:
+        while self.SumShipsMaxCount > self.SumShipsCount() and self.parent.parent.RUN and self.parent.parent.ConvertScene.new.type == PLAY:
             self.Clear()
             cord_not_used = dict.fromkeys([x for x in range(len(self.blocks.blocks.keys()) - 1)],
                                           dict.fromkeys([y for y in range(len(self.blocks.blocks.values()) - 1)], True))
@@ -561,8 +562,7 @@ class PlayGame:
                                text_rect,
                                self.parent.Language.GameClearMap,
                                self.parent.Language.GameClearMap,
-                               (10, 10, 10), (10, 10, 10), (255, 255, 255), (255, 255, 255), False, (100, 100, 200),
-                               (255, 255, 255), False, (200, 100, 255), (), border=border,
+                               *self.parent.Colors.ButtonRed, border=border,
                                func=lambda s: s.parent.Ships.Clear() or s.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select'))
         self.RandomPlacing = Button(self,
                                     (self.size.w * 0.1, self.size.h * 0.7, rect_w, rect_h),
@@ -570,15 +570,9 @@ class PlayGame:
                                     text_rect,
                                     self.parent.Language.GameRandomBuild,
                                     self.parent.Language.GameRandomBuild,
-                                    (100, 100, 100), (100, 100, 100), (255, 255, 255), (255, 255, 255), False,
-                                    (100, 100, 200), (255, 255, 255), False, (200, 100, 255), (), border=border,
+                                    *self.parent.Colors.Button,
+                                    border=border,
                                     func=RndFunc)
-        self.MoveLabel = Label(self, (parent.size.w * 0.5 - rect_w * 0.5, parent.size.h * 0.9, rect_w, rect_h * 0.5),
-                               (parent.size.w * 0.5 - rect_w * 0.5, parent.size.h * 0.9, rect_w, rect_h * 0.5),
-                               0.5,
-                               '',
-                               *parent.Colors.Scene.Load.Label
-                               )
         rect_w, rect_h = self.size.w * 0.2, self.size.h * 0.1
         border = rect_h * BORDER_ATTITUDE
         text_rect = (border, border, rect_w - border * 2, rect_h - border * 2)
@@ -588,7 +582,13 @@ class PlayGame:
                                   '',
                                   *parent.Colors.Scene.Load.Label
                                   )
-        rect_w, rect_h = self.size.h * 0.2, self.size.h * 0.1
+        self.MoveLabel = Label(self, (parent.size.w * 0.5 - rect_w * 0.5, parent.size.h * 0.9, rect_w, rect_h),
+                               (parent.size.w * 0.5 - rect_w * 0.5, parent.size.h * 0.9, rect_w, rect_h),
+                               0.5,
+                               '',
+                               *parent.Colors.Scene.Load.Label
+                               )
+        rect_w, rect_h = self.size.h * 0.22, self.size.h * 0.07
         border = rect_h * BORDER_ATTITUDE
         text_rect = (border, border, rect_w - border * 2, rect_h - border * 2)
         # self.EndGameButtonAgain = Button(self,
@@ -606,8 +606,7 @@ class PlayGame:
                                         text_rect,
                                         self.parent.Language.PlayGameQuit,
                                         self.parent.Language.PlayGameQuit,
-                                        (100, 100, 100), (100, 100, 100), (255, 255, 255), (255, 255, 255), False,
-                                        (100, 100, 200), (255, 255, 255), False, (200, 100, 255), (), border=border,
+                                        *self.parent.Colors.Button, border=border,
                                         func=EscActivate)
         self.BuildElements = pygame.sprite.Group(self.ClearMap, self.RandomPlacing, self.MoveLabel)
         self.GameElements = pygame.sprite.Group(self.MoveLabel)
@@ -654,11 +653,11 @@ class PlayGame:
 
     def _ping(self):
         log.debug('Start TCP socket ping method.')
-        while self.parent.RUN:
+        while self.parent.RUN and self.parent.ConvertScene.new.type == PLAY:
             try:
                 try:
                     l = time.time()
-                    while time.time() - l < 1 and self.parent.RUN:
+                    while time.time() - l < 1 and self.parent.RUN and self.parent.ConvertScene.new.type == PLAY:
                         pass
                     self.AroundNatSocket.send('ping!.'.encode())
                 except (ConnectionAbortedError, OSError):
@@ -677,13 +676,15 @@ class PlayGame:
                                           f'{self.enemy_host}:{self.external_port}'.encode())
                 log.debug(f'ConnectAroundNAT{self.enemy_external_host}:{self.enemy_external_port}|'
                           f'{self.enemy_host}:{self.external_port}')
-            while self.parent.RUN:
+            while self.parent.RUN and self.parent.ConvertScene.new.type == PLAY:
                 try:
                     d = self.AroundNatSocket.recv(1024).decode()
                 except (ConnectionAbortedError, OSError) as err:
                     log.debug(f'TCP connection aborted, error: type:{type(err)}, msg: {err}', stack_info=True, exc_info=True)
+                    self.Event(GAME_EVENT_LEAVE_GAME, {})
                     break
                 if 'pong!.' not in d:
+                    log.debug(4)
                     log.debug(f'TCP socket recv: {d}.')
                     if self.enemy_host:
                         if 'ConnectAroundNATInboundError' in d:
@@ -699,8 +700,11 @@ class PlayGame:
                             self.enemy_host, self.enemy_port = GetIpFromString(d.replace('ConnectAroundNATInbound', ''))
                             log.debug(f'Enemy UDP addr: {GetIpFromTuple((self.enemy_host, self.enemy_port))}')
                             break
-            self.AroundNatSocket.shutdown(0)
-            self.AroundNatSocket.close()
+            try:
+                self.AroundNatSocket.shutdown(0)
+                self.AroundNatSocket.close()
+            except OSError:
+                pass
             log.debug('TCP connection close.')
         except Exception as err:
             log.critical(err, stack_info=True, exc_info=True)
@@ -709,9 +713,9 @@ class PlayGame:
 
     def _read_thread(self):
         log.debug('Started UDP waiting enemy connect.')
-        while not self._activate_enemy and self.parent.RUN:
-            data, addr = self.socket.recvfrom(GAME_DATA_LEN)
+        while not self._activate_enemy and self.parent.RUN and self.parent.ConvertScene.new.type == PLAY:
             try:
+                data, addr = self.socket.recvfrom(GAME_DATA_LEN)
                 data = data.decode()
                 log.debug(f'UDP socket received data: {data}')
                 if 'OSW' in data:
@@ -722,6 +726,8 @@ class PlayGame:
                     break
             except UnicodeError:
                 log.warning(f'UDP socket received unknown data: {data}, from: {addr}.')
+            except OSError:
+                self.Event(GAME_EVENT_LEAVE_GAME, {})
 
     def _activate_socket(self):
         self._activate = time.time()
@@ -730,7 +736,7 @@ class PlayGame:
         if self.link:
             threading.Thread(target=self._around_nat, daemon=True).start()
         log.debug('Waiting UDP enemy connection.')
-        while not self.socket_activated and self.parent.RUN:
+        while not self.socket_activated and self.parent.RUN and self.parent.ConvertScene.new.type == PLAY:
             if self.enemy_host:
                 try:
                     self.socket.sendto(f'OSW,{self._activate},{self._activate_enemy}'.encode(), (self.enemy_host, self.enemy_port))
@@ -748,7 +754,7 @@ class PlayGame:
 
     def _socket_recv(self):
         log.debug('UDP receiver started.')
-        while self.socket_activated and self.parent.RUN:
+        while self.socket_activated and self.parent.RUN and self.parent.ConvertScene.new.type == PLAY:
             try:
                 data = self.socket.recv(GAME_DATA_LEN)
                 data = data.decode()
@@ -826,8 +832,10 @@ class PlayGame:
                 self.Event(GAME_EVENT_LEAVE_GAME, {})
 
     def MergeCondition(self, condition):
-        log.debug(f'New condition: {condition}')
-        self.condition = condition
+        if condition != self.condition:
+            log.debug(f'New condition: {condition}')
+            self.parent.Foreground()
+            self.condition = condition
 
     def Send(self, text=''):
         if text:
@@ -845,7 +853,7 @@ class PlayGame:
             'count': self.send_messages
         }
         self.socket.sendto(str(self._send_dict).encode(), (self.enemy_host, self.enemy_port))
-        if any(map(lambda e: e[type] == GAME_EVENT_LEAVE_GAME, self._send_dict['events'])):
+        if any(map(lambda e: e['type'] == GAME_EVENT_LEAVE_GAME, self._send_dict['events'])):
             self.EndGameButtonQuit.Function()
         self.events = []
         self.send_messages += 1
@@ -853,7 +861,7 @@ class PlayGame:
     def Event(self, event_type, dict_for_events: dict):
         event = {'type': event_type}
         event.update(zip(dict_for_events.keys(), dict_for_events.values()))
-        log.debug(f'New event: {event}.')
+        log.debug(f'New event: {event}, condition: {self.condition}')
         self.events.append(event)
 
     def inBuild(self):
