@@ -91,10 +91,18 @@ class Language(DATA):
                 langs_dict[language] = replace_str_var(exemplar_dict)
             else:
                 langs_dict[language] = exemplar_dict
-        langs_dict = langs_dict | DATA(langs_dict[default_language])
-        super().__init__(langs_dict)
+        super().__init__(DATA(langs_dict[default_language]))
+        self.Languages = langs_dict
         self.LanguageList = list(dict_of_all_languages.keys())
         self.Language = default_language
+
+    def SetLanguage(self, lang):
+        lng = self.Languages
+        lng_l = self.LanguageList
+        super().__init__(DATA(self.Languages[lang]))
+        self.Languages = lng
+        self.LanguageList = lng_l
+        self.Language = lang
 
 
 def get_hwnd_by_pid(pid):

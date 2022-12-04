@@ -1,4 +1,5 @@
 import psutil
+import pygame
 
 import log
 from functions import *
@@ -127,6 +128,14 @@ class Game:
                 SETTINGS: Settings,
                 PLAY: PlayGame
             })
+        self.blocked_scene = {
+            INIT: False,
+            MAIN: False,
+            LOAD: True,
+            CREATE: False,
+            SETTINGS: False,
+            PLAY: True
+        }
         self.ConvertScene = ConvertScene(self, self.Scene[INIT])
         self.ConvertSceneThread = threading.Thread(target=lambda _:True)
         self.Ticker = None
@@ -292,7 +301,10 @@ class Game:
         self.events = pygame.event.get()
         for event in self.events:
             if event.type == pygame.QUIT:
-                self.RUN = False
+                if not self.Blocked:
+                    self.RUN = False
+                else:
+                    pygame.event.post(pygame.event.Event(pygame.QUIT, {}))
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == pygame.BUTTON_LEFT:
                     self.mouse_left_press = event.pos
@@ -360,6 +372,25 @@ class Game:
         self.Settings = DATA(self.Settings.__dict__)
         if name == 'Console':
             self.ConsoleOC()
+        elif name == 'WindowSize':
+            self.size = SIZE(self.Settings.Graphic.WindowSize.value)
+            pygame.display.quit()
+            os.environ['SDL_VIDEO_CENTERED'] = '1'
+            pygame.display.init()
+            self.screen = pygame.display.set_mode(self.size, self.flag, self.depth, vsync=self.vsync)
+            pygame.display.set_caption(self.caption)
+            pygame.display.set_icon(pygame.image.load(ICON_PATH))
+            self.block_size = int(self.size.w // BLOCK_ATTITUDE)
+            self.GAME_HWND = pygame.display.get_wm_info()['window']
+            self.GAME_PID = get_pid_by_hwnd(self.GAME_HWND)
+            self.GAME_PROCESS = psutil.Process(self.GAME_PID)
+            self.ConvertScene.ReNew(self)
+        elif name == 'Language':
+            self.Language.SetLanguage(self.Settings.Graphic.Language.value)
+            self.Settings.Graphic.Theme.values = dict(zip(THEMES, self.Language.ThemeList))
+            self.ConvertScene.ReNew(self)
+        elif name == 'Theme':
+
         elif name == 'Links':
             if self.EXE:
                 file_name = ''

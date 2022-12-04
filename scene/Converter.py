@@ -10,23 +10,28 @@ class ConvertScene:
         self.new = new(parent)
         self.new_alpha = 0
         self.step = SPEED_MERGE_SCENE
+        self.new_parent = None
+        self.new_object = None
+        self.new_kwargs = {}
         log.debug(f'ConvertScene speed: {self.step}.')
 
     def NewScene(self, new, kwargs):
-        if self.old and self.old.type == LOAD:
-            self.parent.Blocked = False
+        self.new_kwargs = kwargs
+        self.new_object = new
         self.image = pygame.Surface(self.parent.size, pygame.SRCALPHA)
         self.old = self.new
+        self.new_parent = self.old.type
         if kwargs and 'parent' in kwargs:
-            last = kwargs.get('parent')
+            self.new_parent = kwargs.get('parent')
             del kwargs['parent']
-            self.new = new(self.parent, last, kwargs)
-        else:
-            self.new = new(self.parent, self.old.type, kwargs)
-        if self.new.type == LOAD:
-            self.parent.Blocked = True
+        self.new = new(self.parent, self.new_parent, self.new_kwargs)
+        self.parent.Blocked = self.parent.blocked_scene[self.new.type]
         log.debug(f'Installed new scene: {self.new.type}, old: {self.old.type}')
         self.new_alpha = 0
+
+    def ReNew(self, parent):
+        self.parent = parent
+        self.new = self.new_object(self.parent, self.new_parent, self.new_kwargs)
 
     # def ReSize(self):
 

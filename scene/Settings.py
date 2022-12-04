@@ -1,3 +1,7 @@
+import time
+
+import log
+
 from functions import *
 from Gui import *
 
@@ -39,6 +43,7 @@ class Settings:
         self.settings_elements = {}
         self.active_element = list(self.parent.Settings.keys())[0]
         self.selected = None
+        log.debug(f'New Scene: {self.type}, last {self.InputScene}, dict:{kwargs}.')
 
         rect_w, rect_h = parent.block_size * 0.75, parent.block_size * 0.5
         border = rect_h * BORDER_ATTITUDE
@@ -59,7 +64,8 @@ class Settings:
         threading.Thread(target=self.LoadElements, daemon=True).start()
 
     def LoadElements(self):
-        self.selected = None
+        t = time.time()
+        log.debug('Initializing settings elements start.')
         pad = SETTINGS_UPPER_MARGIN
         language = self.parent.Language
         BaseRect = pygame.Rect(self.parent.size[0] * 0.24, self.parent.size[1] * pad, self.parent.size[0] * 0.52,
@@ -137,6 +143,7 @@ class Settings:
                 self.elements[type_settings].add(settings_elements.values())
             self.settings_elements[type_settings] = {}
             self.settings_elements[type_settings] = settings_elements
+        log.debug(f'Delta time load settings: {time.time() - t}')
 
     def update(self, active, args):
         self.image.fill(self.parent.Colors.Background)

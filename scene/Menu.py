@@ -1,5 +1,5 @@
+from functions import *
 from Gui import *
-import threading
 
 
 class MainScene:
@@ -9,6 +9,7 @@ class MainScene:
         self.parent = parent
         self.InputScene = input_scene
         self.image = pygame.Surface(parent.size, pygame.SRCALPHA)
+        log.debug(f'New Scene: {self.type}, last {self.InputScene}, dict:{kwargs}.')
 
         rect_w, rect_h = parent.block_size * 2, parent.block_size * 0.5
         border = rect_h * BORDER_ATTITUDE

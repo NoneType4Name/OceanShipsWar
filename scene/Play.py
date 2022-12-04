@@ -286,7 +286,7 @@ class Ships:
         self.die_ships = dict(map(lambda key: (key, {}), [1, 2, 3, 4]))
         self.die_ships_count = dict.fromkeys([1, 2, 3, 4], 0)
         self.die_blocks = []
-        log.debug('Ships successfully removed.')
+        log.debug('Ships successfully removed.', stack_info=True)
 
     def HasShip(self, ship):
         return ship in GetDeepData([[list(self.ships[type_sh][s].values())[0] for s in self.ships[type_sh]] for type_sh in self.ships])
@@ -295,7 +295,7 @@ class Ships:
         for type_ship in self.ships:
             for num_ship in self.ships[type_ship]:
                 if self.blocks.GetShip(self.ships[type_ship][num_ship]['ship']).colliderect(self.blocks.GetShip(ship_cord)):
-                    log.debug(f'ship: {ship_cord} collided with {type_ship}, {num_ship}.')
+                    log.debug(f'ship: {ship_cord} collided with {type_ship}, {num_ship}.', stack_info=True)
                     return type_ship, num_ship
         return False
 
@@ -303,7 +303,7 @@ class Ships:
         for type_ship in self.ships:
             for num_ship in self.ships[type_ship]:
                 if self.blocks.GetShipEnv(self.blocks.GetShip(self.ships[type_ship][num_ship]['ship'])).colliderect(self.blocks.GetShip(ship_cord)):
-                    log.debug(f'ship env: {ship_cord} collided with {type_ship}, {num_ship}.')
+                    log.debug(f'ship env: {ship_cord} collided with {type_ship}, {num_ship}.', stack_info=True)
                     return type_ship, num_ship
         return False
 
@@ -311,7 +311,7 @@ class Ships:
         for type_ship in self.die_ships:
             for num_ship in self.die_ships[type_ship]:
                 if self.blocks.GetShip(self.die_ships[type_ship][num_ship]['ship']).colliderect(self.blocks.GetShip(ship_cord)):
-                    log.debug(f'Die ship: {ship_cord} collided with {type_ship}, {num_ship}.')
+                    log.debug(f'Die ship: {ship_cord} collided with {type_ship}, {num_ship}.', stack_info=True)
                     return type_ship, num_ship
         return False
 
@@ -319,7 +319,7 @@ class Ships:
         for type_ship in self.die_ships:
             for num_ship in self.die_ships[type_ship]:
                 if self.blocks.GetShipEnv(self.blocks.GetShip(self.die_ships[type_ship][num_ship]['ship'])).colliderect(self.blocks.GetShip(ship_cord)):
-                    log.debug(f'Die ship env: {ship_cord} collided with {type_ship}, {num_ship}.')
+                    log.debug(f'Die ship env: {ship_cord} collided with {type_ship}, {num_ship}.', stack_info=True)
                     return type_ship, num_ship
         return False
 
@@ -407,6 +407,7 @@ class Ships:
         return self._start_cord, self._end_cord
 
     def _random_placing(self, image):
+        log.debug('Start random placing.')
         while self.SumShipsMaxCount > self.SumShipsCount() and self.parent.parent.RUN:
             self.Clear()
             cord_not_used = dict.fromkeys([x for x in range(len(self.blocks.blocks.keys()) - 1)],
@@ -453,6 +454,7 @@ class Ships:
                                 cords_used.append(block)
                     else:
                         break
+        log.debug('End random placing.')
 
     def _update_imaginary_ship(self):
         self._imaginary_ship = self._start_cord, self._end_cord
@@ -664,6 +666,7 @@ class PlayGame:
             except Exception as err:
                 log.warning(err, stack_info=True, exc_info=True)
                 self.parent.Report(err)
+                self.Event(GAME_EVENT_LEAVE_GAME, {})
 
     def _around_nat(self):
         log.debug('TCP connection start.')
@@ -702,6 +705,7 @@ class PlayGame:
         except Exception as err:
             log.critical(err, stack_info=True, exc_info=True)
             self.parent.Report(err)
+            self.Event(GAME_EVENT_LEAVE_GAME, {})
 
     def _read_thread(self):
         log.debug('Started UDP waiting enemy connect.')
@@ -740,12 +744,14 @@ class PlayGame:
                 except Exception as err:
                     log.critical(err, stack_info=True, exc_info=True)
                     self.parent.Report(err)
+                    self.Event(GAME_EVENT_LEAVE_GAME, {})
 
     def _socket_recv(self):
         log.debug('UDP receiver started.')
         while self.socket_activated and self.parent.RUN:
             try:
-                data = self.socket.recv(GAME_DATA_LEN).decode()
+                data = self.socket.recv(GAME_DATA_LEN)
+                data = data.decode()
                 if 'OSW' in data:
                     data = data.split(',')
                     if not float(data[2]):
@@ -817,6 +823,7 @@ class PlayGame:
             except Exception as err:
                 log.critical(err, stack_info=True, exc_info=True)
                 self.parent.Report(err)
+                self.Event(GAME_EVENT_LEAVE_GAME, {})
 
     def MergeCondition(self, condition):
         log.debug(f'New condition: {condition}')
@@ -838,6 +845,8 @@ class PlayGame:
             'count': self.send_messages
         }
         self.socket.sendto(str(self._send_dict).encode(), (self.enemy_host, self.enemy_port))
+        if any(map(lambda e: e[type] == GAME_EVENT_LEAVE_GAME, self._send_dict['events'])):
+            self.EndGameButtonQuit.Function()
         self.events = []
         self.send_messages += 1
 

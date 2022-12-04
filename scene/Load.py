@@ -11,7 +11,7 @@ class LoadScene:
         self.func = kwargs.get('func')
         self.kwargs = kwargs
         self.Thread = None
-        log.debug(f'New Scene: {self.type}, last {self.InputScene}, dict:{kwargs}')
+        log.debug(f'New Scene: {self.type}, last {self.InputScene}, dict:{kwargs}.')
 
         self.ProgressBar = ProgressBar((parent.size.w * 0.4, parent.size.h * 0.7,
                                         parent.size.w * 0.2, parent.size.h * 0.05),
