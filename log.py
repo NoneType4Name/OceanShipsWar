@@ -78,5 +78,3 @@ log.warning('WARNING.')
 log.error('ERROR.')
 log.critical('CRITICAL.')
 log.info('--------\tLogging start.\t--------')
-
-print = log.info

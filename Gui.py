@@ -1,6 +1,6 @@
 import string
+import numpy
 import pygame
-import itertools
 import time
 from constants import *
 
@@ -9,6 +9,19 @@ ESCAPE_CHARS = '\n\a\b\f\r\t\v\x00'
 ESCAPE_CHARS_TRANSLATER = str.maketrans(dict.fromkeys(list(ESCAPE_CHARS), None))
 
 pygame.font.init()
+
+
+class MainFont:
+    def __init__(self, font_path):
+        self.font = pygame.font.Font(font_path, 256)
+
+    def render(self, text: str, text_rect: pygame.Rect, antialias: bool, color: pygame.Color, background=None) -> pygame.Surface:
+        srf = self.font.render(text, antialias, color, background)
+        return pygame.transform.smoothscale(
+            srf, numpy.array(srf.get_size()) / max(numpy.array(srf.get_size()) / numpy.array((text_rect.w, text_rect.h))))
+
+
+Font = MainFont(FONT_PATH)
 
 
 def EscActivate(self, **kwargs):
@@ -106,13 +119,6 @@ def RoundedRect(rect: tuple, color: tuple, radius=0.4, gradient=False, gradient_
     return surf
 
 
-def GetFontSize(font, text, rect: pygame.Rect):
-    for i in range(0, 256):
-        font_rect = pygame.font.Font(font, i).size(text)
-        if font_rect[0] >= rect.w or font_rect[1] >= rect.h:
-            return i-1
-
-
 class Button(pygame.sprite.Sprite):
     def __init__(self, parent, rect, text_rect, text_rect_active, text, text_active,
                  color, color_active, text_color, text_color_active,
@@ -144,19 +150,19 @@ class Button(pygame.sprite.Sprite):
         self.func = func if func else lambda s, a=(): s
         self.args = args
 
-        font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text, self.text_rect))
-        size = font.size(text)
+        # font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text, self.text_rect))
+        font = Font.render(self.text, self.text_rect, True, self.text_color)
+        size = font.get_size()
 
         self.image_base = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         self.image_base.blit(RoundedRect(self.rect, self.color, self.radius, self.gradient, self.gradient_start, self.gradient_end, self.border), (0, 0))
-        self.image_base.blit(font.render(text, True, self.text_color),
-                             (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
-        font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text_active, self.text_rect_active))
-        size = font.size(text)
+        self.image_base.blit(font, (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
+        # font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text_active, self.text_rect_active))
+        font = Font.render(self.text_active, self.text_rect_active, True, self.color_act_text)
+        size = font.get_size()
         self.image_active = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         self.image_active.blit(RoundedRect(self.rect, self.color_active, self.radius_active, self.gradient_active, self.gradient_start_active, self.gradient_end_active, self.border_active), (0, 0))
-        self.image_active.blit(font.render(text, True, self.color_act_text),
-                               (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
+        self.image_active.blit(font, (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
         self.collide = False
 
     def update(self):
@@ -174,18 +180,18 @@ class Button(pygame.sprite.Sprite):
             self.image = self.image_base
 
     def UpdateImage(self):
-        font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.text, self.text_rect))
-        size = font.size(self.text)
+        font = Font.render(self.text, self.text_rect, True, self.text_color)
+        size = font.get_size()
+
         self.image_base = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         self.image_base.blit(RoundedRect(self.rect, self.color, self.radius, self.gradient, self.gradient_start, self.gradient_end, self.border), (0, 0))
-        self.image_base.blit(font.render(self.text, True, self.text_color),
-                             (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
-        font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.text_active, self.text_rect_active))
-        size = font.size(self.text)
+        self.image_base.blit(font, (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
+        # font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text_active, self.text_rect_active))
+        font = Font.render(self.text_active, self.text_rect_active, True, self.color_act_text)
+        size = font.get_size()
         self.image_active = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         self.image_active.blit(RoundedRect(self.rect, self.color_active, self.radius_active, self.gradient_active, self.gradient_start_active, self.gradient_end_active, self.border_active), (0, 0))
-        self.image_active.blit(font.render(self.text, True, self.color_act_text),
-                               (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
+        self.image_active.blit(font, (self.rect.w * 0.5 - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
 
     def isCollide(self):
         return self.rect.collidepoint(pygame.mouse.get_pos())
@@ -196,6 +202,7 @@ class Button(pygame.sprite.Sprite):
 
     def Function(self):
         if self.args:
+            # threading.Thread(target=self.func, args=(self, *self.args)).start()
             self.func(self, *self.args)
         else:
             self.func(self)
@@ -229,9 +236,11 @@ class Switch(pygame.sprite.Sprite):
             self.image.blit(RoundedRect(self.rect, self.color, 1), (0, 0))
             pygame.draw.circle(self.image, self.color_off, (self.rect.w / 2 - self.rect.h / 2, self.rect.h / 2),
                                self.rect.h / 2 - self.rect.h * 0.1)
-        if self.isCollide() and self.parent.parent.mouse_left_release:
-            self.value = not self.value
-            self.func(self)
+        if self.isCollide():
+            self.parent.parent.cursor = pygame.SYSTEM_CURSOR_HAND
+            if self.parent.parent.mouse_left_release:
+                self.value = not self.value
+                self.func(self)
 
     def RectEdit(self, x=0, y=0):
         self.rect.x += x
@@ -270,32 +279,32 @@ class Label(pygame.sprite.Sprite):
         self.radius = radius
         self.radius_active = radius_active
         self.func = func if func else lambda s: s
-        self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, text, self.text_rect))
-        self.size = self.font.size(text)
 
     def update(self):
         self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
         if self.isCollide():
             self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), self.color_active,self.radius_active,
                                         self.gradient_active, self.gradient_start_active, self.gradient_end_active, self.border_active), (0, 0))
-            self.image.blit(self.font.render(self.value, True, self.text_color_active),
-                            (self.rect.w * self.left_padding - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
+            font = Font.render(self.value, self.text_rect, True, self.text_color_active)
+            size = font.get_size()
         else:
             self.image.blit(RoundedRect((0, 0, self.rect.w, self.rect.h), self.color, self.radius,
                                         self.gradient, self.gradient_start, self.gradient_end,
                                         self.border), (0, 0))
-            self.image.blit(self.font.render(self.value, True, self.text_color),
-                            (self.rect.w * self.left_padding - self.size[0] // 2, self.rect.h // 2 - self.size[1] // 2))
-        if self.size != self.font.size(self.value):
-            self.NewFont()
+            font = Font.render(self.value, self.text_rect, True, self.text_color)
+            size = font.get_size()
+            self.image.blit(font,
+                            (self.rect.w * self.left_padding - size[0] // 2, self.rect.h // 2 - size[1] // 2))
+        self.image.blit(font,
+                        (self.rect.w * self.left_padding - size[0] // 2, self.rect.h // 2 - size[1] // 2))
         return self.image
 
     def isCollide(self):
         return self.rect.collidepoint(pygame.mouse.get_pos())
 
-    def NewFont(self):
-        self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.value, self.text_rect))
-        self.size = self.font.size(self.value)
+    # def NewFont(self):
+    #     self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.value, self.text_rect))
+    #     self.size = self.font.size(self.value)
 
     def Function(self):
         self.func(self)
@@ -336,6 +345,7 @@ class Slide(pygame.sprite.Sprite):
         self.image.blit(RoundedRect((0, 0, self.slide_rect.w * self.value + (self.rect.h * 1 if self.value else 0),
                                      self.slide_rect.h * 0.5), self.slide_color, self.radius, False), (0, (self.rect.h * 0.5) - (self.slide_rect.h * 0.26)))
         if self.isCollide() and not self.active:
+            self.parent.parent.cursor = pygame.SYSTEM_CURSOR_HAND
             self.image.blit(RoundedRect(self.rect,
                                         self.color_active,
                                         self.radius_active,
@@ -344,6 +354,7 @@ class Slide(pygame.sprite.Sprite):
                                (self.slide_rect.w * self.value + (self.rect.h * 0.5), self.rect.h * 0.5),
                                self.rect.h * 0.5)
         elif self.active:
+            self.parent.parent.cursor = pygame.SYSTEM_CURSOR_SIZEWE
             self.image.blit(RoundedRect(self.rect,
                                         self.color_active,
                                         self.radius_active,
@@ -413,22 +424,27 @@ class Element(pygame.sprite.Sprite):
         self.radius = radius
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         self.value = value
-        self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.parent.texts[self.value], self.parent.rect))
-        self.size = self.font.size(self.parent.texts[self.value])
+        self.font_active = Font.render(self.parent.texts[self.value], self.rect, True, self.text_color_active)
+        self.font = Font.render(self.parent.texts[self.value], self.rect, True, self.text_color)
+        # self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.parent.texts[self.value], self.parent.rect))
+        # self.size = self.font.size(self.parent.texts[self.value])
 
     def update(self):
+        self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
         if self.isCollide():
-            self.image.blit(RoundedRect(self.rect, self.color,self.radius), (0, 0))
-            self.image.blit(self.font.render(self.parent.texts[self.value], True, self.text_color_active),
-                            (self.rect.w * self.parent.left_padding - self.size[0] * 0.5,
-                             self.rect.h * 0.5 - self.size[1] * 0.5))
+            self.parent.parent.parent.cursor = pygame.SYSTEM_CURSOR_HAND
+            self.image.blit(RoundedRect(self.rect, self.color, self.radius), (0, 0))
+            self.image.blit(RoundedRect(self.rect, self.color, self.radius, self.gradient_active, self.gradient_start_active, self.gradient_end_active, self.border), (0, 0))
+            self.image.blit(self.font_active,
+                            (self.rect.w * self.parent.left_padding - self.font.get_size()[0] * 0.5,
+                             self.rect.h * 0.5 - self.font.get_size()[1] * 0.5))
             if self.parent.parent.parent.mouse_left_release:
                 self.parent.value = self.value
         else:
             self.image.blit(RoundedRect(self.rect, self.color, self.radius, self.gradient, self.gradient_start, self.gradient_end, self.border), (0, 0))
-            self.image.blit(self.font.render(self.parent.texts[self.value], True, self.text_color),
-                            (self.rect.w * self.parent.left_padding - self.size[0] * 0.5,
-                             self.rect.h * 0.5 - self.size[1] * 0.5))
+            self.image.blit(self.font,
+                            (self.rect.w * self.parent.left_padding - self.font.get_size()[0] * 0.5,
+                             self.rect.h * 0.5 - self.font.get_size()[1] * 0.5))
 
     def isCollide(self):
         return self.real_rect.collidepoint(pygame.mouse.get_pos())
@@ -481,26 +497,26 @@ class List(pygame.sprite.Sprite):
         self.func_activate = func_activate if func_activate else lambda p: False
         self.func_deactivate = func_deactivate if func_deactivate else lambda p: False
         self.active = False
-        self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.texts[self.value], self.rect))
-        self.size = self.font.size(self.texts[self.value])
+        self.font_active = Font.render(self.texts[self.value], self.rect, True, self.text_color_active)
+        self.font = Font.render(self.texts[self.value], self.rect, True, self.text_color)
         self.image = pygame.Surface(
-            (self.rect.w, self.rect.h + self.size[1] * len(self.texts) + self.size[1] * 0.1 * len(self.texts)),
+            (self.rect.w, self.rect.h + self.font.get_size()[1] * len(self.texts) + self.font.get_size()[1] * 0.1 * len(self.texts)),
             pygame.SRCALPHA)
         self.elements = pygame.sprite.Group()
         for n in range(len(self.texts)):
-            if n == self.value:
-                self.elements.add(
-                    Element(self, (0, rect[3] * (n + 1), rect[2], rect[3]),
-                            (self.rect.x, self.rect.y + self.rect.h * (n + 1), self.rect.w, self.rect.h),
-                            n,
-                            self.color_list,
-                            self.text_color_active,
-                            self.text_color_active,
-                            self.gradient_list_active, self.gradient_start_list_active, self.gradient_end_list_active,
-                            self.gradient_list_active, self.gradient_start_list_active, self.gradient_end_list_active,
-                            self.border_active,
-                            self.radius_active))
-            else:
+            # if n == self.value:
+            #     self.elements.add(
+            #         Element(self, (0, rect[3] * (n + 1), rect[2], rect[3]),
+            #                 (self.rect.x, self.rect.y + self.rect.h * (n + 1), self.rect.w, self.rect.h),
+            #                 n,
+            #                 self.color_list,
+            #                 self.text_color_active,
+            #                 self.text_color_active,
+            #                 self.gradient_list_active, self.gradient_start_list_active, self.gradient_end_list_active,
+            #                 self.gradient_list_active, self.gradient_start_list_active, self.gradient_end_list_active,
+            #                 self.border_active,
+            #                 self.radius_active))
+            # else:
                 self.elements.add(
                     Element(self, (0, rect[3] * (n + 1), rect[2], rect[3]),
                             (self.rect.x, self.rect.y + self.rect.h * (n + 1), self.rect.w, self.rect.h),
@@ -515,15 +531,20 @@ class List(pygame.sprite.Sprite):
     def update(self):
         self.image = pygame.Surface(
             (self.rect.w,
-             self.rect.h + self.size[1] * len(self.texts) + self.size[1] * 0.1 * len(self.texts)),
+             self.rect.h + self.font.get_size()[1] * len(self.texts) + self.font.get_size()[1] * 0.1 * len(self.texts)),
             pygame.SRCALPHA)
         if self.active:
             self.image.blit(
                 RoundedRect(self.rect, self.color_active, self.radius_active, self.gradient_active, self.gradient_start_active, self.gradient_end_active, self.border_active), (0, 0))
-            self.image.blit(self.font.render(self.texts[self.value], True, self.text_color_active), (self.rect.w * self.left_padding - self.size[0] * 0.5, self.rect.h * 0.5 - self.size[1] * 0.5))
+            self.image.blit(self.font_active, (self.rect.w * self.left_padding - self.font_active.get_size()[0] * 0.5, self.rect.h * 0.5 - self.font_active.get_size()[1] * 0.5))
         else:
             self.image.blit(RoundedRect(self.rect, self.color, self.radius, self.gradient, self.gradient_start, self.gradient_end, self.border), (0, 0))
-            self.image.blit(self.font.render(self.texts[self.value], True, self.text_color), (self.rect.w * self.left_padding - self.size[0] * 0.5, self.rect.h * 0.5 - self.size[1] * 0.5))
+            self.image.blit(self.font, (self.rect.w * self.left_padding - self.font_active.get_size()[0] * 0.5, self.rect.h * 0.5 - self.font_active.get_size()[1] * 0.5))
+        if self.isCollide():
+            if self.active:
+                self.parent.parent.cursor = pygame.SYSTEM_CURSOR_NO
+            else:
+                self.parent.parent.cursor = pygame.SYSTEM_CURSOR_HAND
         if not self.active and self.parent.parent.mouse_left_release and self.isCollide():
             self.Activate()
         elif self.active:
@@ -547,8 +568,8 @@ class List(pygame.sprite.Sprite):
 
     def Deactivate(self):
         self.active = False
-        self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.texts[self.value], self.rect))
-        self.size = self.font.size(self.texts[self.value])
+        self.font_active = Font.render(self.texts[self.value], self.rect, True, self.text_color_active)
+        self.font = Font.render(self.texts[self.value], self.rect, True, self.text_color)
         self.func_deactivate(self)
 
     def Activate(self):
@@ -594,11 +615,12 @@ class TextInput(pygame.sprite.Sprite):
         self.active = False
         self.collide = False
         self.pos = len(self.value)
-        self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.value, self.text_rect))
-        self.size = self.font.size(self.value)
 
     def update(self, events):
         self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+        font = Font.render(self.value, self.text_rect, True, self.text_color)
+        font_active = Font.render(self.value, self.text_rect, True, self.text_color_active)
+        size = font.get_size()
         if self.isCollide() and not self.collide:
             self.collide = True
         elif not self.isCollide() and self.collide:
@@ -608,16 +630,18 @@ class TextInput(pygame.sprite.Sprite):
                 self.parent.parent.cursor = pygame.SYSTEM_CURSOR_IBEAM
             self.image.blit(RoundedRect(self.rect, self.color_active, self.radius, self.gradient_active, self.gradient_start_active, self.gradient_end_active, self.border_active), (0, 0))
             if time.time() % 1 > 0.5:
-                width = int(self.font.size(self.text[:self.pos])[1] * 0.1)
+                ft = Font.render(self.text[:self.pos], self.text_rect, True, (0, 0, 0))
+                sz = ft.get_size()
+                width = 2
                 pygame.draw.line(self.image,
                                  (self.color_active.r - 100 if self.color_active.r - 100 > 0 else 100,
                                   self.color_active.g - 100 if self.color_active.g - 100 > 0 else 100,
                                   self.color_active.b - 100 if self.color_active.b - 100 > 0 else 100),
-                                 ((self.text_rect.w * self.left_padding - self.size[0] * 0.5) - width + self.font.size(self.text[:self.pos])[0] + self.text_rect.x,
-                                  self.text_rect.h * 0.5 - self.size[1] * 0.5 + self.text_rect.y),
-                                 ((self.text_rect.w * self.left_padding - self.size[0] * 0.5) - width + self.font.size(self.text[:self.pos])[0] + self.text_rect.x,
-                                  self.text_rect.h * 0.5 + self.size[1] * 0.5 + self.text_rect.y),
-                                 int(self.font.size(self.text[:self.pos])[1] * 0.1))
+                                 ((self.text_rect.w * self.left_padding - size[0] * 0.5) - width + sz[0] + self.text_rect.x,
+                                  self.text_rect.h * 0.5 - size[1] * 0.5 + self.text_rect.y),
+                                 ((self.text_rect.w * self.left_padding - size[0] * 0.5) - width + sz[0] + self.text_rect.x,
+                                  self.text_rect.h * 0.5 + size[1] * 0.5 + self.text_rect.y),
+                                 width)
         else:
             if self.isCollide():
                 self.parent.parent.cursor = pygame.SYSTEM_CURSOR_HAND
@@ -625,11 +649,11 @@ class TextInput(pygame.sprite.Sprite):
             else:
                 self.image.blit(RoundedRect(self.rect, self.color, self.radius, self.gradient, self.gradient_start, self.gradient_end, self.border), (0, 0))
         if self.text:
-            self.image.blit(self.font.render(self.value, True, self.text_color_active),
-                            (self.rect.w * self.left_padding - self.size[0] * 0.5, self.rect.h * 0.5 - self.size[1] * 0.5))
+            self.image.blit(font_active,
+                            (self.rect.w * self.left_padding - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
         else:
-            self.image.blit(self.font.render(self.value, True, self.text_color),
-                            (self.rect.w * self.left_padding - self.size[0] * 0.5, self.rect.h * 0.5 - self.size[1] * 0.5))
+            self.image.blit(font,
+                            (self.rect.w * self.left_padding - size[0] * 0.5, self.rect.h * 0.5 - size[1] * 0.5))
 
         if any(map(lambda e: e.type in (pygame.KEYDOWN, pygame.TEXTEDITING, pygame.TEXTINPUT), events)):
             for event in events:
@@ -702,7 +726,6 @@ class TextInput(pygame.sprite.Sprite):
                         if event.key == pygame.K_ESCAPE:
                             self.Deactivate()
                     self.value = self.text if self.text else self.default
-                    self.NewFont()
         return self.image
 
     def isCollide(self):
@@ -725,10 +748,6 @@ class TextInput(pygame.sprite.Sprite):
         self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select')
         pygame.key.set_repeat(0, 0)
         self.func_deactivate(self)
-
-    def NewFont(self):
-        self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.value, self.text_rect))
-        self.size = self.font.size(self.value)
 
 
 class Notification(pygame.sprite.Sprite):
@@ -833,6 +852,25 @@ class ProgressBar(pygame.sprite.Sprite):
                         self.progress_color), (self.wh, self.wh))
 
 
+class Ticker(pygame.sprite.Sprite):
+    def __init__(self, rect, text, left_padding, color, text_color):
+        pygame.sprite.Sprite.__init__(self)
+        self.rect = pygame.Rect(rect)
+        self.text = text
+        self.left_padding = left_padding
+        self.color = pygame.Color(color)
+        self.text_color = pygame.Color(text_color)
+        self.image = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+        self.image.fill(self.color)
+        self.font = Font.render(self.text, self.rect, True, self.text_color)
+        # self.font = pygame.font.Font(FONT_PATH, GetFontSize(FONT_PATH, self.text, self.rect))
+        # self.size = self.font.size(self.text)
+        self.image.blit(self.font, (self.rect.w * self.left_padding - self.font.get_size()[0] * 0.5, self.rect.h * 0.5 - self.font.get_size()[1] * 0.5))
+
+    def update(self):
+        pass
+
+
 # class Path(pygame.sprite.Sprite):
 #     def __init__(self, default_font, rect, around, color, font_color, display, name, value, types, typ, multiple):
 #         pygame.sprite.Sprite.__init__(self)
@@ -893,150 +931,3 @@ class ProgressBar(pygame.sprite.Sprite):
 #                     return {self.name: self.value}
 #                 else:
 #                     self.value = value
-
-
-# class Settings_class:
-#     def __init__(self, settings, set_of_settings, set_of_settings_type, set_for_lists, set_for_paths, game_language, size, surface):
-#         settings = copy.deepcopy(settings)
-#         self.all_settings = {}
-#         self.default_font = settings['Graphic']['Font']
-#         self.set_of_settings = set_of_settings
-#         self.set_of_settings_type = set_of_settings
-#         self.set_for_lists = set_of_settings_type
-#         self.set_for_paths = set_for_paths
-#         self.settings = settings
-#         self.active_settings = list(self.settings.keys())[0]
-#         self.active_element = None
-#         self.upper = pad = buttons_pad = set_of_settings['up margin']
-#         self.game_language = game_language
-#         self.surface = surface
-#         self.mouse = False
-#         BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92, size[1] // 36)
-#         SettingsButtons = []
-#         for type_settings in settings:
-#             pad = self.upper
-#             temp_g = []
-#             SettingsElements = []
-#             Labels = []
-#             SettingsButtons.append(
-#                 Button(self.default_font, (size[0] * 0.05, size[1] * buttons_pad, BaseRect.h * 5, BaseRect.h),
-#                        game_language[type_settings],
-#                        *set_of_settings[
-#                            'buttons active' if type_settings == self.active_element else 'buttons'],
-#                        1, ))
-#             for element in settings[type_settings]:
-#                 BaseRect = pygame.Rect(size[0] // 2 - size[0] // 1.92 // 2, size[1] * pad, size[0] // 1.92,
-#                                        size[1] // 36)
-#                 if set_of_settings_type[type_settings][element] is Switch:
-#                     SettingsElements.append(
-#                         Switch((BaseRect.x + BaseRect.w - (BaseRect.h * 2 - BaseRect.h * 0.1) - 1,
-#                                 BaseRect.y + 1,
-#                                 BaseRect.h * 2 - BaseRect.h * 0.1,
-#                                 BaseRect.h - 2),
-#                                *set_of_settings['switches'],
-#                                name=f'{type_settings} {element}',
-#                                power=settings[type_settings][element]))
-#                 elif set_of_settings_type[type_settings][element] is List:
-#                     temp_g.append(
-#                         List(self.default_font, (BaseRect.x + BaseRect.w - (BaseRect.h * 4 - BaseRect.h * 0.1) - 1,
-#                                                  BaseRect.y + 1,
-#                                                  BaseRect.h * 4 - BaseRect.h * 0.1,
-#                                                  BaseRect.h - 2),
-#                              set_for_lists[element][settings[type_settings][element]],
-#                              settings[type_settings][element],
-#                              [v for v in set_for_lists[element].values()],
-#                              [v for v in set_for_lists[element].keys()],
-#                              *set_of_settings['lists'],
-#                              f'{type_settings} {element}'))
-#                 elif set_of_settings_type[type_settings][element] is Slide:
-#                     SettingsElements.append(Slide(self.default_font,
-#                                                   (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
-#                                                    BaseRect.y + 1,
-#                                                    (BaseRect.h - 2) * 10,
-#                                                    BaseRect.h - 2),
-#                                                   *set_of_settings['slides'],
-#                                                   base_data=settings[type_settings][element],
-#                                                   name=f'{type_settings} {element}'))
-#                 elif set_of_settings_type[type_settings][element] is Path:
-#                     SettingsElements.append(Path(self.default_font,
-#                                                  (BaseRect.x + BaseRect.w - (BaseRect.h - 2) * 11.5 - 1,
-#                                                   BaseRect.y + 1,
-#                                                   (BaseRect.h - 2) * 10,
-#                                                   BaseRect.h - 2),
-#                                                  *set_of_settings['path'], value=settings[type_settings][element],
-#                                                  display=set_for_paths[element]['name'],
-#                                                  name=f'{type_settings} {element}',
-#                                                  multiple=set_for_paths[element]['multiple'],
-#                                                  types=set_for_paths[element]['types'],
-#                                                  typ=set_for_paths[element]['values']))
-#                 else:
-#                     print(type_settings, element, type(set_of_settings_type[type_settings][element]))
-#                     raise SystemError
-#                 Labels.append(
-#                     Label(self.default_font, BaseRect, game_language[f'{type_settings} {element}'], *set_of_settings['label'], False))
-#                 pad += BaseRect.h / size[1] * 1.1
-#             buttons_pad += (BaseRect.h / size[1] * 1.1)
-#             for el in reversed(temp_g):
-#                 SettingsElements.append(el)
-#             self.all_settings[type_settings] = {}
-#             self.all_settings[type_settings]['labels'] = Labels
-#             self.all_settings[type_settings]['buttons'] = SettingsButtons
-#             self.all_settings[type_settings]['elements'] = SettingsElements
-#
-#     def update(self, mouse, events):
-#         self.mouse = mouse
-#         for label in self.all_settings[self.active_settings]['labels']:
-#             if self.active_element:
-#                 label.update(self.game_language[self.active_element])
-#             else:
-#                 label.update()
-#             self.surface.blit(label.image, label.rect)
-#
-#         sett = self.all_settings[self.active_settings]
-#         for sprite in sett['buttons']:
-#             sprite.update()
-#             if sprite.isCollide() and self.mouse:
-#                 for n, i in enumerate(self.game_language.values()):
-#                     if i == sprite.text:
-#                         break
-#                 el = list(self.game_language.keys())[n]
-#                 self.active_settings = el
-#                 self.mouse = False
-#             self.surface.blit(sprite.image, sprite.rect)
-#
-#         for n, sprite in enumerate(sett['elements']):
-#             self.surface.blit(sprite.image, sprite.rect)
-#             if not self.active_element:
-#                 name = sprite.name.split(' ')
-#                 if sprite.value != self.settings[name[0]][name[1]]:
-#                     sprite.value = self.settings[name[0]][name[1]]
-#                 SpriteUpdate: dict = sprite.update(self.mouse)
-#                 if SpriteUpdate:
-#                     if type(SpriteUpdate) is bool:
-#                         self.active_element = sprite.name
-#                     elif type(SpriteUpdate) is int:
-#                         self.active_element = sprite.name
-#                         self.mouse = False
-#                     elif type(SpriteUpdate) is dict:
-#                         temp = tuple(SpriteUpdate.keys())[0]
-#                         if temp:
-#                             temp2 = temp.split(' ')
-#                             self.settings[temp2[0]][temp2[1]] = SpriteUpdate[temp]
-#                             self.all_settings[self.active_settings]['elements'][n].value = SpriteUpdate[temp]
-#                         self.mouse = False
-#             else:
-#                 if sprite.name != self.active_element:
-#                     sprite.update(False)
-#                 else:
-#                     SpriteUpdate: dict = sprite.update(self.mouse)
-#                     if SpriteUpdate:
-#                         if type(SpriteUpdate) != bool:
-#                             temp = tuple(SpriteUpdate.keys())[0]
-#                             temp2 = temp.split(' ')
-#                             self.settings[temp2[0]][temp2[1]] = SpriteUpdate[temp]
-#                             self.all_settings[self.active_settings]['elements'][n].value = SpriteUpdate[temp]
-#                             self.active_element = None
-#                             self.mouse = False
-#                         else:
-#                             self.active_element = None
-#                             self.mouse = False

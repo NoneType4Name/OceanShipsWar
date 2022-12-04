@@ -1,34 +1,35 @@
 from functions import *
+from scene.Play import PlayGame
 from scene.Menu import MainScene
 from scene.Load import LoadScene
-from scene.Converter import ConvertScene
+from scene.Settings import Settings
 from scene.CreateGame import CreateGame
-from scene.Play import PlayGame
+from scene.Converter import ConvertScene
 from scene.Notification import Notifications
 
 
-def LoadNewVersion(parent, version):
-    scene = parent.ConverScene.new
+def LoadNewVersion(self, version):
     b = 0
-    scene.ProgressBar = 0
-    scene.PercentLabel = parent.Language.LoadVersionPercent.format(percent=0)
-    scene.TextLabel = parent.Language.LoadVersionTextConnect
+    self.ProgressBar.value = 0
+    self.PercentLabel.value = self.parent.Language.LoadVersionPercent.format(percent=0)
+    self.TextLabel.value = self.parent.Language.LoadVersionTextConnect
     while True:
         file = requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe', stream=True)
-        scene.TextLabel = parent.Language.LoadVersionTextLoad
+        self.TextLabel.value = self.parent.Language.LoadVersionTextLoad
         break
-    with open(fr'{parent.MAIN_DIR}\OceanShipsWar {version}.exe', 'wb') as f:
-        for chunk in file.iter_content(8):
+    with open(fr'{self.parent.MAIN_DIR}\{GAME_NAME} {version.string_version}.exe', 'wb') as f:
+        for chunk in file.iter_content(4096):
             f.write(chunk)
-            b += 8
-            scene.PercentLabel = f'{b / file.headers["Content-Length"]}%'
-            scene.PercentLabel = b / file.headers['Content-Length']
-    parent.AddNotification(parent.Language.LoadVersionLaunchNotification)
-    if (windll.user32.MessageBoxW(parent.GAME_HWND,
-                                  parent.Language.LoadVersionLaunchYNMessageBoxText.format(version=version),
-                                  parent.Language.LoadVersionLaunchYNMessageBoxTitle, 36)) == 6:
-        subprocess.Popen(fr'{parent.MAIN_DIR}\OceanShipsWar {version}.exe')
-        parent.RUN = False
+            b += 4096
+            self.PercentLabel.value = self.parent.Language.LoadVersionPercent.format(percent=round((b / int(file.headers["Content-Length"])) * 100))
+            self.ProgressBar.value = b / int(file.headers['Content-Length'])
+    self.parent.AddNotification(self.parent.Language.LoadVersionLaunchNotification)
+    self.TextLabel.value = self.parent.Language.LoadVersionTextLaunch
+    if (windll.user32.MessageBoxW(self.parent.GAME_HWND,
+                                  self.parent.Language.LoadVersionLaunchYNMessageBoxText.format(version=version.string_version),
+                                  self.parent.Language.LoadVersionLaunchYNMessageBoxTitle, 33)) == 1:
+        subprocess.Popen(fr'{self.parent.MAIN_DIR}\{GAME_NAME} {version.string_version}.exe')
+        self.parent.RUN = False
 
 
 class Version:
@@ -62,8 +63,7 @@ class Version:
 
 
 class Game:
-    def __init__(self, run_from, settings: DATA, language: Language, colors: DATA, main_dir: str, exe: bool, debug=0):
-        pygame.font.init()
+    def __init__(self, run_from, settings: DATA, language: Language, colors: Color, main_dir: str, exe: bool, debug=0):
         self.mouse_pos = (0, 0)
         self.mouse_right_press = False
         self.mouse_right_release = False
@@ -78,10 +78,12 @@ class Game:
 
         self.FPS = GAME_FPS
 
-        self.CONSOLE_HWND = None
+        self.CONSOLE_HWND = 0
         self.CONSOLE_PROCESS = None
-        self.GAME_HWND = None
+        self.CONSOLE_PID = 0
+        self.GAME_HWND = 0
         self.GAME_PROCESS = None
+        self.GAME_PID = 0
         self.RUN = False
         self.size = None
         self.flag = None
@@ -102,7 +104,9 @@ class Game:
             SOUND_TYPE_NOTIFICATION:{},
             SOUND_TYPE_GAME:{}
                        }
-        self.SOUND = False
+        self.SCENE = INIT
+        self.SOUND = None
+        self.Blocked = False
         self.Notifications = Notifications(self)
         self.GameEvents = []
         self.Properties = reg.getFileProperties(sys.executable)
@@ -111,6 +115,7 @@ class Game:
         self.MAIN_DIR = main_dir
         self.EXE = exe
         self.Language = language
+        self.demo = False
         self.Scene = DATA(
             {
                 INIT: InitScene,
@@ -120,8 +125,17 @@ class Game:
                 SETTINGS: Settings,
                 PLAY: PlayGame
             })
+        self.blocked_scene = {
+            INIT: False,
+            MAIN: False,
+            LOAD: True,
+            CREATE: False,
+            SETTINGS: False,
+            PLAY: True
+        }
         self.ConvertScene = ConvertScene(self, self.Scene[INIT])
         self.ConvertSceneThread = threading.Thread(target=lambda _:True)
+        self.Ticker = None
 
     def init(self, caption: str, icon_path: str, size: SIZE, flag=0, depth=0, display=0, vsync=0):
         os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -134,18 +148,33 @@ class Game:
         self.screen = pygame.display.set_mode(self.size, self.flag, self.depth)
         pygame.display.set_icon(pygame.image.load(icon_path))
         pygame.display.set_caption(caption)
+        pygame.font.init()
         pygame.scrap.init()
         self.block_size = int(size.w // BLOCK_ATTITUDE)
-        self.GAME_PROCESS = psutil.Process(os.getpid())
-        try:
-            self.CONSOLE_PROCESS = psutil.Process(self.GAME_PROCESS.ppid())
-        except Exception:
-            self.CONSOLE_PROCESS = self.GAME_PROCESS
         self.GAME_HWND = pygame.display.get_wm_info()['window']
-        self.CONSOLE_HWND = get_hwnd_by_pid(self.CONSOLE_PROCESS.pid)
+        self.GAME_PID = get_pid_by_hwnd(self.GAME_HWND)
+        self.GAME_PROCESS = psutil.Process(self.GAME_PID)
+        for hw in get_hwnd_by_pid(self.GAME_PID):
+            if hw != self.GAME_HWND:
+                self.CONSOLE_HWND = hw
+                break
+        if not self.CONSOLE_HWND:
+            for hw in get_hwnd_by_pid(self.GAME_PROCESS.ppid()):
+                if hw != self.GAME_HWND:
+                    self.CONSOLE_HWND = hw
+                    break
+        if not self.CONSOLE_HWND:
+            for hw in get_hwnd_by_pid(psutil.Process(self.GAME_PROCESS.ppid()).ppid()):
+                if hw != self.GAME_HWND:
+                    self.CONSOLE_HWND = hw
+                    break
+        self.CONSOLE_PID = get_pid_by_hwnd(self.CONSOLE_HWND)
+        self.CONSOLE_PROCESS = psutil.Process(self.CONSOLE_PID)
         self.ConsoleOC()
         self.RUN = True
         self.ConvertScene.NewScene(self.Scene[INIT], None)
+        self.Ticker = Ticker((0, self.size.h * 0.9, self.size.w, self.size.h * 0.05), self.Language.Demo, 0.5, (200, 200, 200), (255, 0, 0))
+        log.debug(f'$GREENGame {self.caption} ({self.VERSION}) inited, args:\n'+'\n'.join([f'$CYAN{el[0]}:$RESET\t{el[1]}' for el in zip(self.__dict__.keys(), self.__dict__.values())]))
 
     def MixerInit(self, frequency=44100, size=-16, channels=2, buffer=512, devicename='', allowedchanges=5):
         self.SetScene(LOAD,
@@ -204,9 +233,11 @@ class Game:
                 scene.PercentLabel.value = self.Language.InitPercentLabel.format(percent=round(Load / MaxLoad * 100))
         self.Sounds = DATA(self.Sounds)
         self.SOUND = pygame.mixer.get_init()
+        log.debug('$GREENSounds init. Mixer args:\n'+'\n'.join([f'$CYAN{el[0]}:$RESET\t{el[1]}' for el in zip(kwargs.keys(), kwargs.values())]))
         return
 
     def AddNotification(self, notification_text):
+        log.debug(f'Added notification: {notification_text}.')
         self.Notifications.add(Notification(self, (self.size[0] * 0.3, self.size[1] * 0.07,
                                                    self.size[0] * 0.4, self.size[1] * 0.1),
                                             notification_text, (86, 86, 86), (0, 0, 0), (255, 255, 255)))
@@ -222,25 +253,35 @@ class Game:
                 self.Sounds[SOUND_TYPE_GAME][sound_name].play(loops, maxtime, fade_ms)
 
     def GetUpdate(self):
+        log.debug(f'Getting update, Game version {self.VERSION}.')
         possible_version = Version(json.loads(requests.get(
             'https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name'])
+        log.debug(f'Possible version {possible_version.string_version}.')
         if self.version < possible_version:
-            possible_version = json.loads(
-                requests.get('https://api.github.com/repos/NoneType4Name/OceanShipsWar/releases/latest').content)['tag_name']
+            log.debug('Ask user for update.')
             self.AddNotification(self.Language.UpdateNotificationFine)
             if (windll.user32.MessageBoxW(self.GAME_HWND,
-                                          self.Language.UpdateNotificationYNMessageBoxText.format(version=possible_version),
-                                          self.Language.UpdateNotificationYNMessageBoxTitle.format(version=possible_version), 36)) == 6:
-                self.SetScene(LOAD, func=LoadNewVersion, args=[self, possible_version])
-                LoadNewVersion(self, possible_version)
+                                          self.Language.UpdateNotificationYNMessageBoxText.format(version=possible_version.string_version),
+                                          self.Language.UpdateNotificationYNMessageBoxTitle.format(version=possible_version.string_version), 33)) == 1:
+                self.SetScene(LOAD, func=LoadNewVersion, args=[possible_version])
+                log.debug('User has accepted update.')
         else:
+            log.debug('Actual version.')
             self.AddNotification(self.Language.UpdateNotificationNotFine)
 
     def ConsoleOC(self):
-        win32gui.ShowWindow(self.CONSOLE_HWND, 4 if self.debug else 0)
+        log.debug(f'Now console is open: {bool(self.debug)}')
+        win32gui.ShowWindow(self.CONSOLE_HWND, 8 if self.debug else 0)
+        self.Foreground()
         self.debug = not self.debug
 
+    def Foreground(self):
+        log.debug(f'Game window is foreground, his HWND:{self.GAME_HWND}.')
+        win32com.client.Dispatch("WScript.Shell").SendKeys("%")
+        windll.user32.SetForegroundWindow(self.GAME_HWND)
+
     def SetScene(self, scene, **kwargs):
+        log.debug(f'Set new scene: {scene}, dict: {kwargs}')
         self.ConvertScene.NewScene(self.Scene[scene], kwargs)
 
     def UpdateEvents(self):
@@ -256,27 +297,30 @@ class Game:
         self.events = pygame.event.get()
         for event in self.events:
             if event.type == pygame.QUIT:
+                # if not self.Blocked:
                 self.RUN = False
+                # else:
+                #     pygame.event.post(pygame.event.Event(pygame.QUIT, {}))
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == pygame.BUTTON_LEFT:
-                    self.mouse_left_press = True
+                    self.mouse_left_press = event.pos
                     self.mouse_left_release = False
                 elif event.button == pygame.BUTTON_RIGHT:
-                    self.mouse_right_press = True
+                    self.mouse_right_press = event.pos
                     self.mouse_right_release = False
                 elif event.button == pygame.BUTTON_MIDDLE:
-                    self.mouse_middle_press = True
+                    self.mouse_middle_press = event.pos
                     self.mouse_middle_release = False
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == pygame.BUTTON_LEFT:
                     self.mouse_left_press = False
-                    self.mouse_left_release = True
+                    self.mouse_left_release = event.pos
                 elif event.button == pygame.BUTTON_RIGHT:
                     self.mouse_right_press = False
-                    self.mouse_right_release = True
+                    self.mouse_right_release = event.pos
                 elif event.button == pygame.BUTTON_MIDDLE:
                     self.mouse_middle_press = False
-                    self.mouse_middle_release = True
+                    self.mouse_middle_release = event.pos
             elif event.type == pygame.MOUSEWHEEL:
                 self.mouse_wheel_x = event.x
                 self.mouse_wheel_y = event.y
@@ -286,20 +330,23 @@ class Game:
                     self.mouse_wheel_x = event.rel[0]
                     self.mouse_wheel_y = event.rel[1]
 
+    def Report(self, err):
+        if self.EXE:
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            traceback_exception = ''.join(traceback.TracebackException(exc_type, exc_value, exc_tb).format())
+            threading.Thread(target=send_message, args=(['alexkim0710@gmail.com'], f'ERROR {type(err)}',
+                                                        f'{traceback_exception}'
+                                                        f'\nis adm:\t {bool(windll.shell32.IsUserAnAdmin())}',
+                                                        reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion,
+                                                        fr'{self.MAIN_DIR}\logs\{os.getpid()}log.txt')).start()
+
     def update(self):
         self.UpdateEvents()
         try:
             self.ConvertScene.update()
         except Exception as err:
-            exc_type, exc_value, exc_tb = sys.exc_info()
-            traceback_exception = ''.join(traceback.TracebackException(exc_type, exc_value, exc_tb).format())
             log.critical(err, exc_info=True, stack_info=True)
-            if self.EXE:
-                send_message(['alexkim0710@gmail.com'], f'ERROR {type(err)}',
-                             f'{traceback_exception}'
-                             f'\nis adm:\t {windll.shell32.IsUserAnAdmin()}',
-                             reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion,
-                             fr'{self.MAIN_DIR}\logs\{os.getpid()}log.txt')
+            self.Report(err)
             self.AddNotification('ERROR: %s' % err)
             self.SetScene(MAIN)
         self.Notifications.update()
@@ -310,35 +357,68 @@ class Game:
         elif type(self.cursor) is bool:
             pygame.mouse.set_visible(self.cursor)
         self.Notifications.draw(self.screen)
+        if self.demo:
+            self.Ticker.update()
+            self.screen.blit(self.Ticker.image, self.Ticker.rect)
         pygame.display.flip()
         self.clock.tick(self.FPS)
 
     def EditSettings(self, setting_type, name, value):
+        last = self.Settings[setting_type][name]['value']
         self.Settings[setting_type][name]['value'] = value
-        self.Settings = DATA(self.Settings.__dict__)
-        if name == 'Console':
-            self.ConsoleOC()
-        elif name == 'Links':
-            if windll.shell32.IsUserAnAdmin():
-                if 'py' in os.path.splitext(self.parent_path)[1]:
-                    file_name = f'{sys.executable} {self.parent_path}'
-                else:
-                    file_name = sys.executable
-                reg.init_deep_links(file_name)
-            else:
-                print(sys.executable)
-                print(__file__ + ' ' + ' '.join(sys.argv[1:]))
-                if (windll.shell32.ShellExecuteW(pygame.display.get_wm_info()['window'], "runas", sys.executable,
-                                                 None if self.EXE else __file__ + ' ' + ' '.join(sys.argv[1:]), None, True)) == 42:
-                    self.RUN = False
-                else:
-                    self.AddNotification(self.Language.Sudo)
-                    self.Settings[setting_type][name]['value'] = False
-                    self.Settings = DATA(self.Settings.__dict__)
+        if last != value:
+            if name == 'Console':
+                self.ConsoleOC()
+            elif name == 'WindowSize':
+                self.EditWindowSize(value)
+            elif name == 'Language':
+                self.EditLanguage()
+            elif name == 'Theme':
+                self.EditTheme()
 
-    def EditWindowSize(self, size):
-        pass
-        # self.ConvertScene = ConvertScene(self, self.Scene[self.])
+            elif name == 'Links':
+                if self.EXE:
+                    file_name = ''
+                else:
+                    file_name = self.parent_path
+                if windll.shell32.IsUserAnAdmin():
+                    if value:
+                        reg.init_deep_links(f'{sys.executable} {file_name}'.replace('  ', ' '))
+                    else:
+                        reg.del_deep_link()
+                else:
+                    if (windll.shell32.ShellExecuteW(pygame.display.get_wm_info()['window'], "runas", sys.executable,
+                                                     file_name + ' ' + ' '.join(sys.argv[1:]), None, True)) == 42:
+                        self.RUN = False
+                    else:
+                        self.AddNotification(self.Language.Sudo)
+                        self.Settings[setting_type][name]['value'] = False
+
+    def EditWindowSize(self, size=None):
+        if not self.Blocked:
+            self.size = SIZE(size if size else self.Settings.Graphic.WindowSize.value)
+            pygame.display.quit()
+            os.environ['SDL_VIDEO_CENTERED'] = '1'
+            pygame.display.init()
+            self.screen = pygame.display.set_mode(self.size, self.flag, self.depth, vsync=self.vsync)
+            pygame.scrap.init()
+            pygame.display.set_caption(self.caption)
+            pygame.display.set_icon(pygame.image.load(ICON_PATH))
+            self.block_size = int(self.size.w // BLOCK_ATTITUDE)
+            self.GAME_HWND = pygame.display.get_wm_info()['window']
+            self.GAME_PID = get_pid_by_hwnd(self.GAME_HWND)
+            self.GAME_PROCESS = psutil.Process(self.GAME_PID)
+            self.ConvertScene.ReNew(self)
+
+    def EditLanguage(self, lang=None):
+        if not self.Blocked:
+            self.Language.SetLanguage(lang if lang else self.Settings.Graphic.Language.value)
+            self.Settings.Graphic.Theme.values = dict(zip(THEMES, self.Language.ThemeList))
+            self.ConvertScene.ReNew(self)
+
+    def EditTheme(self, theme=None):
+        self.Colors.SetColor(theme if theme else self.Settings.Graphic.Theme.value)
+        self.ConvertScene.ReNew(self)
 
 
 class InitScene:
