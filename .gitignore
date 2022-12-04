@@ -15,8 +15,6 @@ prod/
 logs
 report.py
 settings.json
-tesst.py
-test2.py
 .vscode
 build/
 dist/
