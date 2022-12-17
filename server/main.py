@@ -1,6 +1,6 @@
-import threading
 import select
 import socket
+import log
 
 
 def GetIpFromTuple(tpl):
@@ -12,43 +12,40 @@ def GetIpFromString(st):
     return ':'.join(st[:-1]), st[-1]
 
 
-def SendList(s, m):
-    s.send(m)
-    s.recv(1024)
-
-
 def handle(u_s, u_ad):
     try:
-        data: bytes = u_s.recv(1024)  # Should be ready
+        data: bytes = u_s.recv(1024)
     except ConnectionError:
-        print(f"Client suddenly closed while receiving")
+        log.info(f"Client {u_ad} suddenly closed while receiving.")
         return False
     if not data:
-        print("Disconnected by", u_ad)
+        log.info(f"Disconnected by {u_ad}.")
         return False
     else:
-        data: str = data.decode().replace('>', '')
+        try:
+            data: str = data.decode()
+            log.debug(f'Recv {u_ad} > {data}.')
+        except UnicodeError:
+            log.critical(f'Unicode Error, received data: {data}.')
+            log.info(f'Forced termination of connection with {u_ad}.')
+            return False
         if 'ConnectAroundNAT' in data:
             expect = data.replace('ConnectAroundNAT', '').split('|')
             if expect[0] in connected:
-                connected_data_list[expect[0]].append(f'ConnectAroundNATInbound{GetIpFromTuple(expect[1])}')
+                connected[expect[0]].send(f'ConnectAroundNATInbound{expect[1]}'.encode())
+                data = ''
             else:
                 data = 'ConnectAroundNATInboundError'
-        elif 'ping!.' in data:
-            for d in connected_data_list[GetIpFromTuple(u_ad)]:
-                threading.Thread(target=SendList, args=[u_s, str(d).encode()]).start()
-            else:
-                data = 'pong!.'
-            connected_data_list[GetIpFromTuple(u_ad)] = []
         elif 'mine.' in data:
-            connected_data_list[GetIpFromTuple(u_ad)].append(GetIpFromTuple(u_ad))
+            data = GetIpFromTuple(u_ad)
         else:
-            print(f"recv: {data} from: {u_ad}")
+            log.warning(f'unknown request: {data}.')
     if data:
         try:
-            u_s.send(data.encode())  # Hope it won't block
+            log.debug(f'Send {data} > {u_ad}.')
+            u_s.send(data.encode())
         except ConnectionError:
-            print(f"Client suddenly closed, cannot send")
+            log.info(f"Client {u_ad} suddenly closed, cannot send.")
             return False
     return True
 
@@ -58,7 +55,6 @@ sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 sock.bind(('192.168.1.64', 61023))
 sock.listen(True)
 connected = {GetIpFromTuple(sock.getsockname()): sock}
-connected_data_list = {GetIpFromTuple(sock.getsockname()): []}
 outputs = []
 
 
@@ -67,14 +63,11 @@ while True:
     for user_sock in readable:
         if user_sock == sock:
             sk, adr = sock.accept()
-            print("Connected by", adr)
+            log.info(f'Connected by {adr}.')
             connected[GetIpFromTuple(adr)] = sk
-            connected_data_list[GetIpFromTuple(adr)] = []
         else:
             adr = user_sock.getpeername()
             if not handle(user_sock, adr):
                 del connected[GetIpFromTuple(adr)]
-                del connected_data_list[GetIpFromTuple(adr)]
-                # if sock in outputs:
-                #     outputs.remove(sock)
                 user_sock.close()
+

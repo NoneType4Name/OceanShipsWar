@@ -1,3 +1,5 @@
+import select
+
 import pygame
 
 import log
@@ -247,7 +249,10 @@ class Ships:
 
     def KillBlock(self, block):
         rtn = self.CollideShip((block, block))
-        if rtn:
+        if block in self.die_blocks:
+            log.warning(f'Duplicated data, block: {block} already die.')
+            return 0
+        elif rtn:
             type_ship, number = rtn
             self.ships[type_ship][number]['blocks'].remove(block)
             self.die_blocks.append(block)
@@ -257,9 +262,6 @@ class Ships:
                 self.KillShip(self.ships[type_ship][number]['ship'], type_ship)
                 return True
             return False
-        elif block in self.die_blocks:
-            log.warning(f'Duplicated data, block: {block} already die.')
-            return 0
         else:
             return None
 
@@ -651,25 +653,24 @@ class PlayGame:
         threading.Thread(target=self._activate_socket, daemon=True).start()
         log.debug('Socket activate start.')
 
-    def _ping(self):
-        log.debug('Start TCP socket ping method.')
-        while self.parent.RUN and self.parent.ConvertScene.new.type == PLAY:
-            try:
-                try:
-                    l = time.time()
-                    while time.time() - l < 1 and self.parent.RUN and self.parent.ConvertScene.new.type == PLAY:
-                        pass
-                    self.AroundNatSocket.send('ping!.'.encode())
-                except (ConnectionAbortedError, OSError):
-                    self.AroundNatSocket.close()
-            except Exception as err:
-                log.warning(err, stack_info=True, exc_info=True)
-                self.parent.Report(err)
-                self.Event(GAME_EVENT_LEAVE_GAME, {})
+    # def _ping(self):
+    #     log.debug('Start TCP socket ping method.')
+    #     while self.parent.RUN and self.parent.ConvertScene.new.type == PLAY:
+    #         try:
+    #             try:
+    #                 l = time.time()
+    #                 while time.time() - l < 1 and self.parent.RUN and self.parent.ConvertScene.new.type == PLAY:
+    #                     pass
+    #                 self.AroundNatSocket.send('ping!.'.encode())
+    #             except (ConnectionAbortedError, OSError):
+    #                 self.AroundNatSocket.close()
+    #         except Exception as err:
+    #             log.warning(err, stack_info=True, exc_info=True)
+    #             self.parent.Report(err)
+    #             self.Event(GAME_EVENT_LEAVE_GAME, {})
 
     def _around_nat(self):
         log.debug('TCP connection start.')
-        threading.Thread(target=self._ping, daemon=True).start()
         try:
             if self.enemy_host:
                 self.AroundNatSocket.send(f'ConnectAroundNAT{self.enemy_external_host}:{self.enemy_external_port}|'
@@ -677,29 +678,37 @@ class PlayGame:
                 log.debug(f'ConnectAroundNAT{self.enemy_external_host}:{self.enemy_external_port}|'
                           f'{self.enemy_host}:{self.external_port}')
             while self.parent.RUN and self.parent.ConvertScene.new.type == PLAY:
-                try:
-                    d = self.AroundNatSocket.recv(1024).decode()
-                except (ConnectionAbortedError, OSError) as err:
-                    log.debug(f'TCP connection aborted, error: type:{type(err)}, msg: {err}', stack_info=True, exc_info=True)
+                readable, writeable, exceptional = select.select([self.AroundNatSocket], [], [self.AroundNatSocket])
+                d = readable[0].recv(1024).decode()
+                if not d:
+                    log.debug(f'TCP connection aborted.', stack_info=True, exc_info=True)
+                    self.AroundNatSocket.shutdown(0)
+                    self.AroundNatSocket.close()
                     self.Event(GAME_EVENT_LEAVE_GAME, {})
                     break
-                if 'pong!.' not in d:
-                    log.debug(4)
-                    log.debug(f'TCP socket recv: {d}.')
-                    if self.enemy_host:
-                        if 'ConnectAroundNATInboundError' in d:
-                            self.socket.shutdown(0)
-                            self.socket.close()
-                            log.warning('Incorrect connection link.')
-                            self.parent.AddNotification(self.parent.Language.PlayGameIncorrectLink)
-                            self.parent.SetScene(MAIN)
-                            break
-                    else:
-                        if 'ConnectAroundNATInbound' in d and not self.enemy_host:
-                            log.debug('TCP socket received enemy addr.')
-                            self.enemy_host, self.enemy_port = GetIpFromString(d.replace('ConnectAroundNATInbound', ''))
-                            log.debug(f'Enemy UDP addr: {GetIpFromTuple((self.enemy_host, self.enemy_port))}')
-                            break
+                log.debug(f'TCP socket recv: {d}.')
+                if self.enemy_host:
+                    if 'ConnectAroundNATInboundError' in d:
+                        self.socket.shutdown(0)
+                        self.socket.close()
+                        log.warning('Incorrect connection link.')
+                        self.parent.AddNotification(self.parent.Language.PlayGameIncorrectLink)
+                        self.parent.SetScene(MAIN)
+                        break
+                else:
+                    if 'ConnectAroundNATInbound' in d:
+                        log.debug('TCP socket received enemy addr.')
+                        self.enemy_host, self.enemy_port = GetIpFromString(d.replace('ConnectAroundNATInbound', ''))
+                        log.debug(f'Enemy UDP addr: {GetIpFromTuple((self.enemy_host, self.enemy_port))}')
+                        break
+            try:
+                self.AroundNatSocket.shutdown(0)
+                self.AroundNatSocket.close()
+            except OSError:
+                pass
+            log.debug('TCP connection close.')
+        except ConnectionResetError:
+            log.info('TCP server closing.')
             try:
                 self.AroundNatSocket.shutdown(0)
                 self.AroundNatSocket.close()
@@ -824,6 +833,7 @@ class PlayGame:
                 log.debug('Enemy leave the Game.')
                 self.parent.AddNotification(self.parent.Language.PlayGameEnemyDisconnected)
                 self.MergeCondition(GAME_CONDITION_WIN)
+                return
             except UnicodeError:
                 log.warning(f'UDP socket received unknown data: {data}.')
             except Exception as err:
