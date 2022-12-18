@@ -1,17 +1,12 @@
-import os
-from logging import *
 from os import chdir, path
 from colorama import init
+from logging import *
 import sys
+import os
 init()
 
-try:
-    chdir(sys._MEIPASS)
-    main_dir = path.dirname(sys.executable)
-
-except AttributeError:
-    chdir(path.split(__file__)[0])
-    main_dir = path.dirname(__file__)
+chdir(path.split(__file__)[0])
+main_dir = path.dirname(__file__)
 
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
@@ -70,10 +65,4 @@ log = getLogger()
 log.addHandler(fileHandler)
 log.addHandler(consoleHandler)
 log.setLevel(NOTSET)
-log.debug('out all levels.')
-log.debug('DEBUG.')
-log.info('INFO.')
-log.warning('WARNING.')
-log.error('ERROR.')
-log.critical('CRITICAL.')
-log.info('--------\tLogging start.\t--------')
+log.info('--------Logging start.--------')
