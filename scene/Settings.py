@@ -43,7 +43,6 @@ class Settings:
         self.settings_elements = {}
         self.active_element = list(self.parent.Settings.keys())[0]
         self.selected = None
-        self.inited = False
         log.debug(f'New Scene: {self.type}, last {self.InputScene}, dict:{kwargs}.')
 
         rect_w, rect_h = parent.block_size * 0.75, parent.block_size * 0.5
@@ -144,7 +143,6 @@ class Settings:
                 self.elements[type_settings].add(settings_elements.values())
             self.settings_elements[type_settings] = {}
             self.settings_elements[type_settings] = settings_elements
-        self.inited = True
         log.debug(f'Delta time load settings: {time.time() - t}')
 
     def update(self, active, args):

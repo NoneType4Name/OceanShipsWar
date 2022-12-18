@@ -92,6 +92,7 @@ def createParser():
     parser.add_argument('-L', '--lang', dest='lang', choices=['русский', 'english'])
     parser.add_argument('--DeepLinksApi', dest='DeepLinksApi')
     parser.add_argument('--debug', '-d', dest='debug', type=int)
+    parser.add_argument('--demo', dest='demo', action='store_true')
     log.debug(f'arg parser is inited. to get supported args, restart exe with arg -h/--help')
     return parser
 
@@ -137,6 +138,3 @@ def getFileProperties(name:str):
     except Exception:
         pass
     return DATA(props)
-
-
-

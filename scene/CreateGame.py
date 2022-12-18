@@ -32,14 +32,7 @@ def StartGame(self: TextInput):
 def _GetIP(ip_button, link_button):
     link_button.parent.around_nat_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     link_button.parent.around_nat_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-    log.debug('Connect to TCP server.')
-    while True:
-        try:
-            link_button.parent.around_nat_socket.connect((AROUND_NAT_SERVER_IP, AROUND_NAT_SERVER_PORT))
-            break
-        except ConnectionRefusedError:
-            pass
-    log.debug('Connected to TCP server.')
+    link_button.parent.around_nat_socket.connect((AROUND_NAT_SERVER_IP, AROUND_NAT_SERVER_PORT))
     link_button.parent.around_nat_socket.send('mine.'.encode())
     ip_button.external_tcp_ip, ip_button.external_tcp_port = link_button.external_tcp_ip, link_button.external_tcp_port = GetIpFromString(link_button.parent.around_nat_socket.recv(1024).decode())
     log.debug(f'external tcp addr: {GetIpFromTuple((ip_button.external_tcp_ip, ip_button.external_tcp_port))}.')
@@ -93,8 +86,6 @@ def CopyIpToClipboard(self, link):
 
 def EscActivate(self, **kwargs):
     self.parent.socket.shutdown(0)
-    self.parent.around_nat_socket.shutdown(0)
-    self.parent.around_nat_socket.close()
     self.parent.socket.close()
     log.debug(f'Close scene {self.parent.type}, args:{kwargs}, socket: {self.parent.socket}.')
     self.parent.parent.SetScene(self.parent.InputScene, *kwargs)

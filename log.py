@@ -54,6 +54,7 @@ class ColorFormatter(Formatter):
         return message + RESET_SEQ
 
 
+ColorFormatter = ColorFormatter
 try:
     os.mkdir(f'{main_dir}\\logs')
 except Exception:

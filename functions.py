@@ -7,13 +7,10 @@ import json
 import stun
 import time
 import numpy
-import select
 import socket
 import psutil
 import pygame
 import random
-import argparse
-import win32api
 import win32gui
 import requests
 import itertools
@@ -34,25 +31,26 @@ from netifaces import interfaces, ifaddresses, AF_INET
 from log import log, consoleHandler, fileHandler
 
 
+def _wrap(self, value):
+    if isinstance(value, (tuple, list, set, frozenset)):
+        return type(value)([_wrap(self, v) for v in value])
+    else:
+        return DATA(value) if isinstance(value, dict) else value
+
+
 class DATA(dict):
     def __init__(self, data: dict):
-        [data.update({name: self._wrap(value)}) for name, value in data.items()]
+        [data.update({name: _wrap(self, value)}) for name, value in data.items()]
         super().__init__(data)
         self.__dict__.update(data)
 
     def __setitem__(self, key, value):
-        wrapt = self._wrap(value)
+        wrapt = _wrap(self, value)
         super().__setitem__(key, wrapt)
         self.__dict__.update(super().items())
 
     def __setattr__(self, key, value):
         self.__setitem__(key, value)
-
-    def _wrap(self, value):
-        if isinstance(value, (tuple, list, set, frozenset)):
-            return type(value)([self._wrap(v) for v in value])
-        else:
-            return DATA(value) if isinstance(value, dict) else value
 
 
 class SIZE(tuple):
@@ -82,23 +80,6 @@ def replace_str_var(dictionary, self=None):
                 except NameError:
                     log.error(f'UNKNOWN VARIABLE: {self}.{md}')
     return literal_eval(str_dict)
-
-
-def settings_set_values(settings:DATA, dict_with_only_values:dict):
-    for key in settings.keys():
-        for sub_key in settings[key].keys():
-            d = dict_with_only_values[key][sub_key]
-            settings[key][sub_key].value = d if type(d) is not list else tuple(d)
-    return settings
-
-
-def settings_get_values(settings:DATA):
-    dict_with_only_values = {}
-    for key in settings.keys():
-        dict_with_only_values[key] = {}
-        for sub_key in settings[key].keys():
-            dict_with_only_values[key][sub_key] = settings[key][sub_key].value
-    return dict_with_only_values
 
 
 class Language(DATA):

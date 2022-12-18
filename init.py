@@ -3,10 +3,11 @@ DISPLAY_SIZE = (get_monitors()[0].width, get_monitors()[0].height)
 parser = reg.createParser()
 namespace_args = parser.parse_args()
 run_with_links = namespace_args.links if namespace_args.links is not None else True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None) else False
-size = SIZE((int(namespace_args.size.split('x')[0]), int(namespace_args.size.split('x')[1]))) if namespace_args.size else None
-theme = float(namespace_args.theme) if namespace_args.theme is not None else None
-lang = namespace_args.lang if namespace_args.lang else None
+size = SIZE((int(namespace_args.size.split('x')[0]), int(namespace_args.size.split('x')[1])) if namespace_args.size else DISPLAY_SIZE)
+theme = float(namespace_args.theme) if namespace_args.theme is not None else 0
+lang = namespace_args.lang if namespace_args.lang else LANG_RUS
 debug = namespace_args.debug if namespace_args.debug else 0
+demo = namespace_args.demo if namespace_args.demo else False
 api_socket = None
 
 if run_with_links:
@@ -39,18 +40,19 @@ else:
 
 pygame.init()
 sz_modes = pygame.display.list_modes()
-if size and size not in sz_modes:
+if size not in sz_modes:
     sz_modes.insert(0, size)
 
-language = Language(DEFAULT_LANGUAGES, DEFAULT_LANGUAGE)
+Language = Language(DEFAULT_LANGUAGES, DEFAULT_LANGUAGE)
+
 
 Settings = DATA({
     'Graphic': {
-        'WindowSize': {'value': DISPLAY_SIZE, 'type': List, 'values': dict(zip(sz_modes, [f'{val[0]} x {val[1]}' for val in sz_modes]))},
-        'Language': {'value': language.Language, 'type': List, 'values': dict(zip(DEFAULT_LANGUAGES, language.LanguageList))},
+        'WindowSize': {'value': size, 'type': List, 'values': dict(zip(sz_modes, [f'{val[0]} x {val[1]}' for val in sz_modes]))},
+        'Language': {'value': lang, 'type': List, 'values': dict(zip(DEFAULT_LANGUAGES, Language.LanguageList))},
         # 'Font': {'value': f'{FONT_PATH}', 'type': Path, 'title': 'Select Font (ttf)...', 'multiple': 0,
         #          'types': ['*.ttf']},
-        'Theme': {'value': THEME_DARK, 'type': List, 'values': dict(zip(THEMES, language.ThemeList))}
+        'Theme': {'value': theme, 'type': List, 'values': dict(zip(THEMES, Language.ThemeList))}
 
     },
     'Sound': {
@@ -58,45 +60,11 @@ Settings = DATA({
         'Game': {'value': 1, 'type': Slide}
     },
     'Other': {
-        'Links': {'value': True if os.path.dirname(reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data) == MAIN_DIR and run_with_links else False,
+        'Links': {'value': True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data == MAIN_DIR and run_with_links else False,
                   'type': Switch},
-        'Console': {'value': 0, 'type': Switch}
+        'Console': {'value': debug, 'type': Switch}
     }
 })
-
-
-language = Language(DEFAULT_LANGUAGES, DEFAULT_LANGUAGE)
-
-
-if os.path.exists(os.path.join(MAIN_DIR, 'settings.json')):
-    with open(os.path.join(MAIN_DIR, 'settings.json')) as cfg:
-        Settings = settings_set_values(Settings, json.loads(cfg.read()))
-else:
-    path = Reg.get_value(Reg.HKEY_CURRENT_USER, r'SOFTWARE\NoneType4Name\OSW\Settings', 'Path').data
-    if path and os.path.exists(path):
-        with open(path) as cfg:
-            Settings = settings_set_values(Settings, json.load(cfg))
-    else:
-        path = os.path.join(os.getenv('LOCALAPPDATA'), 'NoneType4Name', GAME_NAME, 'settings.json')
-        if not os.path.exists(path):
-            try:
-                os.mkdir(os.path.join(os.getenv('LOCALAPPDATA'), 'NoneType4Name'))
-            except FileExistsError:
-                pass
-            try:
-                os.mkdir(os.path.join(os.getenv('LOCALAPPDATA'), 'NoneType4Name', GAME_NAME))
-            except FileExistsError:
-                pass
-            with open(path, 'w') as cfg:
-                cfg.write(json.dumps(settings_get_values(Settings)))
-            Reg.set_value(Reg.HKEY_CURRENT_USER, r'SOFTWARE\NoneType4Name\OSW\Settings', 'Path', path)
-
-
-Settings.Graphic.WindowSize.value = size if size else Settings.Graphic.WindowSize.value
-Settings.Graphic.Language.value = lang if lang else Settings.Graphic.Language.value
-Settings.Graphic.Theme.value = theme if theme else Settings.Graphic.Theme.value
-Settings.Other.Console.value = debug if debug else Settings.Other.Console.value
-language.SetLanguage(Settings.Graphic.Language.value)
 
 LANGS = DATA(DEFAULT_LANGUAGES)
 
@@ -158,9 +126,9 @@ THEME_DARK: {
         }
     }
 }
-}, Settings.Graphic.Theme.value)
+}, theme)
 
-game = Game(__file__, Settings, language, Colors, MAIN_DIR, EXE, debug)
+game = Game(__file__, Settings, Language, Colors, MAIN_DIR, EXE, debug)
 
 
 def work_with_links(url):
@@ -197,12 +165,12 @@ def work_with_links(url):
 
 
 args_parsed = False
-game.init(GAME_NAME, ICON_PATH, SIZE(Settings.Graphic.WindowSize.value), pygame.SRCALPHA)
+game.demo = demo
+game.init(GAME_NAME, ICON_PATH, size, pygame.SRCALPHA)
 game.MixerInit()
 
 while game.RUN:
     try:
-
         if not args_parsed and not game.Blocked and namespace_args.DeepLinksApi:
             threading.Thread(target=work_with_links, args=[namespace_args.DeepLinksApi], daemon=True).start()
             args_parsed = True

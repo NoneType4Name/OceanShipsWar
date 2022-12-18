@@ -1,8 +1,3 @@
-import json
-import os
-import threading
-
-import Reg
 from functions import *
 from scene.Play import PlayGame
 from scene.Menu import MainScene
@@ -103,6 +98,7 @@ class Game:
         consoleHandler.setLevel(debug)
 
         self.parent_path = run_from
+        self.Settings = settings
         self.Colors = colors
         self.Sounds = {
             SOUND_TYPE_NOTIFICATION:{},
@@ -118,8 +114,8 @@ class Game:
         self.VERSION = self.version.string_version
         self.MAIN_DIR = main_dir
         self.EXE = exe
-        self.Settings = settings
         self.Language = language
+        self.demo = False
         self.Scene = DATA(
             {
                 INIT: InitScene,
@@ -129,7 +125,6 @@ class Game:
                 SETTINGS: Settings,
                 PLAY: PlayGame
             })
-
         self.blocked_scene = {
             INIT: False,
             MAIN: False,
@@ -178,6 +173,7 @@ class Game:
         self.ConsoleOC()
         self.RUN = True
         self.ConvertScene.NewScene(self.Scene[INIT], None)
+        self.Ticker = Ticker((0, self.size.h * 0.9, self.size.w, self.size.h * 0.05), self.Language.Demo, 0.5, (200, 200, 200), (255, 0, 0))
         log.debug(f'$GREENGame {self.caption} ({self.VERSION}) inited, args:\n'+'\n'.join([f'$CYAN{el[0]}:$RESET\t{el[1]}' for el in zip(self.__dict__.keys(), self.__dict__.values())]))
 
     def MixerInit(self, frequency=44100, size=-16, channels=2, buffer=512, devicename='', allowedchanges=5):
@@ -334,7 +330,7 @@ class Game:
                     self.mouse_wheel_x = event.rel[0]
                     self.mouse_wheel_y = event.rel[1]
 
-    def _report(self, err):
+    def Report(self, err):
         if self.EXE:
             exc_type, exc_value, exc_tb = sys.exc_info()
             traceback_exception = ''.join(traceback.TracebackException(exc_type, exc_value, exc_tb).format())
@@ -343,9 +339,6 @@ class Game:
                                                         f'\nis adm:\t {bool(windll.shell32.IsUserAnAdmin())}',
                                                         reg.getFileProperties(sys.executable).StringFileInfo.ProductVersion,
                                                         fr'{self.MAIN_DIR}\logs\{os.getpid()}log.txt')).start()
-
-    def Report(self, err):
-        threading.Thread(target=self._report, args=[err], daemon=True).start()
 
     def update(self):
         self.UpdateEvents()
@@ -364,6 +357,9 @@ class Game:
         elif type(self.cursor) is bool:
             pygame.mouse.set_visible(self.cursor)
         self.Notifications.draw(self.screen)
+        if self.demo:
+            self.Ticker.update()
+            self.screen.blit(self.Ticker.image, self.Ticker.rect)
         pygame.display.flip()
         self.clock.tick(self.FPS)
 
@@ -397,9 +393,6 @@ class Game:
                     else:
                         self.AddNotification(self.Language.Sudo)
                         self.Settings[setting_type][name]['value'] = False
-
-            if self.SCENE == SETTINGS and self.ConvertScene.new.inited:
-                self.ConvertScene.new.settings_elements[setting_type][name].value = self.Settings[setting_type][name]['value']
 
     def EditWindowSize(self, size=None):
         if not self.Blocked:
