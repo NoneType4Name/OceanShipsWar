@@ -1,3 +1,5 @@
+import socket
+
 import select
 
 import pygame
@@ -674,9 +676,9 @@ class PlayGame:
         try:
             if self.enemy_host:
                 self.AroundNatSocket.send(f'ConnectAroundNAT{self.enemy_external_host}:{self.enemy_external_port}|'
-                                          f'{self.enemy_host}:{self.external_port}'.encode())
+                                          f'{self.external_host}:{self.external_port}'.encode())
                 log.debug(f'ConnectAroundNAT{self.enemy_external_host}:{self.enemy_external_port}|'
-                          f'{self.enemy_host}:{self.external_port}')
+                          f'{self.external_host}:{self.external_port}')
             while self.parent.RUN and self.parent.ConvertScene.new.type == PLAY:
                 readable, writeable, exceptional = select.select([self.AroundNatSocket], [], [self.AroundNatSocket])
                 d = readable[0].recv(1024).decode()

@@ -34,6 +34,12 @@ def ListDeactivate(self):
     self.parent.selected = None
 
 
+def EscActivate(self, **kwargs):
+    self.parent.parent.SaveSettings()
+    self.parent.parent.SetScene(self.parent.InputScene, *kwargs)
+    self.parent.parent.PlaySound(SOUND_TYPE_GAME, 'select')
+
+
 class Settings:
     def __init__(self, parent, input_scene, kwargs):
         self.type = SETTINGS

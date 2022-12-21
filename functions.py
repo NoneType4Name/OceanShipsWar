@@ -1,3 +1,4 @@
+import ctypes
 import os
 import log
 import sys
@@ -26,12 +27,16 @@ import win32process
 import win32com.client
 from constants import *
 from ctypes import windll
+import comtypes.client as cc
 from ast import literal_eval
 from report import send_message
 from screeninfo import get_monitors
+import comtypes.gen.TaskbarLib as tb
 from urllib.parse import urlparse, parse_qs
 from netifaces import interfaces, ifaddresses, AF_INET
 from log import log, consoleHandler, fileHandler
+cc.GetModule(f'{DATAS_FOLDER_NAME}/taskbarlib.tlb')
+taskbar=cc.CreateObject('{56FDF344-FD6D-11d0-958A-006097C9A090}',interface=tb.ITaskbarList3)
 
 
 class DATA(dict):
@@ -149,6 +154,14 @@ def get_hwnd_by_pid(pid):
 
 def get_pid_by_hwnd(hwnd):
     return win32process.GetWindowThreadProcessId(hwnd)[1]
+
+
+def WindowSetProgressState(hwnd, tbpFlags):
+    return taskbar.SetProgressState(hwnd, tbpFlags)
+
+
+def WindowSetProgressValue(hwnd, ullCompleted, ullTotal):
+    return taskbar.SetProgressValue(hwnd, ullCompleted, ullTotal)
 
 
 def GetIP(sock, ip, port):

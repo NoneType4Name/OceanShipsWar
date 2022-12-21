@@ -1,13 +1,15 @@
 from Game import *
 DISPLAY_SIZE = (get_monitors()[0].width, get_monitors()[0].height)
 parser = reg.createParser()
-namespace_args = parser.parse_args()
+namespace_args, unk = parser.parse_known_args()
 run_with_links = namespace_args.links if namespace_args.links is not None else True if reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None) else False
 size = SIZE((int(namespace_args.size.split('x')[0]), int(namespace_args.size.split('x')[1]))) if namespace_args.size else None
 theme = float(namespace_args.theme) if namespace_args.theme is not None else None
 lang = namespace_args.lang if namespace_args.lang else None
 debug = namespace_args.debug if namespace_args.debug else 0
 api_socket = None
+if unk:
+    log.warning(f'Unknown args: {"; ".join(unk)}, not parsed!.')
 
 if run_with_links:
     api_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -58,7 +60,7 @@ Settings = DATA({
         'Game': {'value': 1, 'type': Slide}
     },
     'Other': {
-        'Links': {'value': True if os.path.dirname(reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data) == MAIN_DIR and run_with_links else False,
+        'Links': {'value': None,
                   'type': Switch},
         'Console': {'value': 0, 'type': Switch}
     }
@@ -96,6 +98,7 @@ Settings.Graphic.WindowSize.value = size if size else Settings.Graphic.WindowSiz
 Settings.Graphic.Language.value = lang if lang else Settings.Graphic.Language.value
 Settings.Graphic.Theme.value = theme if theme else Settings.Graphic.Theme.value
 Settings.Other.Console.value = debug if debug else Settings.Other.Console.value
+Settings.Other.Links.value = (True if os.path.dirname(reg.get_value(reg.HKEY_CLASSES_ROOT, r'osw\shell\open\command', None).data) == MAIN_DIR and run_with_links else False) if Settings.Other.Links.value is None else Settings.Other.Links.value
 language.SetLanguage(Settings.Graphic.Language.value)
 
 LANGS = DATA(DEFAULT_LANGUAGES)

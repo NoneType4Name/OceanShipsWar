@@ -1,7 +1,3 @@
-import json
-import os
-import threading
-
 import Reg
 from functions import *
 from scene.Play import PlayGame
@@ -14,20 +10,29 @@ from scene.Notification import Notifications
 
 
 def LoadNewVersion(self, version):
+    WindowSetProgressState(self.parent.GAME_HWND, 3)
     b = 0
     self.ProgressBar.value = 0
     self.PercentLabel.value = self.parent.Language.LoadVersionPercent.format(percent=0)
     self.TextLabel.value = self.parent.Language.LoadVersionTextConnect
     while True:
-        file = requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe', stream=True)
-        self.TextLabel.value = self.parent.Language.LoadVersionTextLoad
-        break
+        try:
+            file = requests.get('https://github.com/NoneType4Name/OceanShipsWar/releases/latest/download/OceanShipsWar.exe', stream=True)
+            self.TextLabel.value = self.parent.Language.LoadVersionTextLoad
+            WindowSetProgressState(self.parent.GAME_HWND, 2)
+            break
+        except requests.exceptions.ConnectionError:
+            WindowSetProgressState(self.parent.GAME_HWND, 8)
+            pass
     with open(fr'{self.parent.MAIN_DIR}\{GAME_NAME} {version.string_version}.exe', 'wb') as f:
         for chunk in file.iter_content(4096):
             f.write(chunk)
-            b += 4096
+            b += len(chunk)
             self.PercentLabel.value = self.parent.Language.LoadVersionPercent.format(percent=round((b / int(file.headers["Content-Length"])) * 100))
             self.ProgressBar.value = b / int(file.headers['Content-Length'])
+            WindowSetProgressState(self.parent.GAME_HWND, 2)
+            WindowSetProgressValue(self.parent.GAME_HWND, b, int(file.headers['Content-Length']))
+    WindowSetProgressState(self.parent.GAME_HWND, 3)
     self.parent.AddNotification(self.parent.Language.LoadVersionLaunchNotification)
     self.TextLabel.value = self.parent.Language.LoadVersionTextLaunch
     if (windll.user32.MessageBoxW(self.parent.GAME_HWND,
@@ -35,6 +40,8 @@ def LoadNewVersion(self, version):
                                   self.parent.Language.LoadVersionLaunchYNMessageBoxTitle, 33)) == 1:
         subprocess.Popen(fr'{self.parent.MAIN_DIR}\{GAME_NAME} {version.string_version}.exe')
         self.parent.RUN = False
+    WindowSetProgressState(self.parent.GAME_HWND, 0)
+    return
 
 
 class Version:
@@ -140,7 +147,7 @@ class Game:
         }
         self.ConvertScene = ConvertScene(self, self.Scene[INIT])
         self.ConvertSceneThread = threading.Thread(target=lambda _:True)
-        self.Ticker = None
+        self.SaveSettings()
 
     def init(self, caption: str, icon_path: str, size: SIZE, flag=0, depth=0, display=0, vsync=0):
         os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -175,7 +182,7 @@ class Game:
                     break
         self.CONSOLE_PID = get_pid_by_hwnd(self.CONSOLE_HWND)
         self.CONSOLE_PROCESS = psutil.Process(self.CONSOLE_PID)
-        self.ConsoleOC()
+        self.Console()
         self.RUN = True
         self.ConvertScene.NewScene(self.Scene[INIT], None)
         log.debug(f'$GREENGame {self.caption} ({self.VERSION}) inited, args:\n'+'\n'.join([f'$CYAN{el[0]}:$RESET\t{el[1]}' for el in zip(self.__dict__.keys(), self.__dict__.values())]))
@@ -192,6 +199,7 @@ class Game:
                       )
 
     def mixer_init_thread(self, scene, kwargs):
+        WindowSetProgressState(self.GAME_HWND, 3)
         try:
             pygame.mixer.init(*list(kwargs.values()))
         except pygame.error:
@@ -205,8 +213,10 @@ class Game:
             try:
                 requests.get(GITHUB_REPOS_URL + 'releases/latest')
                 scene.TextLabel.value = self.Language.InitTextLabelSuccessConnect
+                WindowSetProgressState(self.GAME_HWND, 2)
                 break
             except requests.exceptions.ConnectionError:
+                WindowSetProgressState(self.GAME_HWND, 8)
                 pass
 
         MaxLoad = len(list(itertools.chain(*SoundsDict.values()))) * 2
@@ -221,8 +231,11 @@ class Game:
                         SoundsDict[sound_type][sound_name] = 1
                         Load += 1
                         break
+                    WindowSetProgressState(self.GAME_HWND, 8)
+                WindowSetProgressState(self.GAME_HWND, 2)
                 scene.ProgressBar.value = Load / MaxLoad
                 scene.PercentLabel.value = self.Language.InitPercentLabel.format(percent=round(Load / MaxLoad * 100))
+                WindowSetProgressValue(self.GAME_HWND, Load, MaxLoad)
 
         for sound_type in SoundsDict:
             for sound_name in SoundsDict[sound_type]:
@@ -235,9 +248,12 @@ class Game:
                 Load += 1
                 scene.ProgressBar.value = Load / MaxLoad
                 scene.PercentLabel.value = self.Language.InitPercentLabel.format(percent=round(Load / MaxLoad * 100))
+                WindowSetProgressState(self.GAME_HWND, 2)
+                WindowSetProgressValue(self.GAME_HWND, Load, MaxLoad)
         self.Sounds = DATA(self.Sounds)
         self.SOUND = pygame.mixer.get_init()
         log.debug('$GREENSounds init. Mixer args:\n'+'\n'.join([f'$CYAN{el[0]}:$RESET\t{el[1]}' for el in zip(kwargs.keys(), kwargs.values())]))
+        WindowSetProgressState(self.GAME_HWND, 0)
         return
 
     def AddNotification(self, notification_text):
@@ -246,6 +262,7 @@ class Game:
                                                    self.size[0] * 0.4, self.size[1] * 0.1),
                                             notification_text, (86, 86, 86), (0, 0, 0), (255, 255, 255)))
         self.PlaySound(SOUND_TYPE_NOTIFICATION, 'in')
+        self.Foreground()
 
     def PlaySound(self, sound_type: str, sound_name: str, loops=0, maxtime=0, fade_ms=0):
         if self.SOUND:
@@ -273,11 +290,11 @@ class Game:
             log.debug('Actual version.')
             self.AddNotification(self.Language.UpdateNotificationNotFine)
 
-    def ConsoleOC(self):
-        log.debug(f'Now console is open: {bool(self.debug)}')
-        win32gui.ShowWindow(self.CONSOLE_HWND, 8 if self.debug else 0)
+    def Console(self):
+        win32gui.ShowWindow(self.CONSOLE_HWND, 8 if self.Settings.Other.Console.value else 0)
+        win32gui.ShowWindow(self.GAME_HWND, 8)
         self.Foreground()
-        self.debug = not self.debug
+        log.debug(f'Now console is open: {self.Settings.Other.Console.value}')
 
     def Foreground(self):
         log.debug(f'Game window is foreground, his HWND:{self.GAME_HWND}.')
@@ -367,12 +384,31 @@ class Game:
         pygame.display.flip()
         self.clock.tick(self.FPS)
 
+    def LoadSettings(self):
+        path = Reg.get_value(Reg.HKEY_CURRENT_USER, r'SOFTWARE\NoneType4Name\OSW\Settings', 'Path').data
+        log.debug(f'Load settings, path to settings: {path}')
+        if path and os.path.exists(path):
+            with open(path) as cfg:
+                self.Settings = settings_set_values(self.Settings, json.load(cfg))
+            log.debug('Successful loaded settings.')
+            return
+        log.warning('path to settings not found.')
+
+    def SaveSettings(self):
+        path = Reg.get_value(Reg.HKEY_CURRENT_USER, r'SOFTWARE\NoneType4Name\OSW\Settings', 'Path').data
+        log.debug(f'Save settings, path to settings: {path}')
+        if path and os.path.exists(path):
+            with open(path, 'w') as cfg:
+                cfg.write(json.dumps(settings_get_values(self.Settings)))
+            return
+        log.warning('path to settings not found.')
+
     def EditSettings(self, setting_type, name, value):
         last = self.Settings[setting_type][name]['value']
         self.Settings[setting_type][name]['value'] = value
         if last != value:
             if name == 'Console':
-                self.ConsoleOC()
+                self.Console()
             elif name == 'WindowSize':
                 self.EditWindowSize(value)
             elif name == 'Language':
@@ -397,7 +433,6 @@ class Game:
                     else:
                         self.AddNotification(self.Language.Sudo)
                         self.Settings[setting_type][name]['value'] = False
-
             if self.SCENE == SETTINGS and self.ConvertScene.new.inited:
                 self.ConvertScene.new.settings_elements[setting_type][name].value = self.Settings[setting_type][name]['value']
 
