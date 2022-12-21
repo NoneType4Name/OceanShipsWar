@@ -1,3 +1,4 @@
+import ctypes
 import os
 import log
 import sys
@@ -7,10 +8,13 @@ import json
 import stun
 import time
 import numpy
+import select
 import socket
 import psutil
 import pygame
 import random
+import argparse
+import win32api
 import win32gui
 import requests
 import itertools
@@ -23,34 +27,37 @@ import win32process
 import win32com.client
 from constants import *
 from ctypes import windll
+import comtypes.client as cc
 from ast import literal_eval
 from report import send_message
 from screeninfo import get_monitors
+import comtypes.gen.TaskbarLib as tb
 from urllib.parse import urlparse, parse_qs
 from netifaces import interfaces, ifaddresses, AF_INET
 from log import log, consoleHandler, fileHandler
-
-
-def _wrap(self, value):
-    if isinstance(value, (tuple, list, set, frozenset)):
-        return type(value)([_wrap(self, v) for v in value])
-    else:
-        return DATA(value) if isinstance(value, dict) else value
+cc.GetModule(f'{DATAS_FOLDER_NAME}/taskbarlib.tlb')
+taskbar=cc.CreateObject('{56FDF344-FD6D-11d0-958A-006097C9A090}',interface=tb.ITaskbarList3)
 
 
 class DATA(dict):
     def __init__(self, data: dict):
-        [data.update({name: _wrap(self, value)}) for name, value in data.items()]
+        [data.update({name: self._wrap(value)}) for name, value in data.items()]
         super().__init__(data)
         self.__dict__.update(data)
 
     def __setitem__(self, key, value):
-        wrapt = _wrap(self, value)
+        wrapt = self._wrap(value)
         super().__setitem__(key, wrapt)
         self.__dict__.update(super().items())
 
     def __setattr__(self, key, value):
         self.__setitem__(key, value)
+
+    def _wrap(self, value):
+        if isinstance(value, (tuple, list, set, frozenset)):
+            return type(value)([self._wrap(v) for v in value])
+        else:
+            return DATA(value) if isinstance(value, dict) else value
 
 
 class SIZE(tuple):
@@ -80,6 +87,23 @@ def replace_str_var(dictionary, self=None):
                 except NameError:
                     log.error(f'UNKNOWN VARIABLE: {self}.{md}')
     return literal_eval(str_dict)
+
+
+def settings_set_values(settings:DATA, dict_with_only_values:dict):
+    for key in settings.keys():
+        for sub_key in settings[key].keys():
+            d = dict_with_only_values[key][sub_key]
+            settings[key][sub_key].value = d if type(d) is not list else tuple(d)
+    return settings
+
+
+def settings_get_values(settings:DATA):
+    dict_with_only_values = {}
+    for key in settings.keys():
+        dict_with_only_values[key] = {}
+        for sub_key in settings[key].keys():
+            dict_with_only_values[key][sub_key] = settings[key][sub_key].value
+    return dict_with_only_values
 
 
 class Language(DATA):
@@ -130,6 +154,14 @@ def get_hwnd_by_pid(pid):
 
 def get_pid_by_hwnd(hwnd):
     return win32process.GetWindowThreadProcessId(hwnd)[1]
+
+
+def WindowSetProgressState(hwnd, tbpFlags):
+    return taskbar.SetProgressState(hwnd, tbpFlags)
+
+
+def WindowSetProgressValue(hwnd, ullCompleted, ullTotal):
+    return taskbar.SetProgressValue(hwnd, ullCompleted, ullTotal)
 
 
 def GetIP(sock, ip, port):
