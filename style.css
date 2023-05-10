@@ -1,6 +1,6 @@
 @font-face {
     font-family: "Cascadia";
-    src: url(./asets/font.ttf);
+    src: url(./assets/font.ttf);
 }
 
 * {
@@ -41,14 +41,10 @@ a.link:hover::after {
 }
 
 
-
-
-
 div.header{
     position: fixed;
-    float: left;
     width: 100%;
-    height: 60px;
+    height: 7%;
     background-color: rgb(22, 27, 34);
     }
 
@@ -107,68 +103,149 @@ a.logo:hover {
     color: rgb(186, 187, 189);
 }
 
+footer {
+  top: 95%;
+  position: fixed;
+  width: 100%;
+  height: 5%;
+  background-color: rgb(22, 27, 34);
+}
 
-.button {
-    border: 4px solid #fff;
-    font-size: 36px;
-    width: 307px;
-    height: 108px;
+footer ul {
+  /* text-align: center; */
+  /* position: absolute; */
+  display: flex;
+  list-style-type: none;
+  margin-left: 50%;
+  margin-top: 10px;
+  transform: translateX(-25%);
+}
+
+footer ul li {
+  float:left;
+  margin-right: 10vw;
+  white-space: nowrap;
+}
+
+footer a {
+  color: white;
+  text-decoration: none;
+  font-size: 20px;
+  
+}
+
+footer a:hover {
+  cursor: pointer;
+  color: rgb(186, 187, 189);
+}
+
+.button-main {
+    position: relative;
+    border: 0.3vw solid #fff;
+    font-size: 4vh;
+    width: 18vw;
+    height: 12vh;
     display: inline-block;
     outline: none;
     text-align: center;
     text-decoration: none;
-    border-radius: 28px;
-    transform: translate(-50%, -50%);
+    border-radius: 1.5vw;
+    background: black;
+   /* transform: translate(-50%, -25%); */
     color: #fff;
 }
-
-.button.main {
-    color: white;
-    background: black;
-}
-
-.button:hover {
+.button-main:hover {
     color: black;
     background: rgb(127, 127, 127);
 }
 
 .tooltip {
-    position: relative;
+/*    position: relative;*/
     display: inline-block;
 }
 
 .tooltip .tooltiptext {
     visibility: hidden;
     width: 60%;
+    height: 20%;
     background-color: rgb(127, 127, 127);
     color: #fff;
     text-align: center;
-    border-radius: 6px;
+    border-radius: 0.4vw;
     padding: 3% 1%;
     position: absolute;
     z-index: 1;
-    top: -15%;
-    left: 52%;
+    top: 50%;
+    left: 100%;
+    font-size: 0.5em;
+    text-align: center;
     opacity: 0;
-    transition: all 0.5s ease;
+    transition: all 0.25s ease;
+    transform: translate(0, -50%);
 }
 
-.tooltip .tooltiptext::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    right: 100%;
-    margin-top: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: transparent rgb(127, 127, 127) transparent transparent;
-}
 .tooltip:hover .tooltiptext {
     visibility: visible;
     opacity: 1;
 }
 
+div.main {
+    position: absolute;
+    left: 50vw;
+    transform: translate(-50%, -50%);
+}
 
+.md-source__facts {
+  margin: 0.1rem 0 0;
+  padding: 0;
+  overflow: hidden;
+  font-size: 0.55rem;
+  list-style-type: none;
+  opacity: 0.75;
+}
+[data-md-state=done] .md-source__facts {
+  animation: facts 250ms ease-in;
+}
+.md-source__fact {
+  display: inline-block;
+}
+[data-md-state=done] .md-source__fact {
+  animation: fact 400ms ease-out;
+}
+.md-source__fact::before {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-right: 0.1rem;
+  vertical-align: text-top;
+  background-color: currentColor;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  content: "";
+}
+.md-source__fact:nth-child(1n+2)::before {
+  margin-left: 0.4rem;
+}
+[dir=rtl] .md-source__fact {
+  margin-right: initial;
+  margin-left: 0.1rem;
+}
+[dir=rtl] .md-source__fact:nth-child(1n+2)::before {
+  margin-right: 0.4rem;
+  margin-left: initial;
+}
+.md-source__fact--version::before {
+  mask-image: var(--md-source-version-icon);
+}
+.md-source__fact--stars::before {
+  mask-image: var(--md-source-stars-icon);
+}
+.md-source__fact--forks::before {
+  mask-image: var(--md-source-forks-icon);
+}
+.md-source__fact--repositories::before {
+  mask-image: var(--md-source-repositories-icon);
+}
 /* внешний вид меню */
 .context-menu {
 	/* настройки шрифта */
